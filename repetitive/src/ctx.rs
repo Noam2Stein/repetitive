@@ -17,7 +17,7 @@ pub trait ContextParse {
         Self: Sized;
 }
 
-pub fn ctx_parse2<T: ContextParse>(
+pub fn ctx_parse2<T>(
     f: impl FnOnce(ParseStream, &mut Context) -> syn::Result<T>,
     input: TokenStream,
     ctx: &mut Context,

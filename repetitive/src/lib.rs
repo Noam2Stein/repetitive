@@ -15,6 +15,7 @@ pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 }
 
 mod main {
+    use proc_macro2::TokenStream;
     use quote::quote;
 
     use super::*;
@@ -33,7 +34,11 @@ mod main {
         );
 
         let tokens_output = match tokens {
-            Ok(tokens) => tokens.collect(),
+            Ok(tokens) => {
+                let mut output = TokenStream::new();
+                tokens.end(&mut output);
+                output
+            }
             Err(err) => err.to_compile_error(),
         };
 

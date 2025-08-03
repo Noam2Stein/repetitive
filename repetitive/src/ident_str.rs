@@ -1,4 +1,5 @@
 use proc_macro2::Span;
+use quote::ToTokens;
 use syn::{
     Ident,
     parse::{Parse, ParseStream},
@@ -17,5 +18,11 @@ impl Parse for IdentStr {
             str: ident.to_string(),
             span: ident.span(),
         })
+    }
+}
+
+impl ToTokens for IdentStr {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        Ident::new(&self.str, self.span).to_tokens(tokens);
     }
 }

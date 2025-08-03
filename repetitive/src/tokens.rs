@@ -51,7 +51,7 @@ impl ContextParse for TokensSegment {
                 tokens,
             }))
         } else if input.peek(Token![@]) {
-            let fragment = Fragment::ctx_parse(input, ctx)?;
+            let fragment = Fragment::ctx_parse_outer(input, ctx)?;
             Ok(TokensSegment::Fragment(fragment))
         } else {
             let tokens = input.parse::<TokenStream>()?;
@@ -61,22 +61,20 @@ impl ContextParse for TokensSegment {
 }
 
 impl Tokens {
-    pub fn collect(&self) -> TokenStream {
-        let mut tokens = TokenStream::new();
-
+    pub fn end(&self, tokens: &mut TokenStream) {
         for segment in &self.segments {
             match segment {
-                TokensSegment::TokenStream(stream) => stream.to_tokens(&mut tokens),
+                TokensSegment::TokenStream(stream) => stream.to_tokens(tokens),
 
                 TokensSegment::Group(group) => {
-                    let group = Group::new(group.delimiter, group.tokens.collect());
-                    group.to_tokens(&mut tokens);
+                    let mut group_tokens = TokenStream::new();
+                    group.tokens.end(&mut group_tokens);
+                    let group = Group::new(group.delimiter, group_tokens);
+                    group.to_tokens(tokens);
                 }
 
-                TokensSegment::Fragment(_) => panic!("unresolved fragment"),
+                TokensSegment::Fragment(fragment) => fragment.end(tokens),
             }
         }
-
-        tokens
     }
 }
