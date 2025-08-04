@@ -1,12 +1,14 @@
 mod ctx;
 mod fragment;
-mod ident_str;
+mod keyword;
 mod name;
+mod op;
 mod tokens;
 use ctx::*;
 use fragment::*;
-use ident_str::*;
+use keyword::*;
 use name::*;
+use op::*;
 use tokens::*;
 
 #[proc_macro]
@@ -26,19 +28,30 @@ mod main {
         let tokens = ctx_parse2(
             Tokens::ctx_parse,
             input.into(),
-            &mut Context {
+            &mut ParseContext {
                 interner: &mut Default::default(),
-                errors: &mut errors,
-                namespace: &mut Namespace::new(),
+                base: Context {
+                    errors: &mut errors,
+                    namespace: &mut Namespace::new(),
+                },
             },
         );
 
         let tokens_output = match tokens {
             Ok(tokens) => {
                 let mut output = TokenStream::new();
-                tokens.end(&mut output);
+
+                tokens.paste(
+                    &mut output,
+                    &Context {
+                        errors: &mut errors,
+                        namespace: &mut Namespace::new(),
+                    },
+                );
+
                 output
             }
+
             Err(err) => err.to_compile_error(),
         };
 

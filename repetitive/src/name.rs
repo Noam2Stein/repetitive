@@ -9,7 +9,7 @@ use super::*;
 #[derive(Debug, Clone)]
 pub struct Namespace<'p> {
     parent: Option<&'p Namespace<'p>>,
-    names: HashMap<NameId, Fragment>,
+    names: HashMap<NameId, FragmentValue>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -38,7 +38,7 @@ impl<'p> Namespace<'p> {
         }
     }
 
-    pub fn insert(&mut self, name: Name, fragment: Fragment, ctx: &mut Context) {
+    pub fn insert(&mut self, name: Name, fragment: FragmentValue, ctx: &mut Context) {
         if self.names.contains_key(&name.id) {
             ctx.errors
                 .push(syn::Error::new(name.span, "Name already exists"));
@@ -47,7 +47,7 @@ impl<'p> Namespace<'p> {
         self.names.insert(name.id, fragment);
     }
 
-    pub fn get(&self, name: NameId) -> Option<&Fragment> {
+    pub fn get(&self, name: NameId) -> Option<&FragmentValue> {
         if let Some(fragment) = self.names.get(&name) {
             Some(fragment)
         } else if let Some(parent) = self.parent {
@@ -56,13 +56,31 @@ impl<'p> Namespace<'p> {
             None
         }
     }
+
+    pub fn try_get(&self, name: Name, errors: &mut Vec<syn::Error>) -> FragmentValue {
+        match self.get(name.id) {
+            Some(fragment) => fragment.clone(),
+            None => {
+                errors.push(syn::Error::new(name.span, "Name not found"));
+
+                FragmentValue::error()
+            }
+        }
+    }
 }
 
 impl ContextParse for Name {
-    fn ctx_parse(input: syn::parse::ParseStream, ctx: &mut Context) -> syn::Result<Self>
+    fn ctx_parse(input: syn::parse::ParseStream, ctx: &mut ParseContext) -> syn::Result<Self>
     where
         Self: Sized,
     {
+        if Keyword::peek(input) {
+            return Err(syn::Error::new(
+                input.span(),
+                "expected name, found keyword",
+            ));
+        }
+
         let ident = input.parse::<Ident>()?;
         let id = NameId {
             inner: ctx.interner.get_or_intern(ident.to_string()),

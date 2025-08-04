@@ -4,7 +4,7 @@ use syn::Token;
 
 use super::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Tokens {
     segments: Vec<TokensSegment>,
 }
@@ -23,7 +23,7 @@ struct TokensGroup {
 }
 
 impl ContextParse for Tokens {
-    fn ctx_parse(input: syn::parse::ParseStream, ctx: &mut crate::Context) -> syn::Result<Self>
+    fn ctx_parse(input: syn::parse::ParseStream, ctx: &mut ParseContext) -> syn::Result<Self>
     where
         Self: Sized,
     {
@@ -39,7 +39,7 @@ impl ContextParse for Tokens {
 }
 
 impl ContextParse for TokensSegment {
-    fn ctx_parse(input: syn::parse::ParseStream, ctx: &mut crate::Context) -> syn::Result<Self>
+    fn ctx_parse(input: syn::parse::ParseStream, ctx: &mut ParseContext) -> syn::Result<Self>
     where
         Self: Sized,
     {
@@ -61,19 +61,25 @@ impl ContextParse for TokensSegment {
 }
 
 impl Tokens {
-    pub fn end(&self, tokens: &mut TokenStream) {
+    pub fn append(&mut self, value: Self) {
+        for segment in value.segments {
+            self.segments.push(segment);
+        }
+    }
+
+    pub fn paste(&self, output: &mut TokenStream, ctx: &Context) {
         for segment in &self.segments {
             match segment {
-                TokensSegment::TokenStream(stream) => stream.to_tokens(tokens),
+                TokensSegment::TokenStream(stream) => stream.to_tokens(output),
 
                 TokensSegment::Group(group) => {
                     let mut group_tokens = TokenStream::new();
-                    group.tokens.end(&mut group_tokens);
+                    group.tokens.paste(&mut group_tokens, ctx);
                     let group = Group::new(group.delimiter, group_tokens);
-                    group.to_tokens(tokens);
+                    group.to_tokens(output);
                 }
 
-                TokensSegment::Fragment(fragment) => fragment.end(tokens),
+                TokensSegment::Fragment(fragment) => fragment.body.resolve(ctx).paste(output, ctx),
             }
         }
     }
