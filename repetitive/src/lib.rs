@@ -1,14 +1,24 @@
 mod ctx;
-mod fragment;
+mod ctx_parse;
+mod fragment_expr;
+mod fragment_outer;
+mod fragment_value;
 mod keyword;
 mod name;
 mod op;
+mod paste;
+mod pattern;
 mod tokens;
 use ctx::*;
-use fragment::*;
+use ctx_parse::*;
+use fragment_expr::*;
+use fragment_outer::*;
+use fragment_value::*;
 use keyword::*;
 use name::*;
 use op::*;
+use paste::*;
+use pattern::*;
 use tokens::*;
 
 #[proc_macro]
@@ -19,47 +29,43 @@ pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 mod main {
     use proc_macro2::TokenStream;
     use quote::quote;
+    use string_interner::DefaultStringInterner;
 
     use super::*;
 
     pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-        let mut errors = vec![];
-
-        let tokens = ctx_parse2(
-            Tokens::ctx_parse,
-            input.into(),
-            &mut ParseContext {
-                interner: &mut Default::default(),
-                base: Context {
-                    errors: &mut errors,
-                    namespace: &mut Namespace::new(),
-                },
-            },
-        );
-
-        let tokens_output = match tokens {
-            Ok(tokens) => {
-                let mut output = TokenStream::new();
-
-                tokens.paste(
-                    &mut output,
-                    &Context {
-                        errors: &mut errors,
-                        namespace: &mut Namespace::new(),
-                    },
-                );
-
-                output
-            }
-
-            Err(err) => err.to_compile_error(),
+        let mut ctx = Context {
+            interner: DefaultStringInterner::new(),
+            errors: vec![],
         };
 
-        let errors_output = errors.iter().map(|err| err.to_compile_error());
+        let tokens = Tokens::ctx_parse.ctx_parse2(input.into(), &mut ctx);
+        let result = 'result: {
+            Ok(match tokens {
+                Ok(tokens) => {
+                    if !ctx.errors.is_empty() {
+                        break 'result Err(ctx.errors);
+                    }
 
-        quote! {
-            #tokens_output
-            #(#errors_output)*
+                    let mut output = TokenStream::new();
+
+                    match tokens.paste(&mut output, &mut ctx, &mut Namespace::new()) {
+                        Ok(()) => output,
+                        Err(err) => break 'result Err(vec![err]),
+                    }
+                }
+                Err(err) => break 'result Err(ctx.errors.into_iter().chain([err]).collect()),
+            })
+        };
+
+        match result {
+            Ok(output) => output,
+            Err(errors) => {
+                let errors_output = errors.iter().map(|err| err.to_compile_error());
+                quote! {
+                    #(#errors_output)*
+                }
+            }
         }
         .into()
     }

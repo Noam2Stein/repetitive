@@ -1,0 +1,119 @@
+use proc_macro2::{Span, TokenStream};
+use quote::ToTokens;
+use syn::{Error, Ident, Lifetime, LitBool, LitChar, LitFloat, LitInt, LitStr, parse::ParseStream};
+
+use super::*;
+
+#[derive(Debug, Clone)]
+pub enum FragmentValue {
+    Int(i128),
+    Float(f64),
+    Bool(bool),
+    String(String),
+    Char(char),
+    Ident(String),
+    List(Vec<FragmentValue>),
+    Tokens(Tokens),
+}
+
+#[derive(Debug, Clone)]
+pub struct FragmentValueExpr {
+    pub span: Span,
+    pub value: FragmentValue,
+}
+
+impl FragmentValueExpr {
+    pub fn option_lit(input: ParseStream) -> Option<Self> {
+        if input.peek(LitInt) {
+            return Some(Self::int_lit(input.parse().unwrap()));
+        }
+        if input.peek(LitFloat) {
+            return Some(Self::float_lit(input.parse().unwrap()));
+        }
+        if input.peek(LitBool) {
+            return Some(Self::bool_lit(input.parse().unwrap()));
+        }
+        if input.peek(LitChar) {
+            return Some(Self::char_lit(input.parse().unwrap()));
+        }
+        if input.peek(LitStr) {
+            return Some(Self::str_lit(input.parse().unwrap()));
+        }
+        if input.peek(Lifetime) {
+            return Some(Self::ident_lit(input.parse().unwrap()));
+        }
+
+        None
+    }
+    pub fn int_lit(lit: LitInt) -> Self {
+        Self {
+            span: lit.span(),
+            value: FragmentValue::Int(lit.base10_digits().parse().unwrap()),
+        }
+    }
+    pub fn float_lit(lit: LitFloat) -> Self {
+        Self {
+            span: lit.span(),
+            value: FragmentValue::Float(lit.base10_digits().parse().unwrap()),
+        }
+    }
+    pub fn bool_lit(lit: LitBool) -> Self {
+        Self {
+            span: lit.span(),
+            value: FragmentValue::Bool(lit.value),
+        }
+    }
+    pub fn char_lit(lit: LitChar) -> Self {
+        Self {
+            span: lit.span(),
+            value: FragmentValue::Char(lit.value()),
+        }
+    }
+    pub fn str_lit(lit: LitStr) -> Self {
+        Self {
+            span: lit.span(),
+            value: FragmentValue::String(lit.value()),
+        }
+    }
+    pub fn ident_lit(lit: Lifetime) -> Self {
+        Self {
+            span: lit.span(),
+            value: FragmentValue::Ident(lit.ident.to_string()),
+        }
+    }
+
+    pub fn into_expr(self) -> FragmentExpr {
+        FragmentExpr {
+            span: self.span,
+            kind: FragmentExprKind::Value(self.value),
+        }
+    }
+}
+
+impl Paste for FragmentValueExpr {
+    fn paste(
+        &self,
+        output: &mut TokenStream,
+        ctx: &mut Context,
+        namespace: &mut Namespace,
+    ) -> syn::Result<()> {
+        Ok(match &self.value {
+            FragmentValue::Int(val) => {
+                LitInt::new(val.to_string().as_str(), self.span).to_tokens(output)
+            }
+            FragmentValue::Float(val) => {
+                LitFloat::new(val.to_string().as_str(), self.span).to_tokens(output)
+            }
+            FragmentValue::Bool(val) => LitBool::new(*val, self.span).to_tokens(output),
+            FragmentValue::String(val) => LitStr::new(val, self.span).to_tokens(output),
+            FragmentValue::Char(val) => LitChar::new(*val, self.span).to_tokens(output),
+            FragmentValue::Ident(val) => Ident::new(val, self.span).to_tokens(output),
+
+            FragmentValue::Tokens(val) => val.paste(output, ctx, namespace)?,
+
+            FragmentValue::List(_) => ctx
+                .errors
+                .push(Error::new(self.span, "cannot paste `list`")),
+        })
+    }
+}

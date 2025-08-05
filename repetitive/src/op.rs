@@ -1,777 +1,695 @@
 use proc_macro2::Span;
-use syn::Error;
+use syn::{Error, Ident, Token, parse::ParseStream, spanned::Spanned};
 
 use super::*;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy)]
 pub enum Op {
-    For,
-    If,
-    IfElse,
-    Let,
+    IfElse(Span),
 
-    Neg,
-    Not,
+    Neg(Span),
+    Not(Span),
 
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Rem,
-    BitAnd,
-    BitOr,
-    BitXor,
-    Shl,
-    Shr,
+    Add(Span),
+    Sub(Span),
+    Mul(Span),
+    Div(Span),
+    Rem(Span),
+    BitAnd(Span),
+    BitOr(Span),
+    BitXor(Span),
+    Shl(Span),
+    Shr(Span),
 
-    Eq,
-    Ne,
-    Lt,
-    Gt,
-    Le,
-    Ge,
+    Eq(Span),
+    Ne(Span),
+    Lt(Span),
+    Gt(Span),
+    Le(Span),
+    Ge(Span),
 
-    And,
-    Or,
+    And(Span),
+    Or(Span),
     #[allow(dead_code)]
-    Xor,
+    Xor(Span),
 
-    Range,
-    RangeInclusive,
+    Range(Span),
+    RangeInclusive(Span),
 
-    Len,
-    Index,
-    Enumerate,
-    Zip,
-    Chain,
+    Len(Span),
+    Index(Span),
+    Enumerate(Span),
+    Zip(Span),
+    Chain(Span),
+
+    ConcatIdent(Span),
+    ConcatString(Span),
 }
 
 impl Op {
-    pub fn compute(
-        self,
-        span: Span,
-        args: &[FragmentValue],
-        ctx: &mut Context,
-    ) -> Result<FragmentValue, Error> {
+    pub fn span(&self) -> Span {
+        match self {
+            Self::IfElse(span) => *span,
+            Self::Neg(span) => *span,
+            Self::Not(span) => *span,
+            Self::Add(span) => *span,
+            Self::Sub(span) => *span,
+            Self::Mul(span) => *span,
+            Self::Div(span) => *span,
+            Self::Rem(span) => *span,
+            Self::BitAnd(span) => *span,
+            Self::BitOr(span) => *span,
+            Self::BitXor(span) => *span,
+            Self::Shl(span) => *span,
+            Self::Shr(span) => *span,
+            Self::Eq(span) => *span,
+            Self::Ne(span) => *span,
+            Self::Lt(span) => *span,
+            Self::Gt(span) => *span,
+            Self::Le(span) => *span,
+            Self::Ge(span) => *span,
+            Self::And(span) => *span,
+            Self::Or(span) => *span,
+            Self::Xor(span) => *span,
+            Self::Range(span) => *span,
+            Self::RangeInclusive(span) => *span,
+            Self::Len(span) => *span,
+            Self::Index(span) => *span,
+            Self::Enumerate(span) => *span,
+            Self::Zip(span) => *span,
+            Self::Chain(span) => *span,
+            Self::ConcatIdent(span) => *span,
+            Self::ConcatString(span) => *span,
+        }
+    }
+}
+
+impl Op {
+    pub fn parse_option_un(input: ParseStream) -> Option<Self> {
+        if let Some(tok) = input.parse::<Option<Token![!]>>().unwrap() {
+            Some(Op::Not(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![-]>>().unwrap() {
+            Some(Op::Neg(tok.span()))
+        } else {
+            None
+        }
+    }
+
+    pub fn parse_option_bin(input: ParseStream) -> Option<Self> {
+        if let Some(tok) = input.parse::<Option<Token![+]>>().unwrap() {
+            Some(Op::Add(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![-]>>().unwrap() {
+            Some(Op::Sub(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![*]>>().unwrap() {
+            Some(Op::Mul(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![/]>>().unwrap() {
+            Some(Op::Div(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![%]>>().unwrap() {
+            Some(Op::Rem(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![|]>>().unwrap() {
+            Some(Op::BitOr(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![^]>>().unwrap() {
+            Some(Op::BitXor(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![&]>>().unwrap() {
+            Some(Op::BitAnd(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![==]>>().unwrap() {
+            Some(Op::Eq(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![!=]>>().unwrap() {
+            Some(Op::Ne(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![<]>>().unwrap() {
+            Some(Op::Lt(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![>]>>().unwrap() {
+            Some(Op::Gt(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![<=]>>().unwrap() {
+            Some(Op::Le(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![>=]>>().unwrap() {
+            Some(Op::Ge(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![..=]>>().unwrap() {
+            Some(Op::RangeInclusive(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![..]>>().unwrap() {
+            Some(Op::Range(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![||]>>().unwrap() {
+            Some(Op::Or(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![&&]>>().unwrap() {
+            Some(Op::And(tok.span()))
+        } else {
+            None
+        }
+    }
+
+    pub fn parse_method(ident: Ident) -> syn::Result<Self> {
+        let variant_fn = match ident.to_string().as_str() {
+            "not" => Op::Not,
+            "neg" => Op::Neg,
+
+            "add" => Op::Add,
+            "sub" => Op::Sub,
+            "mul" => Op::Mul,
+            "div" => Op::Div,
+            "rem" => Op::Rem,
+            "bitand" => Op::BitAnd,
+            "bitor" => Op::BitOr,
+            "bitxor" => Op::BitXor,
+            "shl" => Op::Shl,
+            "shr" => Op::Shr,
+
+            "eq" => Op::Eq,
+            "ne" => Op::Ne,
+            "lt" => Op::Lt,
+            "gt" => Op::Gt,
+            "le" => Op::Le,
+            "ge" => Op::Ge,
+
+            "len" => Op::Len,
+            "index" => Op::Index,
+            "enumerate" => Op::Enumerate,
+            "zip" => Op::Zip,
+            "chain" => Op::Chain,
+
+            "concat_ident" => Op::ConcatIdent,
+            "concat_string" => Op::ConcatString,
+
+            _ => {
+                return Err(syn::Error::new(
+                    ident.span(),
+                    format!("method `{}` not found", ident.to_string()),
+                ));
+            }
+        };
+
+        Ok(variant_fn(ident.span()))
+    }
+
+    pub fn compute(self, args: &[FragmentValue], ctx: &mut Context) -> syn::Result<FragmentValue> {
         Ok(match self {
-            Self::For => {
-                let [iter, body] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+            Self::IfElse(span) => {
+                let [cond, then, otherwise] = args else {
+                    return Err(Error::new(span, "expected three arguments"));
                 };
 
-                let iter = match iter {
-                    FragmentValue::List(list) => list,
-                    _ => unreachable!(),
-                };
-                let body = match body {
-                    FragmentValue::Tokens(tokens) => tokens,
+                let cond = match cond {
+                    FragmentValue::Bool(cond) => cond,
                     _ => unreachable!(),
                 };
 
-                let mut tokens = Tokens::default();
-                for item in iter {
-                    body.paste(&mut tokens, ctx);
+                if *cond {
+                    then.clone()
+                } else {
+                    otherwise.clone()
                 }
-
-                FragmentValue::Tokens(tokens)
             }
 
-            Self::Neg => {
+            Self::Neg(span) => {
                 let [arg] = args else {
                     return Err(Error::new(span, "expected a single argument"));
                 };
 
                 match arg {
-                    FragmentBody::Lit(FragmentValue::Int(val)) => {
-                        FragmentBody::Lit(FragmentValue::Int(-val))
-                    }
-                    FragmentBody::Lit(FragmentValue::Float(val)) => {
-                        FragmentBody::Lit(FragmentValue::Float(-val))
-                    }
+                    FragmentValue::Int(val) => FragmentValue::Int(-val),
+                    FragmentValue::Float(val) => FragmentValue::Float(-val),
 
-                    FragmentBody::Lit(FragmentValue::Bool(_)) => {
+                    FragmentValue::Bool(_) => {
                         return Err(Error::new(span, "cannot negate `bool`"));
                     }
-                    FragmentBody::Lit(FragmentValue::Ident(_)) => {
+                    FragmentValue::Ident(_) => {
                         return Err(Error::new(span, "cannot negate `ident`"));
                     }
-                    FragmentBody::Lit(FragmentValue::String(_)) => {
+                    FragmentValue::String(_) => {
                         return Err(Error::new(span, "cannot negate `string`"));
                     }
-                    FragmentBody::Lit(FragmentValue::Char(_)) => {
+                    FragmentValue::Char(_) => {
                         return Err(Error::new(span, "cannot negate `char`"));
                     }
-                    FragmentBody::List(_) => {
+                    FragmentValue::List(_) => {
                         return Err(Error::new(span, "cannot negate `list`"));
                     }
-                    FragmentBody::Tokens(_) => {
+                    FragmentValue::Tokens(_) => {
                         return Err(Error::new(span, "cannot negate `tokens`"));
                     }
-
-                    FragmentBody::Name(_) => unreachable!(),
-                    FragmentBody::Op(_) => unreachable!(),
                 }
             }
 
-            Self::Not => {
+            Self::Not(span) => {
                 let [arg] = args else {
                     return Err(Error::new(span, "expected a single argument"));
                 };
 
                 match arg {
-                    FragmentBody::Lit(FragmentValue::Bool(val)) => {
-                        FragmentBody::Lit(FragmentValue::Bool(!val))
-                    }
+                    FragmentValue::Bool(val) => FragmentValue::Bool(!val),
 
-                    FragmentBody::Lit(FragmentValue::Int(_)) => {
+                    FragmentValue::Int(_) => {
                         return Err(Error::new(span, "cannot not `int`"));
                     }
-                    FragmentBody::Lit(FragmentValue::Float(_)) => {
+                    FragmentValue::Float(_) => {
                         return Err(Error::new(span, "cannot not `float`"));
                     }
-                    FragmentBody::Lit(FragmentValue::Ident(_)) => {
+                    FragmentValue::Ident(_) => {
                         return Err(Error::new(span, "cannot not `ident`"));
                     }
-                    FragmentBody::Lit(FragmentValue::String(_)) => {
+                    FragmentValue::String(_) => {
                         return Err(Error::new(span, "cannot not `string`"));
                     }
-                    FragmentBody::Lit(FragmentValue::Char(_)) => {
+                    FragmentValue::Char(_) => {
                         return Err(Error::new(span, "cannot not `char`"));
                     }
-                    FragmentBody::List(_) => {
+                    FragmentValue::List(_) => {
                         return Err(Error::new(span, "cannot not `list`"));
                     }
-                    FragmentBody::Tokens(_) => {
+                    FragmentValue::Tokens(_) => {
                         return Err(Error::new(span, "cannot not `tokens`"));
                     }
-
-                    FragmentBody::Name(_) => unreachable!(),
-                    FragmentBody::Op(_) => unreachable!(),
                 }
             }
 
-            Self::Add => {
+            Self::Add(span) => {
                 let [lhs, rhs] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (lhs, rhs) {
-                    (
-                        FragmentBody::Lit(FragmentValue::Int(lhs)),
-                        FragmentBody::Lit(FragmentValue::Int(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Int(lhs + rhs)),
+                    (FragmentValue::Int(lhs), _) => match rhs {
+                        FragmentValue::Int(rhs) => FragmentValue::Int(lhs + rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `int`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Int(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `int`"));
-                    }
+                    (FragmentValue::Float(lhs), _) => match rhs {
+                        FragmentValue::Float(rhs) => FragmentValue::Float(lhs + rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `float`")),
+                    },
 
-                    (
-                        FragmentBody::Lit(FragmentValue::Float(lhs)),
-                        FragmentBody::Lit(FragmentValue::Float(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Float(lhs + rhs)),
+                    (FragmentValue::String(lhs), _) => match rhs {
+                        FragmentValue::String(rhs) => FragmentValue::String(format!("{lhs}{rhs}")),
+                        FragmentValue::Ident(rhs) => FragmentValue::String(format!("{lhs}{rhs}")),
+                        FragmentValue::Char(rhs) => FragmentValue::String(format!("{lhs}{rhs}")),
+                        _ => return Err(Error::new(span, "expected rhs to be `string`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Float(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `float`"));
-                    }
+                    (FragmentValue::Ident(lhs), _) => match rhs {
+                        FragmentValue::Ident(rhs) => FragmentValue::Ident(format!("{lhs}{rhs}")),
+                        FragmentValue::String(rhs) => FragmentValue::Ident(format!("{lhs}{rhs}")),
+                        FragmentValue::Char(rhs) => FragmentValue::Ident(format!("{lhs}{rhs}")),
+                        _ => return Err(Error::new(span, "expected rhs to be `ident`")),
+                    },
 
-                    (
-                        FragmentBody::Lit(FragmentValue::String(lhs)),
-                        FragmentBody::Lit(FragmentValue::String(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::String(format!("{lhs}{rhs}"))),
-
-                    (
-                        FragmentBody::Lit(FragmentValue::String(lhs)),
-                        FragmentBody::Lit(FragmentValue::Ident(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::String(format!("{lhs}{rhs}"))),
-
-                    (
-                        FragmentBody::Lit(FragmentValue::String(lhs)),
-                        FragmentBody::Lit(FragmentValue::Char(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::String(format!("{lhs}{rhs}"))),
-
-                    (FragmentBody::Lit(FragmentValue::String(_)), _) => {
-                        return Err(Error::new(
-                            span,
-                            "expected rhs to be `string`, `ident` or `char`",
-                        ));
-                    }
-
-                    (
-                        FragmentBody::Lit(FragmentValue::Ident(lhs)),
-                        FragmentBody::Lit(FragmentValue::Ident(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Ident(format!("{lhs}{rhs}"))),
-
-                    (
-                        FragmentBody::Lit(FragmentValue::Ident(lhs)),
-                        FragmentBody::Lit(FragmentValue::String(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Ident(format!("{lhs}{rhs}"))),
-
-                    (
-                        FragmentBody::Lit(FragmentValue::Ident(lhs)),
-                        FragmentBody::Lit(FragmentValue::Char(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Ident(format!("{lhs}{rhs}"))),
-
-                    (FragmentBody::Lit(FragmentValue::Ident(_)), _) => {
-                        return Err(Error::new(
-                            span,
-                            "expected rhs to be `ident`, `string` or `char`",
-                        ));
-                    }
-
-                    (FragmentBody::Lit(FragmentValue::Bool(_)), _) => {
+                    (FragmentValue::Bool(_), _) => {
                         return Err(Error::new(span, "cannot add to `bool`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Char(_)), _) => {
+                    (FragmentValue::Char(_), _) => {
                         return Err(Error::new(span, "cannot add to `char`"));
                     }
-                    (FragmentBody::List(_), _) => {
+                    (FragmentValue::List(_), _) => {
                         return Err(Error::new(span, "cannot add to `list`"));
                     }
-                    (FragmentBody::Tokens(_), _) => {
+                    (FragmentValue::Tokens(_), _) => {
                         return Err(Error::new(span, "cannot add to `tokens`"));
                     }
-
-                    (FragmentBody::Name(_), _) => unreachable!(),
-                    (_, FragmentBody::Name(_)) => unreachable!(),
-                    (_, FragmentBody::Op(_)) => unreachable!(),
-                    (FragmentBody::Op(_), _) => unreachable!(),
                 }
             }
 
-            Self::Sub => {
+            Self::Sub(span) => {
                 let [lhs, rhs] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (lhs, rhs) {
-                    (
-                        FragmentBody::Lit(FragmentValue::Int(lhs)),
-                        FragmentBody::Lit(FragmentValue::Int(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Int(lhs - rhs)),
+                    (FragmentValue::Int(lhs), _) => match rhs {
+                        FragmentValue::Int(rhs) => FragmentValue::Int(lhs - rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `int`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Int(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `int`"));
-                    }
+                    (FragmentValue::Float(lhs), _) => match rhs {
+                        FragmentValue::Float(rhs) => FragmentValue::Float(lhs - rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `float`")),
+                    },
 
-                    (
-                        FragmentBody::Lit(FragmentValue::Float(lhs)),
-                        FragmentBody::Lit(FragmentValue::Float(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Float(lhs - rhs)),
-
-                    (FragmentBody::Lit(FragmentValue::Float(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `float`"));
-                    }
-
-                    (FragmentBody::Lit(FragmentValue::String(_)), _) => {
+                    (FragmentValue::String(_), _) => {
                         return Err(Error::new(span, "cannot subtract from `string`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Ident(_)), _) => {
+                    (FragmentValue::Ident(_), _) => {
                         return Err(Error::new(span, "cannot subtract from `ident`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Char(_)), _) => {
+                    (FragmentValue::Char(_), _) => {
                         return Err(Error::new(span, "cannot subtract from `char`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Bool(_)), _) => {
+                    (FragmentValue::Bool(_), _) => {
                         return Err(Error::new(span, "cannot subtract from `bool`"));
                     }
-                    (FragmentBody::List(_), _) => {
+                    (FragmentValue::List(_), _) => {
                         return Err(Error::new(span, "cannot subtract from `list`"));
                     }
-                    (FragmentBody::Tokens(_), _) => {
+                    (FragmentValue::Tokens(_), _) => {
                         return Err(Error::new(span, "cannot subtract from `tokens`"));
                     }
-
-                    (FragmentBody::Name(_), _) => unreachable!(),
-                    (_, FragmentBody::Name(_)) => unreachable!(),
-                    (_, FragmentBody::Op(_)) => unreachable!(),
-                    (FragmentBody::Op(_), _) => unreachable!(),
                 }
             }
 
-            Self::Mul => {
+            Self::Mul(span) => {
                 let [lhs, rhs] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (lhs, rhs) {
-                    (
-                        FragmentBody::Lit(FragmentValue::Int(lhs)),
-                        FragmentBody::Lit(FragmentValue::Int(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Int(lhs * rhs)),
+                    (FragmentValue::Int(lhs), _) => match rhs {
+                        FragmentValue::Int(rhs) => FragmentValue::Int(lhs * rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `int`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Int(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `int`"));
-                    }
+                    (FragmentValue::Float(lhs), _) => match rhs {
+                        FragmentValue::Float(rhs) => FragmentValue::Float(lhs * rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `float`")),
+                    },
 
-                    (
-                        FragmentBody::Lit(FragmentValue::Float(lhs)),
-                        FragmentBody::Lit(FragmentValue::Float(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Float(lhs * rhs)),
+                    (FragmentValue::String(lhs), _) => match rhs {
+                        FragmentValue::Int(rhs) => FragmentValue::String(lhs.repeat(*rhs as usize)),
+                        _ => return Err(Error::new(span, "expected rhs to be `int`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Float(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `float`"));
-                    }
+                    (FragmentValue::Ident(lhs), _) => match rhs {
+                        FragmentValue::Int(rhs) => FragmentValue::Ident(lhs.repeat(*rhs as usize)),
+                        _ => return Err(Error::new(span, "expected rhs to be `int`")),
+                    },
 
-                    (
-                        FragmentBody::Lit(FragmentValue::String(lhs)),
-                        FragmentBody::Lit(FragmentValue::Int(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::String(lhs.repeat(*rhs as usize))),
+                    (FragmentValue::Char(lhs), _) => match rhs {
+                        FragmentValue::Int(rhs) => {
+                            FragmentValue::String(lhs.to_string().repeat(*rhs as usize))
+                        }
+                        _ => return Err(Error::new(span, "expected rhs to be `int`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::String(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `int`"));
-                    }
-
-                    (
-                        FragmentBody::Lit(FragmentValue::Ident(lhs)),
-                        FragmentBody::Lit(FragmentValue::Int(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Ident(lhs.repeat(*rhs as usize))),
-
-                    (FragmentBody::Lit(FragmentValue::Ident(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `int`"));
-                    }
-
-                    (
-                        FragmentBody::Lit(FragmentValue::Char(lhs)),
-                        FragmentBody::Lit(FragmentValue::Int(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::String(
-                        lhs.to_string().repeat(*rhs as usize),
-                    )),
-
-                    (FragmentBody::Lit(FragmentValue::Char(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `int`"));
-                    }
-
-                    (FragmentBody::Lit(FragmentValue::Bool(_)), _) => {
+                    (FragmentValue::Bool(_), _) => {
                         return Err(Error::new(span, "cannot multiply `bool`"));
                     }
-                    (FragmentBody::List(_), _) => {
+                    (FragmentValue::List(_), _) => {
                         return Err(Error::new(span, "cannot multiply `list`"));
                     }
-                    (FragmentBody::Tokens(_), _) => {
+                    (FragmentValue::Tokens(_), _) => {
                         return Err(Error::new(span, "cannot multiply `tokens`"));
                     }
-
-                    (FragmentBody::Name(_), _) => unreachable!(),
-                    (_, FragmentBody::Name(_)) => unreachable!(),
-                    (_, FragmentBody::Op(_)) => unreachable!(),
-                    (FragmentBody::Op(_), _) => unreachable!(),
                 }
             }
 
-            Self::Div => {
+            Self::Div(span) => {
                 let [lhs, rhs] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (lhs, rhs) {
-                    (
-                        FragmentBody::Lit(FragmentValue::Int(lhs)),
-                        FragmentBody::Lit(FragmentValue::Int(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Int(lhs / rhs)),
+                    (FragmentValue::Int(lhs), _) => match rhs {
+                        FragmentValue::Int(rhs) => FragmentValue::Int(lhs / rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `int`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Int(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `int`"));
-                    }
+                    (FragmentValue::Float(lhs), _) => match rhs {
+                        FragmentValue::Float(rhs) => FragmentValue::Float(lhs / rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `float`")),
+                    },
 
-                    (
-                        FragmentBody::Lit(FragmentValue::Float(lhs)),
-                        FragmentBody::Lit(FragmentValue::Float(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Float(lhs / rhs)),
-
-                    (FragmentBody::Lit(FragmentValue::Float(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `float`"));
-                    }
-
-                    (FragmentBody::Lit(FragmentValue::String(_)), _) => {
+                    (FragmentValue::String(_), _) => {
                         return Err(Error::new(span, "cannot divide `string`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Ident(_)), _) => {
+                    (FragmentValue::Ident(_), _) => {
                         return Err(Error::new(span, "cannot divide `ident`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Char(_)), _) => {
+                    (FragmentValue::Char(_), _) => {
                         return Err(Error::new(span, "cannot divide `char`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Bool(_)), _) => {
+                    (FragmentValue::Bool(_), _) => {
                         return Err(Error::new(span, "cannot divide `bool`"));
                     }
-                    (FragmentBody::List(_), _) => {
+                    (FragmentValue::List(_), _) => {
                         return Err(Error::new(span, "cannot divide `list`"));
                     }
-                    (FragmentBody::Tokens(_), _) => {
+                    (FragmentValue::Tokens(_), _) => {
                         return Err(Error::new(span, "cannot divide `tokens`"));
                     }
-
-                    (FragmentBody::Name(_), _) => unreachable!(),
-                    (_, FragmentBody::Name(_)) => unreachable!(),
-                    (_, FragmentBody::Op(_)) => unreachable!(),
-                    (FragmentBody::Op(_), _) => unreachable!(),
                 }
             }
 
-            Self::Rem => {
+            Self::Rem(span) => {
                 let [lhs, rhs] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (lhs, rhs) {
-                    (
-                        FragmentBody::Lit(FragmentValue::Int(lhs)),
-                        FragmentBody::Lit(FragmentValue::Int(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Int(lhs % rhs)),
+                    (FragmentValue::Int(lhs), _) => match rhs {
+                        FragmentValue::Int(rhs) => FragmentValue::Int(lhs % rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `int`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Int(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `int`"));
-                    }
+                    (FragmentValue::Float(lhs), _) => match rhs {
+                        FragmentValue::Float(rhs) => FragmentValue::Float(lhs % rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `float`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Float(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `float`"));
-                    }
-
-                    (FragmentBody::Lit(FragmentValue::String(_)), _) => {
+                    (FragmentValue::String(_), _) => {
                         return Err(Error::new(span, "cannot divide `string`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Ident(_)), _) => {
+                    (FragmentValue::Ident(_), _) => {
                         return Err(Error::new(span, "cannot divide `ident`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Char(_)), _) => {
+                    (FragmentValue::Char(_), _) => {
                         return Err(Error::new(span, "cannot divide `char`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Bool(_)), _) => {
+                    (FragmentValue::Bool(_), _) => {
                         return Err(Error::new(span, "cannot divide `bool`"));
                     }
-                    (FragmentBody::List(_), _) => {
+                    (FragmentValue::List(_), _) => {
                         return Err(Error::new(span, "cannot divide `list`"));
                     }
-                    (FragmentBody::Tokens(_), _) => {
+                    (FragmentValue::Tokens(_), _) => {
                         return Err(Error::new(span, "cannot divide `tokens`"));
                     }
-
-                    (FragmentBody::Name(_), _) => unreachable!(),
-                    (_, FragmentBody::Name(_)) => unreachable!(),
-                    (_, FragmentBody::Op(_)) => unreachable!(),
-                    (FragmentBody::Op(_), _) => unreachable!(),
                 }
             }
 
-            Self::BitAnd => {
+            Self::BitAnd(span) => {
                 let [lhs, rhs] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (lhs, rhs) {
-                    (
-                        FragmentBody::Lit(FragmentValue::Int(lhs)),
-                        FragmentBody::Lit(FragmentValue::Int(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Int(lhs & rhs)),
+                    (FragmentValue::Int(lhs), _) => match rhs {
+                        FragmentValue::Int(rhs) => FragmentValue::Int(lhs & rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `int`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Int(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `int`"));
-                    }
+                    (FragmentValue::Bool(lhs), _) => match rhs {
+                        FragmentValue::Bool(rhs) => FragmentValue::Bool(lhs & rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `bool`")),
+                    },
 
-                    (
-                        FragmentBody::Lit(FragmentValue::Bool(lhs)),
-                        FragmentBody::Lit(FragmentValue::Bool(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs & rhs)),
-
-                    (FragmentBody::Lit(FragmentValue::Bool(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `bool`"));
-                    }
-
-                    (FragmentBody::Lit(FragmentValue::Float(_)), _) => {
+                    (FragmentValue::Float(_), _) => {
                         return Err(Error::new(span, "cannot bitwise-and `float`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::String(_)), _) => {
+                    (FragmentValue::String(_), _) => {
                         return Err(Error::new(span, "cannot divide `string`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Ident(_)), _) => {
+                    (FragmentValue::Ident(_), _) => {
                         return Err(Error::new(span, "cannot bitwise-and `ident`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Char(_)), _) => {
+                    (FragmentValue::Char(_), _) => {
                         return Err(Error::new(span, "cannot bitwise-and `char`"));
                     }
-                    (FragmentBody::List(_), _) => {
+                    (FragmentValue::List(_), _) => {
                         return Err(Error::new(span, "cannot bitwise-and `list`"));
                     }
-                    (FragmentBody::Tokens(_), _) => {
+                    (FragmentValue::Tokens(_), _) => {
                         return Err(Error::new(span, "cannot bitwise-and `tokens`"));
                     }
-
-                    (FragmentBody::Name(_), _) => unreachable!(),
-                    (_, FragmentBody::Name(_)) => unreachable!(),
-                    (_, FragmentBody::Op(_)) => unreachable!(),
-                    (FragmentBody::Op(_), _) => unreachable!(),
                 }
             }
 
-            Self::BitOr => {
+            Self::BitOr(span) => {
                 let [lhs, rhs] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (lhs, rhs) {
-                    (
-                        FragmentBody::Lit(FragmentValue::Int(lhs)),
-                        FragmentBody::Lit(FragmentValue::Int(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Int(lhs | rhs)),
+                    (FragmentValue::Int(lhs), _) => match rhs {
+                        FragmentValue::Int(rhs) => FragmentValue::Int(lhs | rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `int`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Int(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `int`"));
-                    }
+                    (FragmentValue::Bool(lhs), _) => match rhs {
+                        FragmentValue::Bool(rhs) => FragmentValue::Bool(lhs | rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `bool`")),
+                    },
 
-                    (
-                        FragmentBody::Lit(FragmentValue::Bool(lhs)),
-                        FragmentBody::Lit(FragmentValue::Bool(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs | rhs)),
-
-                    (FragmentBody::Lit(FragmentValue::Bool(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `bool`"));
-                    }
-
-                    (FragmentBody::Lit(FragmentValue::String(_)), _) => {
+                    (FragmentValue::String(_), _) => {
                         return Err(Error::new(span, "cannot bitwise-or `string`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Float(_)), _) => {
+                    (FragmentValue::Float(_), _) => {
                         return Err(Error::new(span, "cannot bitwise-and `float`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Ident(_)), _) => {
+                    (FragmentValue::Ident(_), _) => {
                         return Err(Error::new(span, "cannot bitwise-or `ident`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Char(_)), _) => {
+                    (FragmentValue::Char(_), _) => {
                         return Err(Error::new(span, "cannot bitwise-or `char`"));
                     }
-                    (FragmentBody::List(_), _) => {
+                    (FragmentValue::List(_), _) => {
                         return Err(Error::new(span, "cannot bitwise-or `list`"));
                     }
-                    (FragmentBody::Tokens(_), _) => {
+                    (FragmentValue::Tokens(_), _) => {
                         return Err(Error::new(span, "cannot bitwise-or `tokens`"));
                     }
-
-                    (FragmentBody::Name(_), _) => unreachable!(),
-                    (_, FragmentBody::Name(_)) => unreachable!(),
-                    (_, FragmentBody::Op(_)) => unreachable!(),
-                    (FragmentBody::Op(_), _) => unreachable!(),
                 }
             }
 
-            Self::BitXor => {
+            Self::BitXor(span) => {
                 let [lhs, rhs] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (lhs, rhs) {
-                    (
-                        FragmentBody::Lit(FragmentValue::Int(lhs)),
-                        FragmentBody::Lit(FragmentValue::Int(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Int(lhs ^ rhs)),
+                    (FragmentValue::Int(lhs), _) => match rhs {
+                        FragmentValue::Int(rhs) => FragmentValue::Int(lhs ^ rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `int`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Int(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `int`"));
-                    }
+                    (FragmentValue::Bool(lhs), _) => match rhs {
+                        FragmentValue::Bool(rhs) => FragmentValue::Bool(lhs ^ rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `bool`")),
+                    },
 
-                    (
-                        FragmentBody::Lit(FragmentValue::Bool(lhs)),
-                        FragmentBody::Lit(FragmentValue::Bool(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs ^ rhs)),
-
-                    (FragmentBody::Lit(FragmentValue::Bool(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `bool`"));
-                    }
-
-                    (FragmentBody::Lit(FragmentValue::Float(_)), _) => {
+                    (FragmentValue::Float(_), _) => {
                         return Err(Error::new(span, "cannot bitwise-xor `float`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::String(_)), _) => {
+                    (FragmentValue::String(_), _) => {
                         return Err(Error::new(span, "cannot bitwise-xor `string`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Ident(_)), _) => {
+                    (FragmentValue::Ident(_), _) => {
                         return Err(Error::new(span, "cannot bitwise-xor `ident`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Char(_)), _) => {
+                    (FragmentValue::Char(_), _) => {
                         return Err(Error::new(span, "cannot bitwise-xor `char`"));
                     }
-                    (FragmentBody::List(_), _) => {
+                    (FragmentValue::List(_), _) => {
                         return Err(Error::new(span, "cannot bitwise-xor `list`"));
                     }
-                    (FragmentBody::Tokens(_), _) => {
+                    (FragmentValue::Tokens(_), _) => {
                         return Err(Error::new(span, "cannot bitwise-xor `tokens`"));
                     }
-
-                    (FragmentBody::Name(_), _) => unreachable!(),
-                    (_, FragmentBody::Name(_)) => unreachable!(),
-                    (_, FragmentBody::Op(_)) => unreachable!(),
-                    (FragmentBody::Op(_), _) => unreachable!(),
                 }
             }
 
-            Self::Shl => {
+            Self::Shl(span) => {
                 let [lhs, rhs] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (lhs, rhs) {
-                    (
-                        FragmentBody::Lit(FragmentValue::Int(lhs)),
-                        FragmentBody::Lit(FragmentValue::Int(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Int(lhs << rhs)),
+                    (FragmentValue::Int(lhs), _) => match rhs {
+                        FragmentValue::Int(rhs) => FragmentValue::Int(lhs << rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `int`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Int(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `int`"));
-                    }
-
-                    (FragmentBody::Lit(FragmentValue::Float(_)), _) => {
+                    (FragmentValue::Float(_), _) => {
                         return Err(Error::new(span, "cannot shift-left `float`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::String(_)), _) => {
+                    (FragmentValue::String(_), _) => {
                         return Err(Error::new(span, "cannot shift-left `string`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Ident(_)), _) => {
+                    (FragmentValue::Ident(_), _) => {
                         return Err(Error::new(span, "cannot shift-left `ident`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Char(_)), _) => {
+                    (FragmentValue::Char(_), _) => {
                         return Err(Error::new(span, "cannot shift-left `char`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Bool(_)), _) => {
+                    (FragmentValue::Bool(_), _) => {
                         return Err(Error::new(span, "cannot shift-left `bool`"));
                     }
-                    (FragmentBody::List(_), _) => {
+                    (FragmentValue::List(_), _) => {
                         return Err(Error::new(span, "cannot shift-left `list`"));
                     }
-                    (FragmentBody::Tokens(_), _) => {
+                    (FragmentValue::Tokens(_), _) => {
                         return Err(Error::new(span, "cannot shift-left `tokens`"));
                     }
-
-                    (FragmentBody::Name(_), _) => unreachable!(),
-                    (_, FragmentBody::Name(_)) => unreachable!(),
-                    (_, FragmentBody::Op(_)) => unreachable!(),
-                    (FragmentBody::Op(_), _) => unreachable!(),
                 }
             }
 
-            Self::Shr => {
+            Self::Shr(span) => {
                 let [lhs, rhs] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (lhs, rhs) {
-                    (
-                        FragmentBody::Lit(FragmentValue::Int(lhs)),
-                        FragmentBody::Lit(FragmentValue::Int(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Int(lhs >> rhs)),
+                    (FragmentValue::Int(lhs), _) => match rhs {
+                        FragmentValue::Int(rhs) => FragmentValue::Int(lhs >> rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `int`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Int(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `int`"));
-                    }
-
-                    (FragmentBody::Lit(FragmentValue::Float(_)), _) => {
+                    (FragmentValue::Float(_), _) => {
                         return Err(Error::new(span, "cannot shift-right `float`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::String(_)), _) => {
+                    (FragmentValue::String(_), _) => {
                         return Err(Error::new(span, "cannot shift-right `string`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Ident(_)), _) => {
+                    (FragmentValue::Ident(_), _) => {
                         return Err(Error::new(span, "cannot shift-right `ident`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Char(_)), _) => {
+                    (FragmentValue::Char(_), _) => {
                         return Err(Error::new(span, "cannot shift-right `char`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Bool(_)), _) => {
+                    (FragmentValue::Bool(_), _) => {
                         return Err(Error::new(span, "cannot shift-right `bool`"));
                     }
-                    (FragmentBody::List(_), _) => {
+                    (FragmentValue::List(_), _) => {
                         return Err(Error::new(span, "cannot shift-right `list`"));
                     }
-                    (FragmentBody::Tokens(_), _) => {
+                    (FragmentValue::Tokens(_), _) => {
                         return Err(Error::new(span, "cannot shift-right `tokens`"));
                     }
-
-                    (FragmentBody::Name(_), _) => unreachable!(),
-                    (_, FragmentBody::Name(_)) => unreachable!(),
-                    (_, FragmentBody::Op(_)) => unreachable!(),
-                    (FragmentBody::Op(_), _) => unreachable!(),
                 }
             }
 
-            Self::Eq => {
+            Self::Eq(span) => {
                 let [lhs, rhs] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (lhs, rhs) {
-                    (
-                        FragmentBody::Lit(FragmentValue::Int(lhs)),
-                        FragmentBody::Lit(FragmentValue::Int(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs == rhs)),
+                    (FragmentValue::Int(lhs), _) => match rhs {
+                        FragmentValue::Int(rhs) => FragmentValue::Bool(lhs == rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `int`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Int(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `int`"));
-                    }
+                    (FragmentValue::Float(lhs), _) => match rhs {
+                        FragmentValue::Float(rhs) => FragmentValue::Bool(lhs == rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `float`")),
+                    },
 
-                    (
-                        FragmentBody::Lit(FragmentValue::Float(lhs)),
-                        FragmentBody::Lit(FragmentValue::Float(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs == rhs)),
+                    (FragmentValue::String(lhs), _) => match rhs {
+                        FragmentValue::String(rhs) => FragmentValue::Bool(lhs == rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `string`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Float(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `float`"));
-                    }
+                    (FragmentValue::Ident(lhs), _) => match rhs {
+                        FragmentValue::Ident(rhs) => FragmentValue::Bool(lhs == rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `ident`")),
+                    },
 
-                    (
-                        FragmentBody::Lit(FragmentValue::String(lhs)),
-                        FragmentBody::Lit(FragmentValue::String(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs == rhs)),
+                    (FragmentValue::Char(lhs), _) => match rhs {
+                        FragmentValue::Char(rhs) => FragmentValue::Bool(lhs == rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `char`")),
+                    },
 
-                    (
-                        FragmentBody::Lit(FragmentValue::String(lhs)),
-                        FragmentBody::Lit(FragmentValue::Ident(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs == rhs)),
+                    (FragmentValue::Bool(lhs), _) => match rhs {
+                        FragmentValue::Bool(rhs) => FragmentValue::Bool(lhs == rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `bool`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::String(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `string`"));
-                    }
-
-                    (
-                        FragmentBody::Lit(FragmentValue::Ident(lhs)),
-                        FragmentBody::Lit(FragmentValue::Ident(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs == rhs)),
-
-                    (
-                        FragmentBody::Lit(FragmentValue::Ident(lhs)),
-                        FragmentBody::Lit(FragmentValue::String(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs == rhs)),
-
-                    (FragmentBody::Lit(FragmentValue::Ident(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `ident`"));
-                    }
-
-                    (
-                        FragmentBody::Lit(FragmentValue::Char(lhs)),
-                        FragmentBody::Lit(FragmentValue::Char(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs == rhs)),
-
-                    (FragmentBody::Lit(FragmentValue::Char(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `char`"));
-                    }
-
-                    (
-                        FragmentBody::Lit(FragmentValue::Bool(lhs)),
-                        FragmentBody::Lit(FragmentValue::Bool(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs == rhs)),
-
-                    (FragmentBody::Lit(FragmentValue::Bool(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `bool`"));
-                    }
-
-                    (FragmentBody::List(lhs), FragmentBody::List(rhs)) => {
-                        FragmentBody::Lit(FragmentValue::Bool('list_eq: {
+                    (FragmentValue::List(lhs), _) => match rhs {
+                        FragmentValue::List(rhs) => FragmentValue::Bool('list_eq: {
                             if lhs.len() != rhs.len() {
                                 break 'list_eq false;
                             }
 
                             for (a, b) in lhs.iter().zip(rhs.iter()) {
-                                let eq = Op::Eq.compute(span, &[a.clone(), b.clone()])?;
+                                let eq = Op::Eq(span).compute(&[a.clone(), b.clone()], ctx)?;
 
                                 match eq {
-                                    FragmentBody::Lit(FragmentValue::Bool(val)) => {
+                                    FragmentValue::Bool(val) => {
                                         if !val {
                                             break 'list_eq false;
                                         }
@@ -782,414 +700,295 @@ impl Op {
                             }
 
                             true
-                        }))
-                    }
+                        }),
 
-                    (FragmentBody::List(_), _) => {
-                        return Err(Error::new(span, "expected rhs to be `list`"));
-                    }
+                        _ => return Err(Error::new(span, "expected rhs to be `list`")),
+                    },
 
-                    (FragmentBody::Tokens(_), _) => {
+                    (FragmentValue::Tokens(_), _) => {
                         return Err(Error::new(span, "cannot compare `tokens`"));
                     }
-
-                    (FragmentBody::Name(_), _) => unreachable!(),
-                    (_, FragmentBody::Name(_)) => unreachable!(),
-                    (_, FragmentBody::Op(_)) => unreachable!(),
-                    (FragmentBody::Op(_), _) => unreachable!(),
                 }
             }
 
-            Self::Ne => {
-                let eq = Self::Eq.compute(span, args)?;
+            Self::Ne(span) => {
+                let eq = Self::Eq(span).compute(args, ctx)?;
 
                 match eq {
-                    FragmentBody::Lit(FragmentValue::Bool(val)) => {
-                        FragmentBody::Lit(FragmentValue::Bool(!val))
-                    }
-
+                    FragmentValue::Bool(val) => FragmentValue::Bool(!val),
                     _ => unreachable!(),
                 }
             }
 
-            Self::Lt => {
+            Self::Lt(span) => {
                 let [lhs, rhs] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (lhs, rhs) {
-                    (
-                        FragmentBody::Lit(FragmentValue::Int(lhs)),
-                        FragmentBody::Lit(FragmentValue::Int(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs < rhs)),
+                    (FragmentValue::Int(lhs), _) => match rhs {
+                        FragmentValue::Int(rhs) => FragmentValue::Bool(lhs < rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `int`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Int(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `int`"));
-                    }
+                    (FragmentValue::Float(lhs), _) => match rhs {
+                        FragmentValue::Float(rhs) => FragmentValue::Bool(lhs < rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `float`")),
+                    },
 
-                    (
-                        FragmentBody::Lit(FragmentValue::Float(lhs)),
-                        FragmentBody::Lit(FragmentValue::Float(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs < rhs)),
+                    (FragmentValue::String(lhs), _) => match rhs {
+                        FragmentValue::String(rhs) => FragmentValue::Bool(lhs < rhs),
+                        FragmentValue::Ident(rhs) => FragmentValue::Bool(lhs < rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `string`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Float(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `float`"));
-                    }
+                    (FragmentValue::Ident(lhs), _) => match rhs {
+                        FragmentValue::Ident(rhs) => FragmentValue::Bool(lhs < rhs),
+                        FragmentValue::String(rhs) => FragmentValue::Bool(lhs < rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `ident`")),
+                    },
 
-                    (
-                        FragmentBody::Lit(FragmentValue::Char(lhs)),
-                        FragmentBody::Lit(FragmentValue::Char(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs < rhs)),
+                    (FragmentValue::Char(lhs), _) => match rhs {
+                        FragmentValue::Char(rhs) => FragmentValue::Bool(lhs < rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `char`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Char(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `char`"));
-                    }
+                    (FragmentValue::Bool(lhs), _) => match rhs {
+                        FragmentValue::Bool(rhs) => FragmentValue::Bool(lhs < rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `bool`")),
+                    },
 
-                    (
-                        FragmentBody::Lit(FragmentValue::String(lhs)),
-                        FragmentBody::Lit(FragmentValue::String(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs < rhs)),
-
-                    (
-                        FragmentBody::Lit(FragmentValue::String(lhs)),
-                        FragmentBody::Lit(FragmentValue::Ident(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs < rhs)),
-
-                    (FragmentBody::Lit(FragmentValue::String(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `string`"));
-                    }
-
-                    (
-                        FragmentBody::Lit(FragmentValue::Ident(lhs)),
-                        FragmentBody::Lit(FragmentValue::Ident(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs < rhs)),
-
-                    (
-                        FragmentBody::Lit(FragmentValue::Ident(lhs)),
-                        FragmentBody::Lit(FragmentValue::String(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs < rhs)),
-
-                    (FragmentBody::Lit(FragmentValue::Ident(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `ident`"));
-                    }
-
-                    (
-                        FragmentBody::Lit(FragmentValue::Bool(lhs)),
-                        FragmentBody::Lit(FragmentValue::Bool(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs < rhs)),
-
-                    (FragmentBody::Lit(FragmentValue::Bool(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `bool`"));
-                    }
-
-                    (FragmentBody::List(_), _) => {
+                    (FragmentValue::List(_), _) => {
                         return Err(Error::new(span, "cannot compare `list`"));
                     }
-                    (FragmentBody::Tokens(_), _) => {
+                    (FragmentValue::Tokens(_), _) => {
                         return Err(Error::new(span, "cannot compare `tokens`"));
                     }
-
-                    (FragmentBody::Name(_), _) => unreachable!(),
-                    (_, FragmentBody::Name(_)) => unreachable!(),
-                    (_, FragmentBody::Op(_)) => unreachable!(),
-                    (FragmentBody::Op(_), _) => unreachable!(),
                 }
             }
 
-            Self::Gt => {
+            Self::Gt(span) => {
                 let [lhs, rhs] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (lhs, rhs) {
-                    (
-                        FragmentBody::Lit(FragmentValue::Int(lhs)),
-                        FragmentBody::Lit(FragmentValue::Int(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs > rhs)),
+                    (FragmentValue::Int(lhs), _) => match rhs {
+                        FragmentValue::Int(rhs) => FragmentValue::Bool(lhs > rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `int`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Int(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `int`"));
-                    }
+                    (FragmentValue::Float(lhs), _) => match rhs {
+                        FragmentValue::Float(rhs) => FragmentValue::Bool(lhs > rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `float`")),
+                    },
 
-                    (
-                        FragmentBody::Lit(FragmentValue::Float(lhs)),
-                        FragmentBody::Lit(FragmentValue::Float(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs > rhs)),
+                    (FragmentValue::Char(lhs), _) => match rhs {
+                        FragmentValue::Char(rhs) => FragmentValue::Bool(lhs > rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `char`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Float(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `float`"));
-                    }
+                    (FragmentValue::String(lhs), _) => match rhs {
+                        FragmentValue::String(rhs) => FragmentValue::Bool(lhs > rhs),
+                        FragmentValue::Ident(rhs) => FragmentValue::Bool(lhs > rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `string`")),
+                    },
 
-                    (
-                        FragmentBody::Lit(FragmentValue::Char(lhs)),
-                        FragmentBody::Lit(FragmentValue::Char(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs > rhs)),
+                    (FragmentValue::Ident(lhs), _) => match rhs {
+                        FragmentValue::Ident(rhs) => FragmentValue::Bool(lhs > rhs),
+                        FragmentValue::String(rhs) => FragmentValue::Bool(lhs > rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `ident`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Char(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `char`"));
-                    }
+                    (FragmentValue::Bool(lhs), _) => match rhs {
+                        FragmentValue::Bool(rhs) => FragmentValue::Bool(lhs > rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `bool`")),
+                    },
 
-                    (
-                        FragmentBody::Lit(FragmentValue::String(lhs)),
-                        FragmentBody::Lit(FragmentValue::String(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs > rhs)),
-
-                    (
-                        FragmentBody::Lit(FragmentValue::String(lhs)),
-                        FragmentBody::Lit(FragmentValue::Ident(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs > rhs)),
-
-                    (FragmentBody::Lit(FragmentValue::String(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `string`"));
-                    }
-
-                    (
-                        FragmentBody::Lit(FragmentValue::Ident(lhs)),
-                        FragmentBody::Lit(FragmentValue::Ident(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs > rhs)),
-
-                    (
-                        FragmentBody::Lit(FragmentValue::Ident(lhs)),
-                        FragmentBody::Lit(FragmentValue::String(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs > rhs)),
-
-                    (FragmentBody::Lit(FragmentValue::Ident(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `ident`"));
-                    }
-
-                    (
-                        FragmentBody::Lit(FragmentValue::Bool(lhs)),
-                        FragmentBody::Lit(FragmentValue::Bool(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs > rhs)),
-
-                    (FragmentBody::Lit(FragmentValue::Bool(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `bool`"));
-                    }
-
-                    (FragmentBody::List(_), _) => {
+                    (FragmentValue::List(_), _) => {
                         return Err(Error::new(span, "cannot compare `list`"));
                     }
-                    (FragmentBody::Tokens(_), _) => {
+
+                    (FragmentValue::Tokens(_), _) => {
                         return Err(Error::new(span, "cannot compare `tokens`"));
                     }
-
-                    (FragmentBody::Name(_), _) => unreachable!(),
-                    (_, FragmentBody::Name(_)) => unreachable!(),
-                    (_, FragmentBody::Op(_)) => unreachable!(),
-                    (FragmentBody::Op(_), _) => unreachable!(),
                 }
             }
 
-            Self::Le => {
-                let gt = Self::Gt.compute(span, args)?;
+            Self::Le(span) => {
+                let gt = Self::Gt(span).compute(args, ctx)?;
 
                 match gt {
-                    FragmentBody::Lit(FragmentValue::Bool(val)) => {
-                        FragmentBody::Lit(FragmentValue::Bool(!val))
-                    }
-
+                    FragmentValue::Bool(val) => FragmentValue::Bool(!val),
                     _ => unreachable!(),
                 }
             }
 
-            Self::Ge => {
-                let lt = Self::Lt.compute(span, args)?;
+            Self::Ge(span) => {
+                let lt = Self::Lt(span).compute(args, ctx)?;
 
                 match lt {
-                    FragmentBody::Lit(FragmentValue::Bool(val)) => {
-                        FragmentBody::Lit(FragmentValue::Bool(!val))
-                    }
-
+                    FragmentValue::Bool(val) => FragmentValue::Bool(!val),
                     _ => unreachable!(),
                 }
             }
 
-            Self::And => {
+            Self::And(span) => {
                 let [lhs, rhs] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (lhs, rhs) {
-                    (
-                        FragmentBody::Lit(FragmentValue::Bool(lhs)),
-                        FragmentBody::Lit(FragmentValue::Bool(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs & rhs)),
+                    (FragmentValue::Bool(lhs), _) => match rhs {
+                        FragmentValue::Bool(rhs) => FragmentValue::Bool(lhs & rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `bool`")),
+                    },
 
                     _ => return Err(Error::new(span, "expected `bool`")),
                 }
             }
 
-            Self::Or => {
+            Self::Or(span) => {
                 let [lhs, rhs] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (lhs, rhs) {
-                    (
-                        FragmentBody::Lit(FragmentValue::Bool(lhs)),
-                        FragmentBody::Lit(FragmentValue::Bool(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs | rhs)),
+                    (FragmentValue::Bool(lhs), _) => match rhs {
+                        FragmentValue::Bool(rhs) => FragmentValue::Bool(lhs | rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `bool`")),
+                    },
 
                     _ => return Err(Error::new(span, "expected `bool`")),
                 }
             }
 
-            Self::Xor => {
+            Self::Xor(span) => {
                 let [lhs, rhs] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (lhs, rhs) {
-                    (
-                        FragmentBody::Lit(FragmentValue::Bool(lhs)),
-                        FragmentBody::Lit(FragmentValue::Bool(rhs)),
-                    ) => FragmentBody::Lit(FragmentValue::Bool(lhs ^ rhs)),
+                    (FragmentValue::Bool(lhs), _) => match rhs {
+                        FragmentValue::Bool(rhs) => FragmentValue::Bool(lhs ^ rhs),
+                        _ => return Err(Error::new(span, "expected rhs to be `bool`")),
+                    },
 
                     _ => return Err(Error::new(span, "expected `bool`")),
                 }
             }
 
-            Self::Range => {
+            Self::Range(span) => {
                 let [start, end] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (start, end) {
-                    (
-                        FragmentBody::Lit(FragmentValue::Int(lhs)),
-                        FragmentBody::Lit(FragmentValue::Int(rhs)),
-                    ) => FragmentBody::List(
-                        (*lhs..*rhs)
-                            .map(|i| FragmentBody::Lit(FragmentValue::Int(i)))
-                            .collect(),
-                    ),
+                    (FragmentValue::Int(lhs), _) => match end {
+                        FragmentValue::Int(rhs) => FragmentValue::List(
+                            (*lhs..*rhs).map(|i| FragmentValue::Int(i)).collect(),
+                        ),
 
-                    (FragmentBody::Lit(FragmentValue::Int(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `int`"));
-                    }
+                        _ => return Err(Error::new(span, "expected rhs to be `int`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Float(_)), _) => {
+                    (FragmentValue::Float(_), _) => {
                         return Err(Error::new(span, "cannot range `float`"));
                     }
-
-                    (FragmentBody::Lit(FragmentValue::Char(_)), _) => {
+                    (FragmentValue::Char(_), _) => {
                         return Err(Error::new(span, "cannot range `char`"));
                     }
-
-                    (FragmentBody::Lit(FragmentValue::String(_)), _) => {
+                    (FragmentValue::String(_), _) => {
                         return Err(Error::new(span, "cannot range `string`"));
                     }
-
-                    (FragmentBody::Lit(FragmentValue::Ident(_)), _) => {
+                    (FragmentValue::Ident(_), _) => {
                         return Err(Error::new(span, "cannot range `ident`"));
                     }
-
-                    (FragmentBody::Lit(FragmentValue::Bool(_)), _) => {
+                    (FragmentValue::Bool(_), _) => {
                         return Err(Error::new(span, "cannot range `bool`"));
                     }
-
-                    (FragmentBody::List(_), _) => {
+                    (FragmentValue::List(_), _) => {
                         return Err(Error::new(span, "cannot range `list`"));
                     }
-
-                    (FragmentBody::Tokens(_), _) => {
+                    (FragmentValue::Tokens(_), _) => {
                         return Err(Error::new(span, "cannot range `tokens`"));
                     }
-
-                    (FragmentBody::Name(_), _) => unreachable!(),
-                    (_, FragmentBody::Name(_)) => unreachable!(),
-                    (_, FragmentBody::Op(_)) => unreachable!(),
-                    (FragmentBody::Op(_), _) => unreachable!(),
                 }
             }
 
-            Self::RangeInclusive => {
+            Self::RangeInclusive(span) => {
                 let [start, end] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (start, end) {
-                    (
-                        FragmentBody::Lit(FragmentValue::Int(lhs)),
-                        FragmentBody::Lit(FragmentValue::Int(rhs)),
-                    ) => FragmentBody::List(
-                        (*lhs..=*rhs)
-                            .map(|i| FragmentBody::Lit(FragmentValue::Int(i)))
-                            .collect(),
-                    ),
+                    (FragmentValue::Int(lhs), _) => match end {
+                        FragmentValue::Int(rhs) => FragmentValue::List(
+                            (*lhs..=*rhs).map(|i| FragmentValue::Int(i)).collect(),
+                        ),
 
-                    (FragmentBody::Lit(FragmentValue::Int(_)), _) => {
-                        return Err(Error::new(span, "expected rhs to be `int`"));
-                    }
+                        _ => return Err(Error::new(span, "expected rhs to be `int`")),
+                    },
 
-                    (FragmentBody::Lit(FragmentValue::Float(_)), _) => {
+                    (FragmentValue::Float(_), _) => {
                         return Err(Error::new(span, "cannot range `float`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Char(_)), _) => {
+                    (FragmentValue::Char(_), _) => {
                         return Err(Error::new(span, "cannot range `char`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::String(_)), _) => {
+                    (FragmentValue::String(_), _) => {
                         return Err(Error::new(span, "cannot range `string`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Ident(_)), _) => {
+                    (FragmentValue::Ident(_), _) => {
                         return Err(Error::new(span, "cannot range `ident`"));
                     }
-                    (FragmentBody::Lit(FragmentValue::Bool(_)), _) => {
+                    (FragmentValue::Bool(_), _) => {
                         return Err(Error::new(span, "cannot range `bool`"));
                     }
-                    (FragmentBody::List(_), _) => {
+                    (FragmentValue::List(_), _) => {
                         return Err(Error::new(span, "cannot range `list`"));
                     }
-                    (FragmentBody::Tokens(_), _) => {
+                    (FragmentValue::Tokens(_), _) => {
                         return Err(Error::new(span, "cannot range `tokens`"));
                     }
-
-                    (FragmentBody::Name(_), _) => unreachable!(),
-                    (_, FragmentBody::Name(_)) => unreachable!(),
-                    (_, FragmentBody::Op(_)) => unreachable!(),
-                    (FragmentBody::Op(_), _) => unreachable!(),
                 }
             }
 
-            Self::Len => {
+            Self::Len(span) => {
                 let [arg] = args else {
                     return Err(Error::new(span, "expected one argument"));
                 };
 
                 match arg {
-                    FragmentBody::List(list) => {
-                        FragmentBody::Lit(FragmentValue::Int(list.len() as i128))
-                    }
+                    FragmentValue::List(list) => FragmentValue::Int(list.len() as i128),
 
-                    FragmentBody::Lit(FragmentValue::String(string)) => {
-                        FragmentBody::Lit(FragmentValue::Int(string.len() as i128))
-                    }
+                    FragmentValue::String(string) => FragmentValue::Int(string.len() as i128),
 
-                    FragmentBody::Lit(FragmentValue::Ident(ident)) => {
-                        FragmentBody::Lit(FragmentValue::Int(ident.len() as i128))
-                    }
+                    FragmentValue::Ident(ident) => FragmentValue::Int(ident.len() as i128),
 
                     _ => return Err(Error::new(span, "expected `list`,`string` or `ident`")),
                 }
             }
 
-            Self::Index => {
+            Self::Index(span) => {
                 let [list, index] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 let items = match list {
-                    FragmentBody::List(list) => list,
+                    FragmentValue::List(list) => list,
                     _ => return Err(Error::new(span, "expected `list`")),
                 };
 
                 match index {
-                    FragmentBody::Lit(FragmentValue::Int(index)) => items[*index as usize].clone(),
+                    FragmentValue::Int(index) => items[*index as usize].clone(),
 
-                    FragmentBody::List(indicies) => FragmentBody::List(
+                    FragmentValue::List(indicies) => FragmentValue::List(
                         indicies
                             .iter()
-                            .map(|index| Op::Index.compute(span, &[list.clone(), index.clone()]))
+                            .map(|index| {
+                                Op::Index(span).compute(&[list.clone(), index.clone()], ctx)
+                            })
                             .flatten()
                             .collect(),
                     ),
@@ -1198,18 +997,18 @@ impl Op {
                 }
             }
 
-            Self::Enumerate => {
+            Self::Enumerate(span) => {
                 let [list] = args else {
                     return Err(Error::new(span, "expected one argument"));
                 };
 
                 match list {
-                    FragmentBody::List(list) => FragmentBody::List(
+                    FragmentValue::List(list) => FragmentValue::List(
                         list.iter()
                             .enumerate()
                             .map(|(index, item)| {
-                                FragmentBody::List(vec![
-                                    FragmentBody::Lit(FragmentValue::Int(index as i128)),
+                                FragmentValue::List(vec![
+                                    FragmentValue::Int(index as i128),
                                     item.clone(),
                                 ])
                             })
@@ -1220,16 +1019,16 @@ impl Op {
                 }
             }
 
-            Self::Zip => {
+            Self::Zip(span) => {
                 let [lhs, rhs] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (lhs, rhs) {
-                    (FragmentBody::List(lhs), FragmentBody::List(rhs)) => FragmentBody::List(
+                    (FragmentValue::List(lhs), FragmentValue::List(rhs)) => FragmentValue::List(
                         lhs.iter()
                             .zip(rhs.iter())
-                            .map(|(lhs, rhs)| FragmentBody::List(vec![lhs.clone(), rhs.clone()]))
+                            .map(|(lhs, rhs)| FragmentValue::List(vec![lhs.clone(), rhs.clone()]))
                             .collect(),
                     ),
 
@@ -1237,18 +1036,86 @@ impl Op {
                 }
             }
 
-            Self::Chain => {
+            Self::Chain(span) => {
                 let [lhs, rhs] = args else {
                     return Err(Error::new(span, "expected two arguments"));
                 };
 
                 match (lhs, rhs) {
-                    (FragmentBody::List(lhs), FragmentBody::List(rhs)) => {
-                        FragmentBody::List(lhs.iter().chain(rhs.iter()).cloned().collect())
+                    (FragmentValue::List(lhs), FragmentValue::List(rhs)) => {
+                        FragmentValue::List(lhs.iter().chain(rhs.iter()).cloned().collect())
                     }
 
                     _ => return Err(Error::new(span, "expected `list`")),
                 }
+            }
+
+            Self::ConcatIdent(span) => {
+                let [parts] = args else {
+                    return Err(Error::new(span, "expected one argument"));
+                };
+
+                let parts = match parts {
+                    FragmentValue::List(parts) => parts,
+                    _ => return Err(Error::new(span, "expected `list`")),
+                };
+
+                let mut output_str = String::new();
+                for part in parts {
+                    match part {
+                        FragmentValue::Ident(ident) => output_str.push_str(ident.as_str()),
+                        FragmentValue::String(string) => output_str.push_str(string.as_str()),
+                        FragmentValue::Char(char) => output_str.push(*char),
+                        FragmentValue::Int(int) => output_str.push_str(int.to_string().as_str()),
+                        FragmentValue::Float(float) => {
+                            output_str.push_str(float.to_string().as_str())
+                        }
+                        FragmentValue::Bool(bool) => output_str.push_str(bool.to_string().as_str()),
+
+                        FragmentValue::List(_) => {
+                            return Err(Error::new(span, "cannot stringify `list`"));
+                        }
+                        FragmentValue::Tokens(_) => {
+                            return Err(Error::new(span, "cannot stringify `tokens`"));
+                        }
+                    }
+                }
+
+                FragmentValue::Ident(output_str)
+            }
+
+            Self::ConcatString(span) => {
+                let [parts] = args else {
+                    return Err(Error::new(span, "expected one argument"));
+                };
+
+                let parts = match parts {
+                    FragmentValue::List(parts) => parts,
+                    _ => return Err(Error::new(span, "expected `list`")),
+                };
+
+                let mut output_str = String::new();
+                for part in parts {
+                    match part {
+                        FragmentValue::Ident(ident) => output_str.push_str(ident.as_str()),
+                        FragmentValue::String(string) => output_str.push_str(string.as_str()),
+                        FragmentValue::Char(char) => output_str.push(*char),
+                        FragmentValue::Int(int) => output_str.push_str(int.to_string().as_str()),
+                        FragmentValue::Float(float) => {
+                            output_str.push_str(float.to_string().as_str())
+                        }
+                        FragmentValue::Bool(bool) => output_str.push_str(bool.to_string().as_str()),
+
+                        FragmentValue::List(_) => {
+                            return Err(Error::new(span, "cannot stringify `list`"));
+                        }
+                        FragmentValue::Tokens(_) => {
+                            return Err(Error::new(span, "cannot stringify `tokens`"));
+                        }
+                    }
+                }
+
+                FragmentValue::String(output_str)
             }
         })
     }

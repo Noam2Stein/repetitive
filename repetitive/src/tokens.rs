@@ -1,6 +1,6 @@
 use proc_macro2::{Delimiter, Group, TokenStream};
 use quote::ToTokens;
-use syn::Token;
+use syn::{Token, parse::ParseStream};
 
 use super::*;
 
@@ -13,7 +13,7 @@ pub struct Tokens {
 enum TokensSegment {
     TokenStream(TokenStream),
     Group(TokensGroup),
-    Fragment(Fragment),
+    Fragment(FragmentOuter),
 }
 
 #[derive(Debug, Clone)]
@@ -23,7 +23,7 @@ struct TokensGroup {
 }
 
 impl ContextParse for Tokens {
-    fn ctx_parse(input: syn::parse::ParseStream, ctx: &mut ParseContext) -> syn::Result<Self>
+    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
     where
         Self: Sized,
     {
@@ -39,19 +39,19 @@ impl ContextParse for Tokens {
 }
 
 impl ContextParse for TokensSegment {
-    fn ctx_parse(input: syn::parse::ParseStream, ctx: &mut ParseContext) -> syn::Result<Self>
+    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
     where
         Self: Sized,
     {
         if let Some(group) = input.parse::<Option<Group>>()? {
-            let tokens = ctx_parse2(Tokens::ctx_parse, group.stream(), ctx)?;
+            let tokens = Tokens::ctx_parse.ctx_parse2(group.stream(), ctx)?;
 
             Ok(TokensSegment::Group(TokensGroup {
                 delimiter: group.delimiter(),
                 tokens,
             }))
         } else if input.peek(Token![@]) {
-            let fragment = Fragment::ctx_parse_outer(input, ctx)?;
+            let fragment = FragmentOuter::ctx_parse(input, ctx)?;
             Ok(TokensSegment::Fragment(fragment))
         } else {
             let tokens = input.parse::<TokenStream>()?;
@@ -61,26 +61,29 @@ impl ContextParse for TokensSegment {
 }
 
 impl Tokens {
-    pub fn append(&mut self, value: Self) {
-        for segment in value.segments {
-            self.segments.push(segment);
-        }
-    }
-
-    pub fn paste(&self, output: &mut TokenStream, ctx: &Context) {
+    pub fn paste(
+        &self,
+        output: &mut TokenStream,
+        ctx: &mut Context,
+        namespace: &mut Namespace,
+    ) -> syn::Result<()> {
         for segment in &self.segments {
             match segment {
                 TokensSegment::TokenStream(stream) => stream.to_tokens(output),
 
                 TokensSegment::Group(group) => {
                     let mut group_tokens = TokenStream::new();
-                    group.tokens.paste(&mut group_tokens, ctx);
+                    group.tokens.paste(&mut group_tokens, ctx, namespace)?;
                     let group = Group::new(group.delimiter, group_tokens);
                     group.to_tokens(output);
                 }
 
-                TokensSegment::Fragment(fragment) => fragment.body.resolve(ctx).paste(output, ctx),
+                TokensSegment::Fragment(fragment) => {
+                    fragment.clone().paste(output, ctx, namespace)?;
+                }
             }
         }
+
+        Ok(())
     }
 }

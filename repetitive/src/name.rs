@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use proc_macro2::Span;
 use string_interner::DefaultSymbol;
-use syn::Ident;
+use syn::{Ident, parse::ParseStream};
 
 use super::*;
 
@@ -10,6 +10,7 @@ use super::*;
 pub struct Namespace<'p> {
     parent: Option<&'p Namespace<'p>>,
     names: HashMap<NameId, FragmentValue>,
+    new_names: HashMap<NameId, FragmentValue>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -20,7 +21,7 @@ pub struct Name {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NameId {
-    inner: DefaultSymbol,
+    pub inner: DefaultSymbol,
 }
 
 impl<'p> Namespace<'p> {
@@ -28,6 +29,7 @@ impl<'p> Namespace<'p> {
         Self {
             parent: None,
             names: HashMap::new(),
+            new_names: HashMap::new(),
         }
     }
 
@@ -35,16 +37,20 @@ impl<'p> Namespace<'p> {
         Namespace {
             parent: Some(self),
             names: HashMap::new(),
+            new_names: HashMap::new(),
         }
     }
 
-    pub fn insert(&mut self, name: Name, fragment: FragmentValue, ctx: &mut Context) {
-        if self.names.contains_key(&name.id) {
+    pub fn queue_insert(&mut self, name: Name, fragment: FragmentValue, ctx: &mut Context) {
+        if self.new_names.contains_key(&name.id) {
             ctx.errors
                 .push(syn::Error::new(name.span, "Name already exists"));
         }
 
-        self.names.insert(name.id, fragment);
+        self.new_names.insert(name.id, fragment);
+    }
+    pub fn flush(&mut self) {
+        self.names.extend(self.new_names.drain());
     }
 
     pub fn get(&self, name: NameId) -> Option<&FragmentValue> {
@@ -57,20 +63,16 @@ impl<'p> Namespace<'p> {
         }
     }
 
-    pub fn try_get(&self, name: Name, errors: &mut Vec<syn::Error>) -> FragmentValue {
+    pub fn try_get(&self, name: Name) -> syn::Result<FragmentValue> {
         match self.get(name.id) {
-            Some(fragment) => fragment.clone(),
-            None => {
-                errors.push(syn::Error::new(name.span, "Name not found"));
-
-                FragmentValue::error()
-            }
+            Some(fragment) => Ok(fragment.clone()),
+            None => Err(syn::Error::new(name.span, "Name not found")),
         }
     }
 }
 
 impl ContextParse for Name {
-    fn ctx_parse(input: syn::parse::ParseStream, ctx: &mut ParseContext) -> syn::Result<Self>
+    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
     where
         Self: Sized,
     {
