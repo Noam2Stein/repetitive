@@ -1,2 +1,2 @@
 [workspace]
-members = ["repetitive", "sandbox"]
+members = [ "examples/swizzle","repetitive", "sandbox"]
