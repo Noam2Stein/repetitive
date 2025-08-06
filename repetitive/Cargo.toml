@@ -1,8 +1,11 @@
 [package]
-edition = "2024"
-name    = "repetitive"
-readme  = "../README.md"
-version = "0.1.0"
+categories  = [ "rust-patterns" ]
+description = "Macro for generating repetitive code"
+edition     = "2024"
+license     = "MIT"
+name        = "repetitive"
+readme      = "../README.md"
+version     = "0.1.0"
 
 [lib]
 proc-macro = true
