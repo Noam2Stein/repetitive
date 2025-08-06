@@ -60,5 +60,4 @@ repetitive! {
 
     @let frag = -(1);
     const _: () = assert!(@frag == -1);
-
 }
