@@ -1,5 +1,5 @@
 use proc_macro2::{Span, TokenStream};
-use quote::ToTokens;
+use quote::{ToTokens, quote_spanned};
 use syn::{Error, Ident, Lifetime, LitBool, LitChar, LitFloat, LitInt, LitStr, parse::ParseStream};
 
 use super::*;
@@ -113,10 +113,20 @@ impl Paste for FragmentValueExpr {
     ) -> syn::Result<()> {
         Ok(match &self.value {
             FragmentValue::Int(val) => {
-                LitInt::new(val.to_string().as_str(), self.span).to_tokens(output)
+                let lit = LitInt::new(val.abs().to_string().as_str(), self.span);
+                if *val < 0 {
+                    quote_spanned! { self.span => -#lit }.to_tokens(output);
+                } else {
+                    lit.to_tokens(output);
+                }
             }
             FragmentValue::Float(val) => {
-                LitFloat::new(val.to_string().as_str(), self.span).to_tokens(output)
+                let lit = LitFloat::new(&format!("{:?}", val.abs()), self.span);
+                if *val < 0.0 {
+                    quote_spanned! { self.span => -#lit }.to_tokens(output);
+                } else {
+                    lit.to_tokens(output);
+                }
             }
             FragmentValue::Bool(val) => LitBool::new(*val, self.span).to_tokens(output),
             FragmentValue::String(val) => LitStr::new(val, self.span).to_tokens(output),
@@ -125,9 +135,9 @@ impl Paste for FragmentValueExpr {
 
             FragmentValue::Tokens(val) => val.paste(output, ctx, namespace)?,
 
-            FragmentValue::List(_) => ctx
-                .errors
-                .push(Error::new(self.span, "cannot paste `list`")),
+            FragmentValue::List(_) => {
+                return Err(Error::new(self.span, "cannot paste `list`"));
+            }
         })
     }
 }

@@ -96,7 +96,28 @@ impl Op {
     }
 
     pub fn parse_option_bin(input: ParseStream) -> Option<Self> {
-        if let Some(tok) = input.parse::<Option<Token![+]>>().unwrap() {
+        // 3 punctuated ops
+        if let Some(tok) = input.parse::<Option<Token![..=]>>().unwrap() {
+            Some(Op::RangeInclusive(tok.span()))
+        }
+        // 2 punctuated ops
+        else if let Some(tok) = input.parse::<Option<Token![||]>>().unwrap() {
+            Some(Op::Or(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![&&]>>().unwrap() {
+            Some(Op::And(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![<=]>>().unwrap() {
+            Some(Op::Le(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![>=]>>().unwrap() {
+            Some(Op::Ge(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![==]>>().unwrap() {
+            Some(Op::Eq(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![!=]>>().unwrap() {
+            Some(Op::Ne(tok.span()))
+        } else if let Some(tok) = input.parse::<Option<Token![..]>>().unwrap() {
+            Some(Op::Range(tok.span()))
+        }
+        // 1 punctuated op
+        else if let Some(tok) = input.parse::<Option<Token![+]>>().unwrap() {
             Some(Op::Add(tok.span()))
         } else if let Some(tok) = input.parse::<Option<Token![-]>>().unwrap() {
             Some(Op::Sub(tok.span()))
@@ -112,26 +133,10 @@ impl Op {
             Some(Op::BitXor(tok.span()))
         } else if let Some(tok) = input.parse::<Option<Token![&]>>().unwrap() {
             Some(Op::BitAnd(tok.span()))
-        } else if let Some(tok) = input.parse::<Option<Token![==]>>().unwrap() {
-            Some(Op::Eq(tok.span()))
-        } else if let Some(tok) = input.parse::<Option<Token![!=]>>().unwrap() {
-            Some(Op::Ne(tok.span()))
         } else if let Some(tok) = input.parse::<Option<Token![<]>>().unwrap() {
             Some(Op::Lt(tok.span()))
         } else if let Some(tok) = input.parse::<Option<Token![>]>>().unwrap() {
             Some(Op::Gt(tok.span()))
-        } else if let Some(tok) = input.parse::<Option<Token![<=]>>().unwrap() {
-            Some(Op::Le(tok.span()))
-        } else if let Some(tok) = input.parse::<Option<Token![>=]>>().unwrap() {
-            Some(Op::Ge(tok.span()))
-        } else if let Some(tok) = input.parse::<Option<Token![..=]>>().unwrap() {
-            Some(Op::RangeInclusive(tok.span()))
-        } else if let Some(tok) = input.parse::<Option<Token![..]>>().unwrap() {
-            Some(Op::Range(tok.span()))
-        } else if let Some(tok) = input.parse::<Option<Token![||]>>().unwrap() {
-            Some(Op::Or(tok.span()))
-        } else if let Some(tok) = input.parse::<Option<Token![&&]>>().unwrap() {
-            Some(Op::And(tok.span()))
         } else {
             None
         }

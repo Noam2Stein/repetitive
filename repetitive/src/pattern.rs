@@ -22,7 +22,7 @@ impl Pattern {
     ) -> syn::Result<()> {
         Ok(match self {
             Pattern::Name(name) => {
-                namespace.queue_insert(*name, value_expr.value, ctx);
+                namespace.queue_insert(*name, value_expr.value, ctx)?;
             }
 
             Pattern::List(pat) => {

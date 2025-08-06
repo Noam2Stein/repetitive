@@ -187,7 +187,6 @@ pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
 mod main {
     use proc_macro2::TokenStream;
-    use quote::quote;
     use string_interner::DefaultStringInterner;
 
     use super::*;
@@ -195,36 +194,26 @@ mod main {
     pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         let mut ctx = Context {
             interner: DefaultStringInterner::new(),
-            errors: vec![],
         };
 
         let tokens = Tokens::ctx_parse.ctx_parse2(input.into(), &mut ctx);
         let result = 'result: {
             Ok(match tokens {
                 Ok(tokens) => {
-                    if !ctx.errors.is_empty() {
-                        break 'result Err(ctx.errors);
-                    }
-
                     let mut output = TokenStream::new();
 
                     match tokens.paste(&mut output, &mut ctx, &mut Namespace::new()) {
                         Ok(()) => output,
-                        Err(err) => break 'result Err(vec![err]),
+                        Err(err) => break 'result Err(err),
                     }
                 }
-                Err(err) => break 'result Err(ctx.errors.into_iter().chain([err]).collect()),
+                Err(err) => break 'result Err(err),
             })
         };
 
         match result {
             Ok(output) => output,
-            Err(errors) => {
-                let errors_output = errors.iter().map(|err| err.to_compile_error());
-                quote! {
-                    #(#errors_output)*
-                }
-            }
+            Err(err) => err.to_compile_error().into(),
         }
         .into()
     }

@@ -26,13 +26,19 @@ impl<'p> Namespace<'p> {
         }
     }
 
-    pub fn queue_insert(&mut self, name: Name, fragment: FragmentValue, ctx: &mut Context) {
+    pub fn queue_insert(
+        &mut self,
+        name: Name,
+        fragment: FragmentValue,
+        _ctx: &mut Context,
+    ) -> syn::Result<()> {
         if self.new_names.contains_key(&name.id) {
-            ctx.errors
-                .push(syn::Error::new(name.span, "Name already exists"));
+            return Err(syn::Error::new(name.span, "Name already exists"));
         }
 
         self.new_names.insert(name.id, fragment);
+
+        Ok(())
     }
     pub fn flush(&mut self) {
         self.names.extend(self.new_names.drain());
