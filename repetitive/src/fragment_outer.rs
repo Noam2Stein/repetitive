@@ -2,7 +2,7 @@ use proc_macro2::{Delimiter, Group, Span, TokenStream};
 use syn::{
     Ident, Token,
     parse::{ParseStream, Parser},
-    token::Bracket,
+    token::{Brace, Bracket, Paren},
 };
 
 use super::*;
@@ -63,102 +63,15 @@ impl ContextParse for FragmentOuterKind {
         }
 
         if input.peek(Token![let]) {
-            let let_span = input.parse::<Token![let]>()?.span;
-
-            let pat = Pattern::ctx_parse(input, ctx)?;
-
-            input.parse::<Token![=]>()?;
-
-            let expr = FragmentExpr::ctx_parse(input, ctx)?;
-
-            input.parse::<Token![;]>()?;
-
-            return Ok(Self::Let(FragmentLet {
-                let_span,
-                pat,
-                expr,
-            }));
+            return Ok(Self::Let(FragmentLet::ctx_parse(input, ctx)?));
         }
 
         if input.peek(Token![if]) {
-            let if_span = input.parse::<Token![if]>()?.span;
-            let cond = FragmentExpr::ctx_parse(input, ctx)?;
-
-            let then_group = input.parse::<Group>()?;
-            if then_group.delimiter() != Delimiter::Brace {
-                return Err(syn::Error::new(
-                    then_group.span(),
-                    "expected a brace-delimited block",
-                ));
-            }
-
-            let then = FragmentExpr {
-                span: if_span,
-                kind: FragmentExprKind::Value(FragmentValue::Tokens(
-                    Tokens::ctx_parse.ctx_parse2(then_group.stream(), ctx)?,
-                )),
-            };
-
-            let else_ = if input.peek(Token![else]) {
-                input.parse::<Token![else]>()?;
-
-                if input.peek(Token![if]) {
-                    let else_if = FragmentOuterKind::ctx_parse(input, ctx)?;
-
-                    match else_if {
-                        FragmentOuterKind::Expr(expr) => expr,
-                        _ => unreachable!(),
-                    }
-                } else {
-                    let else_group = input.parse::<Group>()?;
-                    if else_group.delimiter() != Delimiter::Brace {
-                        return Err(syn::Error::new(
-                            else_group.span(),
-                            "expected a brace-delimited block",
-                        ));
-                    }
-
-                    FragmentExpr {
-                        span: if_span,
-                        kind: FragmentExprKind::Value(FragmentValue::Tokens(
-                            Tokens::ctx_parse.ctx_parse2(else_group.stream(), ctx)?,
-                        )),
-                    }
-                }
-            } else {
-                FragmentExpr {
-                    span: if_span,
-                    kind: FragmentExprKind::Value(FragmentValue::Tokens(Tokens::default())),
-                }
-            };
-
-            return Ok(Self::Expr(FragmentExpr::op(
-                Op::IfElse(if_span),
-                vec![cond, then, else_],
-                ctx,
-            )?));
+            return Ok(Self::ctx_parse_if(input, ctx)?);
         }
 
-        if Keyword::peek(input) {
-            let keyword_span = input.span();
-            let keyword = input.parse::<Keyword>()?;
-
-            if input.peek(Bracket) {
-                let group = input.parse::<Group>()?;
-
-                let is_to_str = match keyword {
-                    Keyword::Str => true,
-                };
-
-                return Ok(Self::parse_concat(
-                    group.span(),
-                    group.stream(),
-                    is_to_str,
-                    ctx,
-                )?);
-            }
-
-            return Err(syn::Error::new(keyword_span, "unexpected keyword"));
+        if input.peek(Bracket) || Keyword::peek(input) {
+            return Ok(Self::parse_concat(input, ctx)?);
         }
 
         if input.peek(Ident) {
@@ -167,45 +80,29 @@ impl ContextParse for FragmentOuterKind {
             return Ok(Self::Expr(FragmentExpr::name(name)));
         }
 
-        if let Some(lit) = FragmentValueExpr::option_lit(input) {
-            return Ok(Self::Expr(lit.into_expr()));
+        if input.peek(Paren) {
+            let group = input.parse::<Group>()?;
+
+            let expr = FragmentExpr::ctx_parse.ctx_parse2(group.stream(), ctx)?;
+
+            return Ok(Self::Expr(expr));
         }
 
-        if let Some(group) = input.parse::<Option<Group>>()? {
-            match group.delimiter() {
-                Delimiter::Parenthesis => {
-                    let fragment_expr = FragmentExpr::ctx_parse.ctx_parse2(group.stream(), ctx)?;
+        if input.peek(Brace) {
+            let group = input.parse::<Group>()?;
 
-                    return Ok(Self::Expr(fragment_expr));
-                }
+            let tokens = Tokens::ctx_parse.ctx_parse2(group.stream(), ctx)?;
 
-                Delimiter::Brace => {
-                    return Ok(Self::Expr(FragmentExpr {
-                        span: group.span(),
-                        kind: FragmentExprKind::Value(FragmentValue::Tokens(
-                            Tokens::ctx_parse.ctx_parse2(group.stream(), ctx)?,
-                        )),
-                    }));
-                }
-
-                Delimiter::Bracket => {
-                    return Ok(Self::parse_concat(
-                        group.span(),
-                        group.stream(),
-                        false,
-                        ctx,
-                    )?);
-                }
-
-                Delimiter::None => {
-                    return Self::ctx_parse.ctx_parse2(group.stream(), ctx);
-                }
-            }
+            return Ok(Self::Expr(FragmentExpr {
+                span: group.span(),
+                kind: FragmentExprKind::Value(FragmentValue::Tokens(tokens)),
+            }));
         }
 
         Err(syn::Error::new(input.span(), "expected a fragment"))
     }
 }
+
 impl ContextParse for FragmentFor {
     fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
     where
@@ -257,13 +154,104 @@ impl ContextParse for FragmentForIter {
     }
 }
 
+impl ContextParse for FragmentLet {
+    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
+    where
+        Self: Sized,
+    {
+        let let_span = input.parse::<Token![let]>()?.span;
+
+        let pat = Pattern::ctx_parse(input, ctx)?;
+
+        input.parse::<Token![=]>()?;
+
+        let expr = FragmentExpr::ctx_parse(input, ctx)?;
+
+        input.parse::<Token![;]>()?;
+
+        return Ok(Self {
+            let_span,
+            pat,
+            expr,
+        });
+    }
+}
+
 impl FragmentOuterKind {
-    fn parse_concat(
-        group_span: Span,
-        group_stream: TokenStream,
-        is_to_str: bool,
-        ctx: &mut Context,
-    ) -> syn::Result<Self> {
+    fn ctx_parse_if(input: ParseStream, ctx: &mut Context) -> syn::Result<Self> {
+        let if_span = input.parse::<Token![if]>()?.span;
+        let cond = FragmentExpr::ctx_parse(input, ctx)?;
+
+        let then_group = input.parse::<Group>()?;
+        if then_group.delimiter() != Delimiter::Brace {
+            return Err(syn::Error::new(
+                then_group.span(),
+                "expected a brace-delimited block",
+            ));
+        }
+
+        let then = FragmentExpr {
+            span: if_span,
+            kind: FragmentExprKind::Value(FragmentValue::Tokens(
+                Tokens::ctx_parse.ctx_parse2(then_group.stream(), ctx)?,
+            )),
+        };
+
+        let else_ = if input.peek(Token![else]) {
+            input.parse::<Token![else]>()?;
+
+            if input.peek(Token![if]) {
+                let else_if = FragmentOuterKind::ctx_parse(input, ctx)?;
+
+                match else_if {
+                    FragmentOuterKind::Expr(expr) => expr,
+                    _ => unreachable!(),
+                }
+            } else {
+                let else_group = input.parse::<Group>()?;
+                if else_group.delimiter() != Delimiter::Brace {
+                    return Err(syn::Error::new(
+                        else_group.span(),
+                        "expected a brace-delimited block",
+                    ));
+                }
+
+                FragmentExpr {
+                    span: if_span,
+                    kind: FragmentExprKind::Value(FragmentValue::Tokens(
+                        Tokens::ctx_parse.ctx_parse2(else_group.stream(), ctx)?,
+                    )),
+                }
+            }
+        } else {
+            FragmentExpr {
+                span: if_span,
+                kind: FragmentExprKind::Value(FragmentValue::Tokens(Tokens::default())),
+            }
+        };
+
+        return Ok(Self::Expr(FragmentExpr::op(
+            Op::IfElse(if_span),
+            vec![cond, then, else_],
+            ctx,
+        )?));
+    }
+
+    fn parse_concat(input: ParseStream, ctx: &mut Context) -> syn::Result<Self> {
+        let keyword = if Keyword::peek(input) {
+            Some(input.parse::<Keyword>()?)
+        } else {
+            None
+        };
+
+        let group = input.parse::<Group>()?;
+        if group.delimiter() != Delimiter::Bracket {
+            return Err(syn::Error::new(
+                group.span(),
+                "expected a bracket-delimited list",
+            ));
+        }
+
         let parse_fn = |input: ParseStream| {
             let mut parts = Vec::new();
 
@@ -279,15 +267,15 @@ impl FragmentOuterKind {
             Ok::<_, syn::Error>(parts)
         };
 
-        let parts = parse_fn.parse2(group_stream)?;
+        let parts = parse_fn.parse2(group.stream())?;
 
-        let op = if is_to_str {
-            Op::ConcatString(group_span)
+        let op = if let Some(Keyword::Str) = keyword {
+            Op::ConcatString(group.span())
         } else {
-            Op::ConcatIdent(group_span)
+            Op::ConcatIdent(group.span())
         };
         let op_args = vec![FragmentExpr {
-            span: group_span,
+            span: group.span(),
             kind: FragmentExprKind::List(parts),
         }];
 
