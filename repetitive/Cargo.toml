@@ -1,6 +1,7 @@
 [package]
 edition = "2024"
 name    = "repetitive"
+readme  = "../README.md"
 version = "0.1.0"
 
 [lib]
