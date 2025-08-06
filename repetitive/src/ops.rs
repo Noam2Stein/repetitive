@@ -184,7 +184,10 @@ impl Op {
         Ok(match self {
             Self::IfElse(span) => {
                 let [cond, then, otherwise] = args else {
-                    return Err(Error::new(span, "expected three arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 3 arguments, found {}", args.len()),
+                    ));
                 };
 
                 let cond = match cond {
@@ -201,7 +204,10 @@ impl Op {
 
             Self::Neg(span) => {
                 let [arg] = args else {
-                    return Err(Error::new(span, "expected a single argument"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 1 argument, found {}", args.len()),
+                    ));
                 };
 
                 match arg {
@@ -231,7 +237,10 @@ impl Op {
 
             Self::Not(span) => {
                 let [arg] = args else {
-                    return Err(Error::new(span, "expected a single argument"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 1 argument, found {}", args.len()),
+                    ));
                 };
 
                 match arg {
@@ -263,7 +272,10 @@ impl Op {
 
             Self::Add(span) => {
                 let [lhs, rhs] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (lhs, rhs) {
@@ -308,7 +320,10 @@ impl Op {
 
             Self::Sub(span) => {
                 let [lhs, rhs] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (lhs, rhs) {
@@ -345,7 +360,10 @@ impl Op {
 
             Self::Mul(span) => {
                 let [lhs, rhs] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (lhs, rhs) {
@@ -390,7 +408,10 @@ impl Op {
 
             Self::Div(span) => {
                 let [lhs, rhs] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (lhs, rhs) {
@@ -427,7 +448,10 @@ impl Op {
 
             Self::Rem(span) => {
                 let [lhs, rhs] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (lhs, rhs) {
@@ -464,7 +488,10 @@ impl Op {
 
             Self::BitAnd(span) => {
                 let [lhs, rhs] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (lhs, rhs) {
@@ -501,7 +528,10 @@ impl Op {
 
             Self::BitOr(span) => {
                 let [lhs, rhs] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (lhs, rhs) {
@@ -538,7 +568,10 @@ impl Op {
 
             Self::BitXor(span) => {
                 let [lhs, rhs] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (lhs, rhs) {
@@ -575,7 +608,10 @@ impl Op {
 
             Self::Shl(span) => {
                 let [lhs, rhs] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (lhs, rhs) {
@@ -610,7 +646,10 @@ impl Op {
 
             Self::Shr(span) => {
                 let [lhs, rhs] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (lhs, rhs) {
@@ -645,7 +684,10 @@ impl Op {
 
             Self::Eq(span) => {
                 let [lhs, rhs] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (lhs, rhs) {
@@ -722,7 +764,10 @@ impl Op {
 
             Self::Lt(span) => {
                 let [lhs, rhs] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (lhs, rhs) {
@@ -769,7 +814,10 @@ impl Op {
 
             Self::Gt(span) => {
                 let [lhs, rhs] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (lhs, rhs) {
@@ -835,7 +883,10 @@ impl Op {
 
             Self::And(span) => {
                 let [lhs, rhs] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (lhs, rhs) {
@@ -850,7 +901,10 @@ impl Op {
 
             Self::Or(span) => {
                 let [lhs, rhs] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (lhs, rhs) {
@@ -865,7 +919,10 @@ impl Op {
 
             Self::Xor(span) => {
                 let [lhs, rhs] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (lhs, rhs) {
@@ -880,7 +937,10 @@ impl Op {
 
             Self::Range(span) => {
                 let [start, end] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (start, end) {
@@ -918,7 +978,10 @@ impl Op {
 
             Self::RangeInclusive(span) => {
                 let [start, end] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (start, end) {
@@ -956,7 +1019,10 @@ impl Op {
 
             Self::Len(span) => {
                 let [arg] = args else {
-                    return Err(Error::new(span, "expected one argument"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 1 argument, found {}", args.len()),
+                    ));
                 };
 
                 match arg {
@@ -966,18 +1032,34 @@ impl Op {
 
                     FragmentValue::Ident(ident) => FragmentValue::Int(ident.len() as i128),
 
-                    _ => return Err(Error::new(span, "expected `list`,`string` or `ident`")),
+                    _ => {
+                        return Err(Error::new(
+                            span,
+                            format!(
+                                "expected `list`,`string` or `ident`, found `{}`",
+                                arg.kind()
+                            ),
+                        ));
+                    }
                 }
             }
 
             Self::Index(span) => {
                 let [list, index] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 let items = match list {
                     FragmentValue::List(list) => list,
-                    _ => return Err(Error::new(span, "expected `list`")),
+                    _ => {
+                        return Err(Error::new(
+                            span,
+                            format!("expected `list`, found `{}`", list.kind()),
+                        ));
+                    }
                 };
 
                 match index {
@@ -999,7 +1081,10 @@ impl Op {
 
             Self::Enumerate(span) => {
                 let [list] = args else {
-                    return Err(Error::new(span, "expected one argument"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 1 argument, found {}", args.len()),
+                    ));
                 };
 
                 match list {
@@ -1015,13 +1100,21 @@ impl Op {
                             .collect(),
                     ),
 
-                    _ => return Err(Error::new(span, "expected `list`")),
+                    _ => {
+                        return Err(Error::new(
+                            span,
+                            format!("expected `list`, found `{}`", list.kind()),
+                        ));
+                    }
                 }
             }
 
             Self::Zip(span) => {
                 let [lhs, rhs] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (lhs, rhs) {
@@ -1032,13 +1125,28 @@ impl Op {
                             .collect(),
                     ),
 
-                    _ => return Err(Error::new(span, "expected `list`")),
+                    (FragmentValue::List(_), _) => {
+                        return Err(Error::new(
+                            span,
+                            format!("expected rhs to be `list`, found `{}`", rhs.kind()),
+                        ));
+                    }
+
+                    _ => {
+                        return Err(Error::new(
+                            span,
+                            format!("expected `list`, found `{}`", lhs.kind()),
+                        ));
+                    }
                 }
             }
 
             Self::Chain(span) => {
                 let [lhs, rhs] = args else {
-                    return Err(Error::new(span, "expected two arguments"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
                 };
 
                 match (lhs, rhs) {
@@ -1046,18 +1154,31 @@ impl Op {
                         FragmentValue::List(lhs.iter().chain(rhs.iter()).cloned().collect())
                     }
 
-                    _ => return Err(Error::new(span, "expected `list`")),
+                    _ => {
+                        return Err(Error::new(
+                            span,
+                            format!("expected `list`, found `{}`", lhs.kind()),
+                        ));
+                    }
                 }
             }
 
             Self::ConcatIdent(span) => {
                 let [parts] = args else {
-                    return Err(Error::new(span, "expected one argument"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 1 argument, found {}", args.len()),
+                    ));
                 };
 
                 let parts = match parts {
                     FragmentValue::List(parts) => parts,
-                    _ => return Err(Error::new(span, "expected `list`")),
+                    _ => {
+                        return Err(Error::new(
+                            span,
+                            format!("expected `list`, found `{}`", parts.kind()),
+                        ));
+                    }
                 };
 
                 let mut output_str = String::new();
@@ -1086,12 +1207,20 @@ impl Op {
 
             Self::ConcatString(span) => {
                 let [parts] = args else {
-                    return Err(Error::new(span, "expected one argument"));
+                    return Err(Error::new(
+                        span,
+                        format!("expected 1 argument, found {}", args.len()),
+                    ));
                 };
 
                 let parts = match parts {
                     FragmentValue::List(parts) => parts,
-                    _ => return Err(Error::new(span, "expected `list`")),
+                    _ => {
+                        return Err(Error::new(
+                            span,
+                            format!("expected `list`, found `{}`", parts.kind()),
+                        ));
+                    }
                 };
 
                 let mut output_str = String::new();

@@ -89,6 +89,20 @@ impl FragmentValueExpr {
         }
     }
 }
+impl FragmentValue {
+    pub fn kind(&self) -> &str {
+        match self {
+            FragmentValue::Int(_) => "int",
+            FragmentValue::Float(_) => "float",
+            FragmentValue::Bool(_) => "bool",
+            FragmentValue::String(_) => "string",
+            FragmentValue::Char(_) => "char",
+            FragmentValue::Ident(_) => "ident",
+            FragmentValue::List(_) => "list",
+            FragmentValue::Tokens(_) => "tokens",
+        }
+    }
+}
 
 impl Paste for FragmentValueExpr {
     fn paste(

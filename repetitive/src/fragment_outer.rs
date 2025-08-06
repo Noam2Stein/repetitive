@@ -23,9 +23,13 @@ pub enum FragmentOuterKind {
 #[derive(Debug, Clone)]
 pub struct FragmentFor {
     pub for_span: Span,
+    pub iters: Vec<FragmentForIter>,
+    pub body: Tokens,
+}
+#[derive(Debug, Clone)]
+pub struct FragmentForIter {
     pub pat: Pattern,
     pub iter: FragmentExpr,
-    pub body: Tokens,
 }
 
 #[derive(Debug, Clone)]
@@ -55,30 +59,7 @@ impl ContextParse for FragmentOuterKind {
         Self: Sized,
     {
         if input.peek(Token![for]) {
-            let for_span = input.parse::<Token![for]>()?.span;
-
-            let pat = Pattern::ctx_parse(input, ctx)?;
-
-            input.parse::<Token![in]>()?;
-
-            let iter = FragmentExpr::ctx_parse(input, ctx)?;
-
-            let body_group = input.parse::<Group>()?;
-            if body_group.delimiter() != Delimiter::Brace {
-                return Err(syn::Error::new(
-                    body_group.span(),
-                    "expected a brace-delimited block",
-                ));
-            }
-
-            let body = Tokens::ctx_parse.ctx_parse2(body_group.stream(), ctx)?;
-
-            return Ok(Self::For(FragmentFor {
-                for_span,
-                pat,
-                iter,
-                body,
-            }));
+            return Ok(Self::For(FragmentFor::ctx_parse(input, ctx)?));
         }
 
         if input.peek(Token![let]) {
@@ -225,6 +206,57 @@ impl ContextParse for FragmentOuterKind {
         Err(syn::Error::new(input.span(), "expected a fragment"))
     }
 }
+impl ContextParse for FragmentFor {
+    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
+    where
+        Self: Sized,
+    {
+        let for_span = input.parse::<Token![for]>()?.span;
+
+        let mut iters = Vec::new();
+        while Pattern::peek(input) {
+            let iter = FragmentForIter::ctx_parse(input, ctx)?;
+            iters.push(iter);
+
+            if !input.peek(Token![,]) {
+                break;
+            }
+
+            input.parse::<Token![,]>()?;
+        }
+
+        let body_group = input.parse::<Group>()?;
+        if body_group.delimiter() != Delimiter::Brace {
+            return Err(syn::Error::new(
+                body_group.span(),
+                "expected a brace-delimited block",
+            ));
+        }
+
+        let body = Tokens::ctx_parse.ctx_parse2(body_group.stream(), ctx)?;
+
+        return Ok(Self {
+            for_span,
+            iters,
+            body,
+        });
+    }
+}
+impl ContextParse for FragmentForIter {
+    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
+    where
+        Self: Sized,
+    {
+        let pat = Pattern::ctx_parse(input, ctx)?;
+
+        input.parse::<Token![in]>()?;
+
+        let iter = FragmentExpr::ctx_parse(input, ctx)?;
+
+        Ok(Self { pat, iter })
+    }
+}
+
 impl FragmentOuterKind {
     fn parse_concat(
         group_span: Span,
@@ -284,22 +316,31 @@ impl Paste for FragmentFor {
         ctx: &mut Context,
         namespace: &mut Namespace,
     ) -> syn::Result<()> {
-        let iter_val = self.iter.eval(ctx, namespace)?;
-        let items = match iter_val.value {
-            FragmentValue::List(val) => val,
-            _ => return Err(syn::Error::new(self.iter.span, "expected a list")),
-        };
+        let iters = self
+            .iters
+            .iter()
+            .map(|iter| iter.iter.eval(ctx, namespace))
+            .map(|val_expr| match val_expr {
+                Ok(val_expr) => match val_expr.value {
+                    FragmentValue::List(val) => Ok(val),
+                    _ => Err(syn::Error::new(val_expr.span, "expected a list")),
+                },
+                Err(e) => Err(e),
+            })
+            .collect::<syn::Result<Vec<_>>>()?;
 
-        for item in items {
-            let item_expr = FragmentValueExpr {
-                span: self.for_span,
-                value: item,
-            };
-
+        for iter_items in iter_combinations(&iters) {
             let mut item_namespace = namespace.fork();
-            item_namespace.flush();
-            self.pat.queue_insert(item_expr, &mut item_namespace, ctx)?;
-            item_namespace.flush();
+
+            for (item, iter) in iter_items.into_iter().zip(self.iters.iter()) {
+                let item_expr = FragmentValueExpr {
+                    span: self.for_span,
+                    value: item.clone(),
+                };
+
+                iter.pat.queue_insert(item_expr, &mut item_namespace, ctx)?;
+                item_namespace.flush();
+            }
 
             self.body.paste(output, ctx, &mut item_namespace)?;
         }
@@ -322,4 +363,26 @@ impl FragmentLet {
 
         Ok(())
     }
+}
+
+fn iter_combinations<'a, T>(iters: &'a Vec<Vec<T>>) -> impl Iterator<Item = Vec<&'a T>> {
+    let lengths: Vec<usize> = iters.iter().map(|v| v.len()).collect();
+    let total = lengths.iter().product::<usize>();
+
+    (0..total).filter_map(move |i| {
+        let mut rem = i;
+        let mut combo = Vec::with_capacity(iters.len());
+
+        for (j, v) in iters.iter().enumerate() {
+            let len = lengths[j];
+            if len == 0 {
+                return None; // skip if any inner vec is empty
+            }
+            let idx = rem % len;
+            rem /= len;
+            combo.push(&v[idx]);
+        }
+
+        Some(combo)
+    })
 }

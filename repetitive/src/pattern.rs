@@ -9,24 +9,11 @@ pub enum Pattern {
     List(Vec<Pattern>),
 }
 
-impl ContextParse for Pattern {
-    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
-    where
-        Self: Sized,
-    {
-        if input.peek(Bracket) {
-            let group = input.parse::<Group>()?;
-
-            return Ok(Self::List(
-                ctx_parse_punctuated.ctx_parse2(group.stream(), ctx)?,
-            ));
-        }
-
-        Ok(Self::Name(Name::ctx_parse(input, ctx)?))
-    }
-}
-
 impl Pattern {
+    pub fn peek(input: ParseStream) -> bool {
+        input.peek(Bracket) || Name::peek(input)
+    }
+
     pub fn queue_insert(
         &self,
         value_expr: FragmentValueExpr,
@@ -66,6 +53,23 @@ impl Pattern {
                 }
             }
         })
+    }
+}
+
+impl ContextParse for Pattern {
+    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
+    where
+        Self: Sized,
+    {
+        if input.peek(Bracket) {
+            let group = input.parse::<Group>()?;
+
+            return Ok(Self::List(
+                ctx_parse_punctuated.ctx_parse2(group.stream(), ctx)?,
+            ));
+        }
+
+        Ok(Self::Name(Name::ctx_parse(input, ctx)?))
     }
 }
 

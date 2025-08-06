@@ -5,9 +5,12 @@ repetitive! {
     @let [start, end] = [0, n];
     @let range = start..end;
 
+    @let underscore = '_;
+    @let names = ['A, 'B, 'C];
+
     @for i in range {
-        @let name = ['A, 'B, 'C].index(i);
-        @let name = @['_ @name];
+        @let name = names[i];
+        @let name = @[underscore @name];
 
         const @name: u8 = @i;
     }

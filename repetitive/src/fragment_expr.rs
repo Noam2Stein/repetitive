@@ -1,7 +1,7 @@
 use std::mem::replace;
 
 use proc_macro2::{Delimiter, Group, Span, TokenStream};
-use syn::{Ident, Token, parse::ParseStream};
+use syn::{Ident, Token, parse::ParseStream, token::Bracket};
 
 use super::*;
 
@@ -201,6 +201,13 @@ impl FragmentExpr {
             expr = Self::op(op, [expr].into_iter().chain(args).collect(), ctx)?;
         }
 
+        if input.peek(Bracket) {
+            let group = input.parse::<Group>()?;
+            let idx = FragmentExpr::ctx_parse.ctx_parse2(group.stream(), ctx)?;
+
+            expr = Self::op(Op::Index(group.span()), vec![expr, idx], ctx)?;
+        }
+
         Ok(expr)
     }
 
@@ -320,7 +327,7 @@ impl FragmentExpr {
             }
         }
 
-        Err(syn::Error::new(input.span(), "expected a fragment"))
+        Err(syn::Error::new(input.span(), "expected a fragment expr"))
     }
 
     fn optimize(&mut self, ctx: &mut Context) -> syn::Result<()> {
