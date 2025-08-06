@@ -59,6 +59,8 @@ impl ContextParse for FragmentOuterKind {
 
             let pat = Pattern::ctx_parse(input, ctx)?;
 
+            input.parse::<Token![in]>()?;
+
             let iter = FragmentExpr::ctx_parse(input, ctx)?;
 
             let body_group = input.parse::<Group>()?;
@@ -109,21 +111,49 @@ impl ContextParse for FragmentOuterKind {
                 ));
             }
 
-            let then = Tokens::ctx_parse.ctx_parse2(then_group.stream(), ctx)?;
+            let then = FragmentExpr {
+                span: if_span,
+                kind: FragmentExprKind::Value(FragmentValue::Tokens(
+                    Tokens::ctx_parse.ctx_parse2(then_group.stream(), ctx)?,
+                )),
+            };
+
+            let else_ = if input.peek(Token![else]) {
+                input.parse::<Token![else]>()?;
+
+                if input.peek(Token![if]) {
+                    let else_if = FragmentOuterKind::ctx_parse(input, ctx)?;
+
+                    match else_if {
+                        FragmentOuterKind::Expr(expr) => expr,
+                        _ => unreachable!(),
+                    }
+                } else {
+                    let else_group = input.parse::<Group>()?;
+                    if else_group.delimiter() != Delimiter::Brace {
+                        return Err(syn::Error::new(
+                            else_group.span(),
+                            "expected a brace-delimited block",
+                        ));
+                    }
+
+                    FragmentExpr {
+                        span: if_span,
+                        kind: FragmentExprKind::Value(FragmentValue::Tokens(
+                            Tokens::ctx_parse.ctx_parse2(else_group.stream(), ctx)?,
+                        )),
+                    }
+                }
+            } else {
+                FragmentExpr {
+                    span: if_span,
+                    kind: FragmentExprKind::Value(FragmentValue::Tokens(Tokens::default())),
+                }
+            };
 
             return Ok(Self::Expr(FragmentExpr::op(
                 Op::IfElse(if_span),
-                vec![
-                    cond,
-                    FragmentExpr {
-                        span: if_span,
-                        kind: FragmentExprKind::Value(FragmentValue::Tokens(then)),
-                    },
-                    FragmentExpr {
-                        span: if_span,
-                        kind: FragmentExprKind::Value(FragmentValue::Tokens(Tokens::default())),
-                    },
-                ],
+                vec![cond, then, else_],
                 ctx,
             )?));
         }
@@ -267,7 +297,9 @@ impl Paste for FragmentFor {
             };
 
             let mut item_namespace = namespace.fork();
+            item_namespace.flush();
             self.pat.queue_insert(item_expr, &mut item_namespace, ctx)?;
+            item_namespace.flush();
 
             self.body.paste(output, ctx, &mut item_namespace)?;
         }

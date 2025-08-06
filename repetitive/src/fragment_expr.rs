@@ -183,7 +183,7 @@ impl FragmentExpr {
 
         let mut expr = FragmentExpr::ctx_parse_base(input, ctx)?;
 
-        if input.peek(Token![.]) {
+        if input.peek(Token![.]) && !input.peek(Token![..]) && !input.peek(Token![...]) {
             input.parse::<Token![.]>()?;
             let ident = input.parse::<Ident>()?;
 

@@ -1,11 +1,16 @@
 use repetitive::repetitive;
 
 fn main() {
-    println!("Hello, world!");
-}
+    repetitive! {
+        @for i in 0..10 {
+            @let even = @{ println!("{} is even", @i); };
+            @let odd = @{ println!("{} is odd", @i); };
 
-repetitive! {
-    @let a = 'Fun;
-
-    struct @a {}
+            @if i % 2 == 0 {
+                @even
+            } else {
+                @odd
+            }
+        }
+    }
 }
