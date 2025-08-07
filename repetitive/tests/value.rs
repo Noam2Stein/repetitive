@@ -17,4 +17,6 @@ repetitive! {
 
     const _: () = assert!(@('ident == 'ident));
     const _: () = assert!(@('ident == ~ident));
+
+    const _: [u8; 3] = @([1, 2, 3]);
 }

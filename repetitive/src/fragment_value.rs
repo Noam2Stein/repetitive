@@ -1,8 +1,6 @@
 use proc_macro2::{Span, TokenStream};
-use quote::{ToTokens, quote_spanned};
-use syn::{
-    Error, Ident, Lifetime, LitBool, LitChar, LitFloat, LitInt, LitStr, Token, parse::ParseStream,
-};
+use quote::{ToTokens, quote, quote_spanned};
+use syn::{Ident, Lifetime, LitBool, LitChar, LitFloat, LitInt, LitStr, Token, parse::ParseStream};
 
 use super::*;
 
@@ -148,8 +146,19 @@ impl Paste for FragmentValueExpr {
 
             FragmentValue::Tokens(val) => val.paste(output, ctx, namespace)?,
 
-            FragmentValue::List(_) => {
-                return Err(Error::new(self.span, "cannot paste `list`"));
+            FragmentValue::List(val) => {
+                let mut items = TokenStream::new();
+                for item in val {
+                    FragmentValueExpr {
+                        span: self.span,
+                        value: item.clone(),
+                    }
+                    .paste(&mut items, ctx, namespace)?;
+
+                    quote! { , }.to_tokens(&mut items);
+                }
+
+                quote_spanned! { self.span => [#items] }.to_tokens(output);
             }
         })
     }
