@@ -154,7 +154,8 @@ use tokens::*;
 /// - char lit,
 /// - string lit,
 /// - ident,
-/// - list.
+/// - list,
+/// - tokenstream.
 ///
 /// An expression can be:
 /// - a literal: `1`, `1.0`, `'a'`, `"hello"`, `true`, `false`,
@@ -175,11 +176,13 @@ use tokens::*;
 ///
 /// These methods are supported:
 /// - operator methods,
-/// - `len()`,
-/// - `index(<idx>)`,
-/// - `enumerate()`,
-/// - `zip(<list>)`,
-/// - `chain(<list>)`.
+/// - `.len()`,
+/// - `.index(<idx>)`,
+/// - `.enumerate()`,
+/// - `.zip(<list>)`,
+/// - `.chain(<list>)`,
+/// - `.concat_ident()`,
+/// - `.concat_string()`.
 #[proc_macro]
 pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     main::repetitive(input)

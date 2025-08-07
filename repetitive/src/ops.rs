@@ -171,6 +171,9 @@ impl Op {
             "zip" => Op::Zip,
             "chain" => Op::Chain,
 
+            "concat_ident" => Op::ConcatIdent,
+            "concat_string" => Op::ConcatString,
+
             _ => {
                 return Err(syn::Error::new(
                     ident.span(),
