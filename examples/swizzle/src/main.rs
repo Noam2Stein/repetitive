@@ -19,13 +19,13 @@ repetitive! {
 
         #[derive(Debug, Clone, Copy)]
         struct @VecN {
-            @for c in @components {
+            @for c in components {
                 @c: f32,
             }
         }
 
         impl @VecN {
-            @for x in @components, y in @components {
+            @for x in components, y in components {
                 fn @[x y](self) -> Vec2 {
                     Vec2 {
                         x: self.@x,
@@ -34,7 +34,7 @@ repetitive! {
                 }
             }
 
-            @for x in @components, y in @components, z in @components {
+            @for x in components, y in components, z in components {
                 fn @[x y z](self) -> Vec3 {
                     Vec3 {
                         x: self.@x,
@@ -44,7 +44,7 @@ repetitive! {
                 }
             }
 
-            @for x in @components, y in @components, z in @components, w in @components {
+            @for x in components, y in components, z in components, w in components {
                 fn @[x y z w](self) -> Vec4 {
                     Vec4 {
                         x: self.@x,

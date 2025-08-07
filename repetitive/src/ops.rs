@@ -1,5 +1,5 @@
 use proc_macro2::Span;
-use syn::{Error, Ident, Token, parse::ParseStream, spanned::Spanned};
+use syn::{Error, Token, parse::ParseStream, spanned::Spanned};
 
 use super::*;
 
@@ -142,47 +142,38 @@ impl Op {
         }
     }
 
-    pub fn parse_method(ident: Ident) -> syn::Result<Self> {
-        let variant_fn = match ident.to_string().as_str() {
-            "not" => Op::Not,
-            "neg" => Op::Neg,
+    pub fn from_method_ident(ident: Method) -> Self {
+        match ident {
+            Method::Not(span) => Op::Not(span),
+            Method::Neg(span) => Op::Neg(span),
 
-            "add" => Op::Add,
-            "sub" => Op::Sub,
-            "mul" => Op::Mul,
-            "div" => Op::Div,
-            "rem" => Op::Rem,
-            "bitand" => Op::BitAnd,
-            "bitor" => Op::BitOr,
-            "bitxor" => Op::BitXor,
-            "shl" => Op::Shl,
-            "shr" => Op::Shr,
+            Method::Add(span) => Op::Add(span),
+            Method::Sub(span) => Op::Sub(span),
+            Method::Mul(span) => Op::Mul(span),
+            Method::Div(span) => Op::Div(span),
+            Method::Rem(span) => Op::Rem(span),
+            Method::BitAnd(span) => Op::BitAnd(span),
+            Method::BitOr(span) => Op::BitOr(span),
+            Method::BitXor(span) => Op::BitXor(span),
+            Method::Shl(span) => Op::Shl(span),
+            Method::Shr(span) => Op::Shr(span),
 
-            "eq" => Op::Eq,
-            "ne" => Op::Ne,
-            "lt" => Op::Lt,
-            "gt" => Op::Gt,
-            "le" => Op::Le,
-            "ge" => Op::Ge,
+            Method::Eq(span) => Op::Eq(span),
+            Method::Ne(span) => Op::Ne(span),
+            Method::Lt(span) => Op::Lt(span),
+            Method::Gt(span) => Op::Gt(span),
+            Method::Le(span) => Op::Le(span),
+            Method::Ge(span) => Op::Ge(span),
 
-            "len" => Op::Len,
-            "index" => Op::Index,
-            "enumerate" => Op::Enumerate,
-            "zip" => Op::Zip,
-            "chain" => Op::Chain,
+            Method::Len(span) => Op::Len(span),
+            Method::Index(span) => Op::Index(span),
+            Method::Enumerate(span) => Op::Enumerate(span),
+            Method::Zip(span) => Op::Zip(span),
+            Method::Chain(span) => Op::Chain(span),
 
-            "concat_ident" => Op::ConcatIdent,
-            "concat_string" => Op::ConcatString,
-
-            _ => {
-                return Err(syn::Error::new(
-                    ident.span(),
-                    format!("method `{}` not found", ident.to_string()),
-                ));
-            }
-        };
-
-        Ok(variant_fn(ident.span()))
+            Method::ConcatIdent(span) => Op::ConcatIdent(span),
+            Method::ConcatString(span) => Op::ConcatString(span),
+        }
     }
 
     pub fn compute(self, args: &[FragmentValue], ctx: &mut Context) -> syn::Result<FragmentValue> {

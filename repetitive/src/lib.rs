@@ -4,6 +4,7 @@
 
 mod ctx;
 mod ctx_parse;
+mod doc;
 mod fragment_expr;
 mod fragment_outer;
 mod fragment_value;
@@ -16,6 +17,7 @@ mod pattern;
 mod tokens;
 use ctx::*;
 use ctx_parse::*;
+use doc::*;
 use fragment_expr::*;
 use fragment_outer::*;
 use fragment_value::*;
@@ -198,6 +200,7 @@ mod main {
     pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         let mut ctx = Context {
             interner: DefaultStringInterner::new(),
+            method_idents: Vec::new(),
             warnings: Vec::new(),
         };
 
@@ -226,10 +229,18 @@ mod main {
             .into_iter()
             .map(|warning| warning.into_compile_error());
 
+        #[cfg(feature = "doc")]
+        let doc = paste_method_doc(ctx.method_idents);
+
+        #[cfg(not(feature = "doc"))]
+        let doc = TokenStream::new();
+
         quote! {
             #result
 
             #(#warnings)*
+
+            #doc
         }
         .into()
     }

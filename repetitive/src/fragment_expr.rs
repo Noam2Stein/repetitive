@@ -188,8 +188,8 @@ impl FragmentExpr {
         let mut expr = FragmentExpr::ctx_parse_base(input, ctx)?;
 
         if input.peek(Token![.]) && !input.peek(Token![..]) && !input.peek(Token![...]) {
-            input.parse::<Token![.]>()?;
-            let ident = input.parse::<Ident>()?;
+            let method = Method::ctx_parse(input, ctx)?;
+            let op = Op::from_method_ident(method);
 
             let group = input.parse::<Group>()?;
             if group.delimiter() != Delimiter::Parenthesis {
@@ -199,7 +199,6 @@ impl FragmentExpr {
                 ));
             }
 
-            let op = Op::parse_method(ident)?;
             let args = ctx_parse_punctuated.ctx_parse2(group.stream(), ctx)?;
 
             expr = Self::op(op, [expr].into_iter().chain(args).collect(), ctx)?;
