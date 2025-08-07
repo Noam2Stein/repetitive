@@ -1,6 +1,8 @@
 use proc_macro2::{Span, TokenStream};
 use quote::{ToTokens, quote_spanned};
-use syn::{Error, Ident, Lifetime, LitBool, LitChar, LitFloat, LitInt, LitStr, parse::ParseStream};
+use syn::{
+    Error, Ident, Lifetime, LitBool, LitChar, LitFloat, LitInt, LitStr, Token, parse::ParseStream,
+};
 
 use super::*;
 
@@ -23,27 +25,38 @@ pub struct FragmentValueExpr {
 }
 
 impl FragmentValueExpr {
-    pub fn option_lit(input: ParseStream) -> Option<Self> {
+    pub fn option_lit(input: ParseStream) -> syn::Result<Option<Self>> {
         if input.peek(LitInt) {
-            return Some(Self::int_lit(input.parse().unwrap()));
+            return Ok(Some(Self::int_lit(input.parse().unwrap())));
         }
         if input.peek(LitFloat) {
-            return Some(Self::float_lit(input.parse().unwrap()));
+            return Ok(Some(Self::float_lit(input.parse().unwrap())));
         }
         if input.peek(LitBool) {
-            return Some(Self::bool_lit(input.parse().unwrap()));
+            return Ok(Some(Self::bool_lit(input.parse().unwrap())));
         }
         if input.peek(LitChar) {
-            return Some(Self::char_lit(input.parse().unwrap()));
+            return Ok(Some(Self::char_lit(input.parse().unwrap())));
         }
         if input.peek(LitStr) {
-            return Some(Self::str_lit(input.parse().unwrap()));
+            return Ok(Some(Self::str_lit(input.parse().unwrap())));
         }
         if input.peek(Lifetime) {
-            return Some(Self::ident_lit(input.parse().unwrap()));
+            return Ok(Some(Self::ident_lit(input.parse().unwrap())));
+        }
+        if input.peek(Token![~]) {
+            let punct_span = input.parse::<Token![~]>().unwrap().span;
+            let ident = input.parse::<Ident>()?;
+
+            let lifetime = Lifetime {
+                apostrophe: punct_span,
+                ident,
+            };
+
+            return Ok(Some(Self::ident_lit(lifetime)));
         }
 
-        None
+        Ok(None)
     }
     pub fn int_lit(lit: LitInt) -> Self {
         Self {

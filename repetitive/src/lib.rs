@@ -161,7 +161,7 @@ use tokens::*;
 ///
 /// An expression can be:
 /// - a literal: `1`, `1.0`, `'a'`, `"hello"`, `true`, `false`,
-/// - an "ident literal": `'Ident`,
+/// - an "ident literal": `'Ident`, `~Ident` (useful for declarative macros. `~$ident_lit_frag`),
 /// - a list: `[... <expr> ...]`,
 /// - a name: `name`,
 /// - a fragment: `@{...}`,
@@ -176,15 +176,7 @@ use tokens::*;
 /// - and `&&`, or `||`, not `!`,
 /// - range `..`, range_inclusive `..=`.
 ///
-/// These methods are supported:
-/// - operator methods,
-/// - `.len()`,
-/// - `.index(<idx>)`,
-/// - `.enumerate()`,
-/// - `.zip(<list>)`,
-/// - `.chain(<list>)`,
-/// - `.concat_ident()`,
-/// - `.concat_string()`.
+/// Supported methods are known by auto-completion.
 #[proc_macro]
 pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     main::repetitive(input)

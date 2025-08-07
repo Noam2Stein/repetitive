@@ -14,4 +14,7 @@ repetitive! {
     const _: () = assert!(@('1') == '1');
 
     const _: () = assert!(@{ 1 } == 1);
+
+    const _: () = assert!(@('ident == 'ident));
+    const _: () = assert!(@('ident == ~ident));
 }

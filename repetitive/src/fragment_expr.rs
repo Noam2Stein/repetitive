@@ -307,7 +307,7 @@ impl FragmentExpr {
             return Ok(Self::name(name));
         }
 
-        if let Some(lit) = FragmentValueExpr::option_lit(input) {
+        if let Some(lit) = FragmentValueExpr::option_lit(input)? {
             return Ok(lit.into_expr());
         }
 
