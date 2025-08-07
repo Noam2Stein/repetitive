@@ -113,3 +113,26 @@ impl Odd for Number1 {}
 impl Even for Number2 {}
 impl Odd for Number3 {}
 ```
+
+## Expression Methods
+
+Expression methods have full auto-completion and documentation.
+
+```rust
+repetitive! {
+    @for N in 2..=4 {
+        @let VecN = @['Vec N];
+        @let components = ['x, 'y, 'z, 'w][0..N];
+
+        println!("{} has: {}", @str[VecN], @(components.concat_string()));
+    }
+}
+```
+
+Generates:
+
+```rust
+println!("{} has: {}", "Vec2", "xy");
+println!("{} has: {}", "Vec3", "xyz");
+println!("{} has: {}", "Vec4", "xyzw");
+```
