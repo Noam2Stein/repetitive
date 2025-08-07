@@ -4,11 +4,11 @@
 
 mod ctx;
 mod ctx_parse;
-mod doc;
 mod fragment_expr;
 mod fragment_outer;
 mod fragment_value;
 mod keyword;
+mod methods;
 mod name;
 mod namespace;
 mod ops;
@@ -17,11 +17,11 @@ mod pattern;
 mod tokens;
 use ctx::*;
 use ctx_parse::*;
-use doc::*;
 use fragment_expr::*;
 use fragment_outer::*;
 use fragment_value::*;
 use keyword::*;
+use methods::*;
 use name::*;
 use namespace::*;
 use ops::*;
