@@ -5,7 +5,7 @@ repetitive! {
     trait Odd {}
 
     @for i in 0..4 {
-        @let NumberI = @['_Number @i];
+        @let NumberI = @['_Number i];
 
         struct @NumberI;
 

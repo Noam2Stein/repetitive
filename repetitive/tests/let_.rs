@@ -10,7 +10,7 @@ repetitive! {
 
     @for i in range {
         @let name = names[i];
-        @let name = @[underscore @name];
+        @let name = @[underscore name];
 
         const @name: u8 = @i;
     }

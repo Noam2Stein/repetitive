@@ -1,7 +1,11 @@
 use std::mem::replace;
 
 use proc_macro2::{Delimiter, Group, Span, TokenStream};
-use syn::{Ident, Token, parse::ParseStream, token::Bracket};
+use syn::{
+    Ident, Token,
+    parse::ParseStream,
+    token::{Bracket, Paren},
+};
 
 use super::*;
 
@@ -236,7 +240,18 @@ impl FragmentExpr {
 
     fn ctx_parse_base(input: ParseStream, ctx: &mut Context) -> syn::Result<Self> {
         if input.peek(Token![@]) {
-            let outer = FragmentOuter::ctx_parse(input, ctx)?;
+            let at_span = input.parse::<Token![@]>()?.span;
+
+            if input.peek(Paren) || Name::peek(input) {
+                ctx.warnings
+                    .push(syn::Error::new(at_span, "unnecessary `@`"));
+            }
+
+            let outer_kind = FragmentOuterKind::ctx_parse(input, ctx)?;
+            let outer = FragmentOuter {
+                at_span,
+                kind: outer_kind,
+            };
 
             return Ok(match outer.kind {
                 FragmentOuterKind::Expr(expr) => expr,
