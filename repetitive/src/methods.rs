@@ -7,20 +7,24 @@ use super::*;
 /// Contains both the dot and the method ident.
 #[derive(Debug, Clone, Copy)]
 pub enum Method {
+    // Unary Operators
     Neg(Span),
     Not(Span),
 
+    // Binary Operators
     Add(Span),
     Sub(Span),
     Mul(Span),
     Div(Span),
     Rem(Span),
+
     BitAnd(Span),
     BitOr(Span),
     BitXor(Span),
     Shl(Span),
     Shr(Span),
 
+    // Comparison Operators
     Eq(Span),
     Ne(Span),
     Lt(Span),
@@ -28,6 +32,11 @@ pub enum Method {
     Le(Span),
     Ge(Span),
 
+    Min(Span),
+    Max(Span),
+    Clamp(Span),
+
+    // List
     Len(Span),
     Index(Span),
     Enumerate(Span),
@@ -58,20 +67,24 @@ impl ContextParse for Method {
         };
 
         Ok(match ident.to_string().as_str() {
+            // Unary Operators
             "neg" => Self::Neg(ident.span()),
             "not" => Self::Not(ident.span()),
 
+            // Binary Operators
             "add" => Self::Add(ident.span()),
             "sub" => Self::Sub(ident.span()),
             "mul" => Self::Mul(ident.span()),
             "div" => Self::Div(ident.span()),
             "rem" => Self::Rem(ident.span()),
+
             "bitand" => Self::BitAnd(ident.span()),
             "bitor" => Self::BitOr(ident.span()),
             "bitxor" => Self::BitXor(ident.span()),
             "shl" => Self::Shl(ident.span()),
             "shr" => Self::Shr(ident.span()),
 
+            // Comparison Operators
             "eq" => Self::Eq(ident.span()),
             "ne" => Self::Ne(ident.span()),
             "lt" => Self::Lt(ident.span()),
@@ -79,6 +92,11 @@ impl ContextParse for Method {
             "le" => Self::Le(ident.span()),
             "ge" => Self::Ge(ident.span()),
 
+            "min" => Self::Min(ident.span()),
+            "max" => Self::Max(ident.span()),
+            "clamp" => Self::Clamp(ident.span()),
+
+            // List
             "len" => Self::Len(ident.span()),
             "index" => Self::Index(ident.span()),
             "enumerate" => Self::Enumerate(ident.span()),
@@ -101,9 +119,11 @@ pub fn paste_method_doc(idents: Vec<(Token![.], Option<Ident>)>) -> TokenStream 
             .as_ref()
             .map(|ident| ident.as_str())
         {
+            // Unary Operators
             Some("neg") => quote! { val #dot #ident() },
             Some("not") => quote! { val #dot #ident() },
 
+            // Binary Operators
             Some("add") => quote! { val #dot #ident(other) },
             Some("sub") => quote! { val #dot #ident(other) },
             Some("mul") => quote! { val #dot #ident(other) },
@@ -116,6 +136,7 @@ pub fn paste_method_doc(idents: Vec<(Token![.], Option<Ident>)>) -> TokenStream 
             Some("shl") => quote! { val #dot #ident(other) },
             Some("shr") => quote! { val #dot #ident(other) },
 
+            // Comparison Operators
             Some("eq") => quote! { val #dot #ident(other) },
             Some("ne") => quote! { val #dot #ident(other) },
             Some("lt") => quote! { val #dot #ident(other) },
@@ -123,6 +144,11 @@ pub fn paste_method_doc(idents: Vec<(Token![.], Option<Ident>)>) -> TokenStream 
             Some("le") => quote! { val #dot #ident(other) },
             Some("ge") => quote! { val #dot #ident(other) },
 
+            Some("min") => quote! { val #dot #ident(other) },
+            Some("max") => quote! { val #dot #ident(other) },
+            Some("clamp") => quote! { val #dot #ident(min, max) },
+
+            // List
             Some("len") => quote! { val #dot #ident() },
             Some("index") => quote! { val #dot #ident(index) },
             Some("enumerate") => quote! { val #dot #ident() },
@@ -156,6 +182,10 @@ pub fn paste_method_doc(idents: Vec<(Token![.], Option<Ident>)>) -> TokenStream 
     let gt_doc = fn_doc("gt", GT_DOC, &idents);
     let le_doc = fn_doc("le", LE_DOC, &idents);
     let ge_doc = fn_doc("ge", GE_DOC, &idents);
+
+    let min_doc = fn_doc("min", MIN_DOC, &idents);
+    let max_doc = fn_doc("max", MAX_DOC, &idents);
+    let clamp_doc = fn_doc("clamp", CLAMP_DOC, &idents);
 
     let len_doc = fn_doc("len", LEN_DOC, &idents);
     let index_doc = fn_doc("index", INDEX_DOC, &idents);
@@ -245,6 +275,18 @@ pub fn paste_method_doc(idents: Vec<(Token![.], Option<Ident>)>) -> TokenStream 
                 const fn ge(self, other: Self) -> Self { Self }
 
                 #[allow(dead_code)]
+                #[doc = #min_doc]
+                const fn min(self, other: Self) -> Self { Self }
+
+                #[allow(dead_code)]
+                #[doc = #max_doc]
+                const fn max(self, other: Self) -> Self { Self }
+
+                #[allow(dead_code)]
+                #[doc = #clamp_doc]
+                const fn clamp(self, min: Self, max: Self) -> Self { Self }
+
+                #[allow(dead_code)]
                 #[doc = #len_doc]
                 const fn len(self) -> Self { Self }
 
@@ -279,6 +321,10 @@ pub fn paste_method_doc(idents: Vec<(Token![.], Option<Ident>)>) -> TokenStream 
             let other = Fragment;
             #[allow(dead_code)]
             let index = Fragment;
+            #[allow(dead_code)]
+            let min = Fragment;
+            #[allow(dead_code)]
+            let max = Fragment;
 
             #(#ident_calls;)*
         };
@@ -347,6 +393,21 @@ const GT_DOC: &str = "Checks if the first fragment is greater than the second. T
 const LE_DOC: &str = "Checks if the first fragment is less than or equal to the second. This works for all fragments but `list` and `tokens`.";
 
 const GE_DOC: &str = "Checks if the first fragment is greater than or equal to the second. This works for all fragments but `list` and `tokens`.";
+
+const MIN_DOC: &str = "
+    Returns the minimum of two fragments.
+    This uses the `<` / `>` operators, and thus works for more than just numbers.
+    ";
+
+const MAX_DOC: &str = "
+    Returns the maximum of two fragments.
+    This uses the `<` / `>` operators, and thus works for more than just numbers.
+    ";
+
+const CLAMP_DOC: &str = "
+    Clamps a fragment between two other fragments.
+    This uses the `<` / `>` operators, and thus works for more than just numbers.
+    ";
 
 const LEN_DOC: &str = "Returns the length of a fragment. This works for `str`, `ident`, `char`, `list` and `tokens` fragments.";
 

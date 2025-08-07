@@ -7,20 +7,24 @@ use super::*;
 pub enum Op {
     IfElse(Span),
 
+    // Unary Operators
     Neg(Span),
     Not(Span),
 
+    // Binary Operators
     Add(Span),
     Sub(Span),
     Mul(Span),
     Div(Span),
     Rem(Span),
+
     BitAnd(Span),
     BitOr(Span),
     BitXor(Span),
     Shl(Span),
     Shr(Span),
 
+    // Comparison Operators
     Eq(Span),
     Ne(Span),
     Lt(Span),
@@ -28,20 +32,26 @@ pub enum Op {
     Le(Span),
     Ge(Span),
 
+    Min(Span),
+    Max(Span),
+    Clamp(Span),
+
+    // Logical Operators
     And(Span),
     Or(Span),
     #[allow(dead_code)]
     Xor(Span),
 
+    // Range Operators
     Range(Span),
     RangeInclusive(Span),
 
+    // List
     Len(Span),
     Index(Span),
     Enumerate(Span),
     Zip(Span),
     Chain(Span),
-
     ConcatIdent(Span),
     ConcatString(Span),
 }
@@ -68,6 +78,9 @@ impl Op {
             Self::Gt(span) => *span,
             Self::Le(span) => *span,
             Self::Ge(span) => *span,
+            Self::Min(span) => *span,
+            Self::Max(span) => *span,
+            Self::Clamp(span) => *span,
             Self::And(span) => *span,
             Self::Or(span) => *span,
             Self::Xor(span) => *span,
@@ -146,7 +159,6 @@ impl Op {
         match ident {
             Method::Not(span) => Op::Not(span),
             Method::Neg(span) => Op::Neg(span),
-
             Method::Add(span) => Op::Add(span),
             Method::Sub(span) => Op::Sub(span),
             Method::Mul(span) => Op::Mul(span),
@@ -157,20 +169,20 @@ impl Op {
             Method::BitXor(span) => Op::BitXor(span),
             Method::Shl(span) => Op::Shl(span),
             Method::Shr(span) => Op::Shr(span),
-
             Method::Eq(span) => Op::Eq(span),
             Method::Ne(span) => Op::Ne(span),
             Method::Lt(span) => Op::Lt(span),
             Method::Gt(span) => Op::Gt(span),
             Method::Le(span) => Op::Le(span),
             Method::Ge(span) => Op::Ge(span),
-
+            Method::Min(span) => Op::Min(span),
+            Method::Max(span) => Op::Max(span),
+            Method::Clamp(span) => Op::Clamp(span),
             Method::Len(span) => Op::Len(span),
             Method::Index(span) => Op::Index(span),
             Method::Enumerate(span) => Op::Enumerate(span),
             Method::Zip(span) => Op::Zip(span),
             Method::Chain(span) => Op::Chain(span),
-
             Method::ConcatIdent(span) => Op::ConcatIdent(span),
             Method::ConcatString(span) => Op::ConcatString(span),
         }
@@ -874,6 +886,77 @@ impl Op {
                 match lt {
                     FragmentValue::Bool(val) => FragmentValue::Bool(!val),
                     _ => unreachable!(),
+                }
+            }
+
+            Self::Min(span) => {
+                let [lhs, rhs] = args else {
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
+                };
+
+                let lhs_is_greater = Self::Gt(span).compute(&[lhs.clone(), rhs.clone()], ctx)?;
+                let lhs_is_greater = match lhs_is_greater {
+                    FragmentValue::Bool(val) => val,
+                    _ => unreachable!(),
+                };
+
+                if lhs_is_greater {
+                    rhs.clone()
+                } else {
+                    lhs.clone()
+                }
+            }
+
+            Self::Max(span) => {
+                let [lhs, rhs] = args else {
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
+                };
+
+                let lhs_is_greater = Self::Gt(span).compute(&[lhs.clone(), rhs.clone()], ctx)?;
+                let lhs_is_greater = match lhs_is_greater {
+                    FragmentValue::Bool(val) => val,
+                    _ => unreachable!(),
+                };
+
+                if lhs_is_greater {
+                    lhs.clone()
+                } else {
+                    rhs.clone()
+                }
+            }
+
+            Self::Clamp(span) => {
+                let [value, min, max] = args else {
+                    return Err(Error::new(
+                        span,
+                        format!("expected 3 arguments, found {}", args.len()),
+                    ));
+                };
+
+                let is_too_low = Self::Lt(span).compute(&[value.clone(), min.clone()], ctx)?;
+                let is_too_low = match is_too_low {
+                    FragmentValue::Bool(val) => val,
+                    _ => unreachable!(),
+                };
+
+                let is_too_high = Self::Gt(span).compute(&[value.clone(), max.clone()], ctx)?;
+                let is_too_high = match is_too_high {
+                    FragmentValue::Bool(val) => val,
+                    _ => unreachable!(),
+                };
+
+                if is_too_low {
+                    min.clone()
+                } else if is_too_high {
+                    max.clone()
+                } else {
+                    value.clone()
                 }
             }
 
