@@ -3,7 +3,7 @@
 Rust macro for repetitive code generation which is easier to use than declarative macros,
 or a combination of macro crates like `paste` and `seq_macro`.
 
-### For Loop
+## For Loop
 
 ```rust
 repetitive! {
@@ -12,14 +12,16 @@ repetitive! {
     }
 }
 ```
+
 Generates:
+
 ```rust
 struct StructA;
 struct StructB;
 struct StructC;
 ```
 
-### Concat
+## Concat
 
 ```rust
 repetitive! {
@@ -28,14 +30,16 @@ repetitive! {
     }
 }
 ```
+
 Generates:
+
 ```rust
 struct StructA;
 struct StructB;
 struct StructC;
 ```
 
-### Expressions
+## Expressions
 
 ```rust
 repetitive! {
@@ -51,7 +55,9 @@ repetitive! {
     }
 }
 ```
+
 Generates:
+
 ```rust
 struct Vec2 {
     x: f32,
@@ -70,7 +76,7 @@ struct Vec4 {
 }
 ```
 
-### If Statement
+## If Statement
 
 ```rust
 repetitive! {
@@ -90,7 +96,9 @@ repetitive! {
     }
 }
 ```
+
 Generates:
+
 ```rust
 trait Even {}
 trait Odd {}
