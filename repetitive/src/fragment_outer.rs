@@ -297,6 +297,7 @@ impl Paste for FragmentOuter {
         })
     }
 }
+
 impl Paste for FragmentFor {
     fn paste(
         &self,
@@ -304,38 +305,48 @@ impl Paste for FragmentFor {
         ctx: &mut Context,
         namespace: &mut Namespace,
     ) -> syn::Result<()> {
-        let iters = self
-            .iters
-            .iter()
-            .map(|iter| iter.iter.eval(ctx, namespace))
-            .map(|val_expr| match val_expr {
-                Ok(val_expr) => match val_expr.value {
-                    FragmentValue::List(val) => Ok(val),
-                    _ => Err(syn::Error::new(val_expr.span, "expected a list")),
-                },
-                Err(e) => Err(e),
-            })
-            .collect::<syn::Result<Vec<_>>>()?;
+        self.paste_from_iter_items(0, output, ctx, namespace)?;
 
-        for iter_items in iter_combinations(&iters) {
+        Ok(())
+    }
+}
+impl FragmentFor {
+    fn paste_from_iter_items(
+        &self,
+        iter_idx: usize,
+        output: &mut TokenStream,
+        ctx: &mut Context,
+        namespace: &mut Namespace,
+    ) -> syn::Result<()> {
+        let iter = &self.iters[iter_idx];
+        let iter_items = iter.iter.eval(ctx, namespace)?;
+
+        let iter_items = match iter_items.value {
+            FragmentValue::List(val) => val,
+            _ => return Err(syn::Error::new(iter_items.span, "expected a list")),
+        };
+
+        for item in iter_items {
+            let item_expr = FragmentValueExpr {
+                span: self.for_span,
+                value: item.clone(),
+            };
+
             let mut item_namespace = namespace.fork();
+            iter.pat.queue_insert(item_expr, &mut item_namespace, ctx)?;
+            item_namespace.flush();
 
-            for (item, iter) in iter_items.into_iter().zip(self.iters.iter()) {
-                let item_expr = FragmentValueExpr {
-                    span: self.for_span,
-                    value: item.clone(),
-                };
-
-                iter.pat.queue_insert(item_expr, &mut item_namespace, ctx)?;
-                item_namespace.flush();
+            if self.iters.get(iter_idx + 1).is_some() {
+                self.paste_from_iter_items(iter_idx + 1, output, ctx, &mut item_namespace)?;
+            } else {
+                self.body.paste(output, ctx, &mut item_namespace)?;
             }
-
-            self.body.paste(output, ctx, &mut item_namespace)?;
         }
 
         Ok(())
     }
 }
+
 impl FragmentLet {
     pub fn paste(
         &self,
@@ -351,26 +362,4 @@ impl FragmentLet {
 
         Ok(())
     }
-}
-
-fn iter_combinations<'a, T>(iters: &'a Vec<Vec<T>>) -> impl Iterator<Item = Vec<&'a T>> {
-    let lengths: Vec<usize> = iters.iter().map(|v| v.len()).collect();
-    let total = lengths.iter().product::<usize>();
-
-    (0..total).filter_map(move |i| {
-        let mut rem = i;
-        let mut combo = Vec::with_capacity(iters.len());
-
-        for (j, v) in iters.iter().enumerate() {
-            let len = lengths[j];
-            if len == 0 {
-                return None; // skip if any inner vec is empty
-            }
-            let idx = rem % len;
-            rem /= len;
-            combo.push(&v[idx]);
-        }
-
-        Some(combo)
-    })
 }
