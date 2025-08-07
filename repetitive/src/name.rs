@@ -17,6 +17,10 @@ pub struct NameId {
 
 impl Name {
     pub fn peek(input: ParseStream) -> bool {
+        if Keyword::peek(input) {
+            return false;
+        }
+
         input.peek(Ident) || input.peek(Token![_])
     }
 }
