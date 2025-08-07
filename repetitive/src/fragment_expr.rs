@@ -187,28 +187,30 @@ impl FragmentExpr {
 
         let mut expr = FragmentExpr::ctx_parse_base(input, ctx)?;
 
-        if input.peek(Token![.]) && !input.peek(Token![..]) && !input.peek(Token![...]) {
-            let method = Method::ctx_parse(input, ctx)?;
-            let op = Op::from_method_ident(method);
+        loop {
+            if input.peek(Token![.]) && !input.peek(Token![..]) && !input.peek(Token![...]) {
+                let method = Method::ctx_parse(input, ctx)?;
+                let op = Op::from_method_ident(method);
 
-            let group = input.parse::<Group>()?;
-            if group.delimiter() != Delimiter::Parenthesis {
-                return Err(syn::Error::new(
-                    group.span(),
-                    "expected a parenthesized list",
-                ));
+                let group = input.parse::<Group>()?;
+                if group.delimiter() != Delimiter::Parenthesis {
+                    return Err(syn::Error::new(
+                        group.span(),
+                        "expected a parenthesized list",
+                    ));
+                }
+
+                let args = ctx_parse_punctuated.ctx_parse2(group.stream(), ctx)?;
+
+                expr = Self::op(op, [expr].into_iter().chain(args).collect(), ctx)?;
+            } else if input.peek(Bracket) {
+                let group = input.parse::<Group>()?;
+                let idx = FragmentExpr::ctx_parse.ctx_parse2(group.stream(), ctx)?;
+
+                expr = Self::op(Op::Index(group.span()), vec![expr, idx], ctx)?;
+            } else {
+                break;
             }
-
-            let args = ctx_parse_punctuated.ctx_parse2(group.stream(), ctx)?;
-
-            expr = Self::op(op, [expr].into_iter().chain(args).collect(), ctx)?;
-        }
-
-        if input.peek(Bracket) {
-            let group = input.parse::<Group>()?;
-            let idx = FragmentExpr::ctx_parse.ctx_parse2(group.stream(), ctx)?;
-
-            expr = Self::op(Op::Index(group.span()), vec![expr, idx], ctx)?;
         }
 
         Ok(expr)
