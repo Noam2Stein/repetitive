@@ -21,7 +21,7 @@ impl Name {
             return false;
         }
 
-        input.peek(Ident) || input.peek(Token![_])
+        input.peek(Ident) && !input.peek(Token![_])
     }
 }
 

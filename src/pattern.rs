@@ -5,6 +5,7 @@ use super::*;
 
 #[derive(Debug, Clone)]
 pub enum Pattern {
+    Empty,
     Name(Name),
     Literal(FragmentValue),
     List(Vec<Pattern>),
@@ -12,7 +13,10 @@ pub enum Pattern {
 
 impl Pattern {
     pub fn peek(input: ParseStream) -> bool {
-        input.peek(Bracket) || Name::peek(input) || FragmentExpr::peek(input)
+        input.peek(Bracket)
+            || Name::peek(input)
+            || FragmentExpr::peek(input)
+            || input.peek(Token![_])
     }
 
     pub fn matches(
@@ -21,6 +25,7 @@ impl Pattern {
         ctx: &mut Context,
     ) -> syn::Result<syn::Result<()>> {
         Ok(match self {
+            Self::Empty => Ok(()),
             Self::Name(_) => Ok(()),
 
             Self::Literal(lit) => {
@@ -94,6 +99,7 @@ impl Pattern {
                 namespace.queue_insert(*name, value_expr, ctx)?;
             }
 
+            Pattern::Empty => {}
             Pattern::Literal(_) => {}
 
             Pattern::List(pat) => {
@@ -128,6 +134,10 @@ impl ContextParse for Pattern {
 
         if let Some(lit) = FragmentValue::option_lit(input)? {
             return Ok(Self::Literal(lit));
+        }
+
+        if let Some(_) = input.parse::<Option<Token![_]>>()? {
+            return Ok(Self::Empty);
         }
 
         Err(syn::Error::new(input.span(), "expected pattern"))
