@@ -4,7 +4,7 @@ description = "Macro for generating repetitive code"
 edition     = "2024"
 license     = "MIT"
 name        = "repetitive"
-readme      = "../README.md"
+readme      = "README.md"
 version     = "0.1.5"
 
 [lib]
