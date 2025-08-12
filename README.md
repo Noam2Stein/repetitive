@@ -1,12 +1,18 @@
 # Repetitive
 
 Rust macro for writing repetitive code in a simpler,
-more readable and powerful way than declarative macros.
+more readable, and more powerful way than declarative macros.
+
+Features:
+- Repetition with `@for`
+- String/Identifier Concatenation with `@["string" "string"]`
+- Meta Variables with `@let`
+- Conditions with `@if` and `@match`
 
 ## Repetition
 
 Repetition is done with the `@for` keyword.
-The body of the for-loop is emitted for each value in the list.
+The body is repeated for each value in the given list.
 
 ```rust
 repetitive! {
@@ -16,7 +22,7 @@ repetitive! {
 }
 ```
 
-Generates:
+Expands to:
 
 ```rust
 struct StructA;
@@ -26,7 +32,7 @@ struct StructC;
 
 ## String/Identifier Concatenation
 
-Concatenation is done with `@["string" "string"]` syntax.
+Concatenation is done using `@["a" "b"]` syntax.
 
 ```rust
 repetitive! {
@@ -37,7 +43,7 @@ repetitive! {
 }
 ```
 
-Generates:
+Expands to:
 
 ```rust
 /// Letter A!
@@ -50,9 +56,7 @@ struct StructC;
 
 ## Meta Variables
 
-The `@let` keyword is used to store values in the macro context to make the code more readable.
-
-Meta expressions support alot of useful operators and methods.
+Use `@let` to define variables in the macro context to improve readability.
 
 ```rust
 repetitive! {
@@ -69,7 +73,7 @@ repetitive! {
 }
 ```
 
-Generates:
+Expands to:
 
 ```rust
 struct Vec2 {
@@ -91,7 +95,7 @@ struct Vec4 {
 
 ## Conditions
 
-Conditions are done with the `@if` keyword.
+Conditions are done using `@if`.
 
 ```rust
 repetitive! {
@@ -127,4 +131,26 @@ impl Even for Number0 {}
 impl Odd for Number1 {}
 impl Even for Number2 {}
 impl Odd for Number3 {}
+```
+
+## Operators And Methods
+
+Macro context expressions support operators and methods.
+
+```rust
+repetitive! {
+    @for N in [1, 2, 3] {
+        @let crazy = (N * 2).min(5);
+
+        const _: u32 = @crazy;
+    }
+}
+```
+
+Expands to:
+
+```rust
+const _: u32 = 2;
+const _: u32 = 4;
+const _: u32 = 5;
 ```
