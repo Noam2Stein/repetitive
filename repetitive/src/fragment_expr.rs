@@ -20,6 +20,7 @@ pub enum FragmentExprKind {
     Name(Name),
     Op(FragmentOp),
     List(Vec<FragmentExpr>),
+    Match(FragmentMatch),
 }
 
 #[derive(Debug, Clone)]
@@ -28,12 +29,29 @@ pub struct FragmentOp {
     pub args: Vec<FragmentExpr>,
 }
 
+#[derive(Debug, Clone)]
+pub struct FragmentMatch {
+    #[allow(dead_code)]
+    pub match_span: Span,
+    pub expr: Box<FragmentExpr>,
+    pub match_arms: Vec<FragmentMatchArm>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FragmentMatchArm {
+    pub pat: Pattern,
+    pub condition: Option<FragmentExpr>,
+    pub body: FragmentExpr,
+}
+
 impl FragmentExpr {
     pub fn peek(input: ParseStream) -> bool {
         FragmentValue::peek_lit(input)
             || input.peek(Paren)
             || input.peek(Bracket)
             || input.peek(Token![@])
+            || input.peek(Token![if])
+            || input.peek(Token![match])
     }
 
     pub fn temp() -> Self {
@@ -311,6 +329,62 @@ impl FragmentExpr {
             return Ok(Self::op(Op::IfElse(if_span), vec![cond, then, else_], ctx)?);
         }
 
+        if input.peek(Token![match]) {
+            let match_span = input.parse::<Token![match]>()?.span;
+            let expr = Box::new(FragmentExpr::ctx_parse(input, ctx)?);
+
+            let group = input.parse::<Group>()?;
+            if group.delimiter() != Delimiter::Brace {
+                return Err(syn::Error::new(
+                    group.span(),
+                    "expected a brace-delimited block",
+                ));
+            }
+
+            let match_arms_parse_fn = |input: ParseStream, ctx: &mut Context| {
+                let mut arms = Vec::new();
+
+                while !input.is_empty() {
+                    let pat = Pattern::ctx_parse(input, ctx)?;
+
+                    let condition = if input.peek(Token![if]) {
+                        input.parse::<Token![if]>()?;
+
+                        Some(FragmentExpr::ctx_parse(input, ctx)?)
+                    } else {
+                        None
+                    };
+
+                    input.parse::<Token![=>]>()?;
+
+                    let body = FragmentExpr::ctx_parse(input, ctx)?;
+
+                    arms.push(FragmentMatchArm {
+                        pat,
+                        condition,
+                        body,
+                    });
+
+                    if !input.is_empty() {
+                        input.parse::<Token![,]>()?;
+                    }
+                }
+
+                Ok::<_, syn::Error>(arms)
+            };
+
+            let match_arms = match_arms_parse_fn.ctx_parse2(group.stream(), ctx)?;
+
+            return Ok(FragmentExpr {
+                span: match_span,
+                kind: FragmentExprKind::Match(FragmentMatch {
+                    match_span,
+                    expr,
+                    match_arms,
+                }),
+            });
+        }
+
         if input.peek(Ident) {
             let name = Name::ctx_parse(input, ctx)?;
 
@@ -374,6 +448,22 @@ impl FragmentExpr {
 
                 *self = Self::op(*op, args.clone(), ctx)?;
             }
+
+            FragmentExprKind::Match(FragmentMatch {
+                match_span: _,
+                expr,
+                match_arms,
+            }) => {
+                expr.optimize(ctx)?;
+
+                for arm in match_arms.iter_mut() {
+                    arm.body.optimize(ctx)?;
+
+                    if let Some(condition) = &mut arm.condition {
+                        condition.optimize(ctx)?;
+                    }
+                }
+            }
         }
 
         Ok(())
@@ -400,6 +490,46 @@ impl FragmentExpr {
                     .collect::<syn::Result<Vec<_>>>()?;
 
                 op.compute(&resolved_args, ctx)?.kind
+            }
+
+            FragmentExprKind::Match(FragmentMatch {
+                match_span: _,
+                expr,
+                match_arms,
+            }) => {
+                let expr_value = expr.eval(ctx, namespace)?;
+
+                let mut matched_arm = None;
+                for arm in match_arms {
+                    let matches = arm.pat.matches(&expr_value, ctx)?.is_ok();
+
+                    let passed_condition = arm.condition.as_ref().map_or(Ok(true), |cond| {
+                        match cond.eval(ctx, namespace)?.kind {
+                            FragmentValueKind::Bool(val) => Ok(val),
+                            _ => Err(syn::Error::new(cond.span, "expected a boolean")),
+                        }
+                    })?;
+
+                    if matches && passed_condition {
+                        matched_arm = Some(arm);
+                        break;
+                    }
+                }
+
+                if let Some(matched_arm) = matched_arm {
+                    let mut arm_namespace = namespace.fork();
+                    arm_namespace.flush();
+                    matched_arm
+                        .pat
+                        .queue_insert(expr_value.clone(), &mut arm_namespace, ctx)?;
+
+                    matched_arm.body.eval(ctx, &mut arm_namespace)?.kind
+                } else {
+                    return Err(syn::Error::new(
+                        expr_value.span,
+                        "none of the match arms matched",
+                    ));
+                }
             }
         };
 

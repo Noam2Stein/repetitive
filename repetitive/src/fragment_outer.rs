@@ -1,6 +1,6 @@
 use proc_macro2::{Delimiter, Group, Span, TokenStream};
 use syn::{
-    Ident, Token,
+    Error, Ident, Token,
     parse::{ParseStream, Parser},
     token::{Brace, Bracket, Paren},
 };
@@ -68,6 +68,10 @@ impl ContextParse for FragmentOuterKind {
 
         if input.peek(Token![if]) {
             return Ok(Self::ctx_parse_if(input, ctx)?);
+        }
+
+        if input.peek(Token![match]) {
+            return Ok(Self::ctx_parse_match(input, ctx)?);
         }
 
         if input.peek(Bracket) || Keyword::peek(input) {
@@ -235,6 +239,75 @@ impl FragmentOuterKind {
             vec![cond, then, else_],
             ctx,
         )?));
+    }
+
+    fn ctx_parse_match(input: ParseStream, ctx: &mut Context) -> syn::Result<Self> {
+        let match_span = input.parse::<Token![match]>()?.span;
+
+        let expr = Box::new(FragmentExpr::ctx_parse(input, ctx)?);
+
+        let group = input.parse::<Group>()?;
+        if group.delimiter() != Delimiter::Brace {
+            return Err(syn::Error::new(
+                group.span(),
+                "expected a brace-delimited block",
+            ));
+        }
+
+        let match_arms_parse_fn = |input: ParseStream, ctx: &mut Context| {
+            let mut arms = Vec::new();
+
+            while !input.is_empty() {
+                let pat = Pattern::ctx_parse(input, ctx)?;
+
+                let condition = if input.peek(Token![if]) {
+                    input.parse::<Token![if]>()?;
+
+                    Some(FragmentExpr::ctx_parse(input, ctx)?)
+                } else {
+                    None
+                };
+
+                input.parse::<Token![=>]>()?;
+
+                let body_group = input.parse::<Group>()?;
+                if body_group.delimiter() != Delimiter::Brace {
+                    return Err(syn::Error::new(
+                        body_group.span(),
+                        "expected a brace-delimited block",
+                    ));
+                }
+
+                let body = Tokens::ctx_parse.ctx_parse2(body_group.stream(), ctx)?;
+
+                arms.push(FragmentMatchArm {
+                    pat,
+                    condition,
+                    body: FragmentExpr {
+                        span: group.span(),
+                        kind: FragmentExprKind::Value(FragmentValueKind::Tokens(body)),
+                    },
+                });
+
+                if let Some(token) = input.parse::<Option<Token![,]>>()? {
+                    ctx.warnings
+                        .push(Error::new_spanned(token, "unnecessary comma"));
+                }
+            }
+
+            Ok::<_, syn::Error>(arms)
+        };
+
+        let match_arms = match_arms_parse_fn.ctx_parse2(group.stream(), ctx)?;
+
+        Ok(Self::Expr(FragmentExpr {
+            span: match_span,
+            kind: FragmentExprKind::Match(FragmentMatch {
+                match_span,
+                expr,
+                match_arms,
+            }),
+        }))
     }
 
     fn parse_concat(input: ParseStream, ctx: &mut Context) -> syn::Result<Self> {
