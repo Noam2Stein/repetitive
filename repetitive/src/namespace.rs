@@ -44,9 +44,29 @@ impl<'p> Namespace<'p> {
         self.names.extend(self.new_names.drain());
     }
 
-    pub fn get(&self, name: NameId) -> Option<&FragmentValue> {
-        if let Some(fragment) = self.names.get(&name) {
-            Some(fragment)
+    pub fn get(&self, name: Name) -> Option<FragmentValue> {
+        if let Some(fragment) = self.names.get(&name.id) {
+            Some(FragmentValue {
+                span: name.span,
+                kind: match &fragment.kind {
+                    FragmentValueKind::List(val) => FragmentValueKind::List(
+                        val.iter()
+                            .map(|item| FragmentValue {
+                                span: name.span,
+                                kind: item.kind.clone(),
+                            })
+                            .collect(),
+                    ),
+
+                    FragmentValueKind::Int(val) => FragmentValueKind::Int(*val),
+                    FragmentValueKind::Float(val) => FragmentValueKind::Float(*val),
+                    FragmentValueKind::Bool(val) => FragmentValueKind::Bool(*val),
+                    FragmentValueKind::String(val) => FragmentValueKind::String(val.clone()),
+                    FragmentValueKind::Char(val) => FragmentValueKind::Char(*val),
+                    FragmentValueKind::Ident(val) => FragmentValueKind::Ident(val.clone()),
+                    FragmentValueKind::Tokens(val) => FragmentValueKind::Tokens(val.clone()),
+                },
+            })
         } else if let Some(parent) = self.parent {
             parent.get(name)
         } else {
@@ -55,8 +75,8 @@ impl<'p> Namespace<'p> {
     }
 
     pub fn try_get(&self, name: Name) -> syn::Result<FragmentValue> {
-        match self.get(name.id) {
-            Some(fragment) => Ok(fragment.clone()),
+        match self.get(name) {
+            Some(fragment) => Ok(fragment),
             None => Err(syn::Error::new(name.span, "Name not found")),
         }
     }

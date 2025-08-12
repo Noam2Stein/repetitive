@@ -16,7 +16,7 @@ pub struct FragmentExpr {
 }
 #[derive(Debug, Clone)]
 pub enum FragmentExprKind {
-    Value(FragmentValue),
+    Value(FragmentValueKind),
     Name(Name),
     Op(FragmentOp),
     List(Vec<FragmentExpr>),
@@ -30,7 +30,7 @@ pub struct FragmentOp {
 
 impl FragmentExpr {
     pub fn peek(input: ParseStream) -> bool {
-        FragmentValueExpr::peek_lit(input)
+        FragmentValue::peek_lit(input)
             || input.peek(Paren)
             || input.peek(Bracket)
             || input.peek(Token![@])
@@ -39,7 +39,7 @@ impl FragmentExpr {
     pub fn temp() -> Self {
         Self {
             span: Span::call_site(),
-            kind: FragmentExprKind::Value(FragmentValue::Int(0)),
+            kind: FragmentExprKind::Value(FragmentValueKind::Int(0)),
         }
     }
 
@@ -227,16 +227,19 @@ impl FragmentExpr {
         if let Some(args) = args
             .iter()
             .map(|item| match &item.kind {
-                FragmentExprKind::Value(val) => Some(val),
+                FragmentExprKind::Value(val) => Some(FragmentValue {
+                    span: item.span,
+                    kind: val.clone(),
+                }),
                 _ => None,
             })
             .collect::<Option<Vec<_>>>()
         {
-            let args = args.into_iter().cloned().collect::<Vec<_>>();
+            let args = args.into_iter().collect::<Vec<_>>();
 
-            return Ok(Self {
+            return Ok(FragmentExpr {
                 span: op.span(),
-                kind: FragmentExprKind::Value(op.compute(&args, ctx)?),
+                kind: FragmentExprKind::Value(op.compute(&args, ctx)?.kind),
             });
         }
 
@@ -314,7 +317,7 @@ impl FragmentExpr {
             return Ok(Self::name(name));
         }
 
-        if let Some(lit) = FragmentValueExpr::option_lit(input)? {
+        if let Some(lit) = FragmentValue::option_lit(input)? {
             return Ok(lit.into_expr());
         }
 
@@ -331,7 +334,7 @@ impl FragmentExpr {
 
                     return Ok(FragmentExpr {
                         span: group.span(),
-                        kind: FragmentExprKind::Value(FragmentValue::Tokens(tokens)),
+                        kind: FragmentExprKind::Value(FragmentValueKind::Tokens(tokens)),
                     });
                 }
 
@@ -378,31 +381,31 @@ impl FragmentExpr {
 }
 
 impl FragmentExpr {
-    pub fn eval(&self, ctx: &mut Context, namespace: &Namespace) -> syn::Result<FragmentValueExpr> {
+    pub fn eval(&self, ctx: &mut Context, namespace: &Namespace) -> syn::Result<FragmentValue> {
         let value = match &self.kind {
             FragmentExprKind::Value(val) => val.clone(),
 
-            FragmentExprKind::Name(name) => namespace.try_get(*name)?,
+            FragmentExprKind::Name(name) => namespace.try_get(*name)?.kind,
 
-            FragmentExprKind::List(val) => FragmentValue::List(
+            FragmentExprKind::List(val) => FragmentValueKind::List(
                 val.into_iter()
-                    .map(|item| item.eval(ctx, namespace).map(|val_expr| val_expr.value))
+                    .map(|item| item.eval(ctx, namespace))
                     .collect::<syn::Result<_>>()?,
             ),
 
             FragmentExprKind::Op(FragmentOp { op, args }) => {
                 let resolved_args = args
                     .into_iter()
-                    .map(|item| item.eval(ctx, namespace).map(|val_expr| val_expr.value))
+                    .map(|item| item.eval(ctx, namespace))
                     .collect::<syn::Result<Vec<_>>>()?;
 
-                op.compute(&resolved_args, ctx)?
+                op.compute(&resolved_args, ctx)?.kind
             }
         };
 
-        Ok(FragmentValueExpr {
+        Ok(FragmentValue {
             span: self.span,
-            value,
+            kind: value,
         })
     }
 }

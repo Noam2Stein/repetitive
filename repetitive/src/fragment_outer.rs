@@ -95,7 +95,7 @@ impl ContextParse for FragmentOuterKind {
 
             return Ok(Self::Expr(FragmentExpr {
                 span: group.span(),
-                kind: FragmentExprKind::Value(FragmentValue::Tokens(tokens)),
+                kind: FragmentExprKind::Value(FragmentValueKind::Tokens(tokens)),
             }));
         }
 
@@ -192,7 +192,7 @@ impl FragmentOuterKind {
 
         let then = FragmentExpr {
             span: if_span,
-            kind: FragmentExprKind::Value(FragmentValue::Tokens(
+            kind: FragmentExprKind::Value(FragmentValueKind::Tokens(
                 Tokens::ctx_parse.ctx_parse2(then_group.stream(), ctx)?,
             )),
         };
@@ -218,7 +218,7 @@ impl FragmentOuterKind {
 
                 FragmentExpr {
                     span: if_span,
-                    kind: FragmentExprKind::Value(FragmentValue::Tokens(
+                    kind: FragmentExprKind::Value(FragmentValueKind::Tokens(
                         Tokens::ctx_parse.ctx_parse2(else_group.stream(), ctx)?,
                     )),
                 }
@@ -226,7 +226,7 @@ impl FragmentOuterKind {
         } else {
             FragmentExpr {
                 span: if_span,
-                kind: FragmentExprKind::Value(FragmentValue::Tokens(Tokens::default())),
+                kind: FragmentExprKind::Value(FragmentValueKind::Tokens(Tokens::default())),
             }
         };
 
@@ -321,19 +321,14 @@ impl FragmentFor {
         let iter = &self.iters[iter_idx];
         let iter_items = iter.iter.eval(ctx, namespace)?;
 
-        let iter_items = match iter_items.value {
-            FragmentValue::List(val) => val,
+        let iter_items = match iter_items.kind {
+            FragmentValueKind::List(val) => val,
             _ => return Err(syn::Error::new(iter_items.span, "expected a list")),
         };
 
         for item in iter_items {
-            let item_expr = FragmentValueExpr {
-                span: self.for_span,
-                value: item.clone(),
-            };
-
             let mut item_namespace = namespace.fork();
-            iter.pat.queue_insert(item_expr, &mut item_namespace, ctx)?;
+            iter.pat.queue_insert(item, &mut item_namespace, ctx)?;
             item_namespace.flush();
 
             if self.iters.get(iter_idx + 1).is_some() {
