@@ -194,6 +194,7 @@ mod main {
             interner: DefaultStringInterner::new(),
             method_idents: Vec::new(),
             warnings: Vec::new(),
+            arc_warnings: Vec::new(),
         };
 
         let tokens = Tokens::ctx_parse.ctx_parse2(input.into(), &mut ctx);
@@ -219,7 +220,14 @@ mod main {
         let warnings = ctx
             .warnings
             .into_iter()
-            .map(|warning| warning.into_compile_error());
+            .map(|warning| warning.into_compile_error())
+            .chain(ctx.arc_warnings.iter().filter_map(|arc_warning| {
+                arc_warning
+                    .lock()
+                    .unwrap()
+                    .as_ref()
+                    .map(|warning| warning.to_compile_error())
+            }));
 
         #[cfg(feature = "doc")]
         let doc = paste_method_doc(ctx.method_idents);

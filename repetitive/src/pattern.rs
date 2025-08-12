@@ -24,6 +24,23 @@ impl Pattern {
             Self::Name(_) => Ok(()),
 
             Self::Literal(lit) => {
+                let is_same_kind = match (&lit.kind, &value.kind) {
+                    (FragmentValueKind::Bool(_), FragmentValueKind::Bool(_)) => true,
+                    (FragmentValueKind::Int(_), FragmentValueKind::Int(_)) => true,
+                    (FragmentValueKind::Float(_), FragmentValueKind::Float(_)) => true,
+                    (FragmentValueKind::String(_), FragmentValueKind::String(_)) => true,
+                    (FragmentValueKind::Char(_), FragmentValueKind::Char(_)) => true,
+                    (FragmentValueKind::Ident(_), FragmentValueKind::Ident(_)) => true,
+                    _ => false,
+                };
+
+                if !is_same_kind {
+                    return Ok(Err(syn::Error::new(
+                        value.span,
+                        "value does not match pattern. different types",
+                    )));
+                }
+
                 let eq = Op::Eq(value.span).compute(&[lit.clone(), value.clone()], ctx)?;
 
                 let FragmentValueKind::Bool(eq) = eq.kind else {

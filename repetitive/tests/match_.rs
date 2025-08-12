@@ -27,11 +27,3 @@ const _: () = assert!(U16_SIZE == 16);
 const _: () = assert!(U32_SIZE == 32);
 const _: () = assert!(U64_SIZE == 64);
 const _: () = assert!(U128_SIZE == 128);
-
-repetitive! {
-    @match [1, 2, 3] {
-        [a] => { compile_error!("a"); }
-        [a, b] => { compile_error!("b"); }
-        a => {}
-    }
-}

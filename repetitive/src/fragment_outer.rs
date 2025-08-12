@@ -258,6 +258,7 @@ impl FragmentOuterKind {
             let mut arms = Vec::new();
 
             while !input.is_empty() {
+                let pat_span = input.span();
                 let pat = Pattern::ctx_parse(input, ctx)?;
 
                 let condition = if input.peek(Token![if]) {
@@ -287,6 +288,7 @@ impl FragmentOuterKind {
                         span: group.span(),
                         kind: FragmentExprKind::Value(FragmentValueKind::Tokens(body)),
                     },
+                    unused_warnings: ctx.push_arc_warning(Error::new(pat_span, "unused match arm")),
                 });
 
                 if let Some(token) = input.parse::<Option<Token![,]>>()? {

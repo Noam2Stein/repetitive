@@ -1,8 +1,11 @@
-use std::mem::replace;
+use std::{
+    mem::replace,
+    sync::{Arc, Mutex},
+};
 
 use proc_macro2::{Delimiter, Group, Span, TokenStream};
 use syn::{
-    Ident, Token,
+    Error, Ident, Token,
     parse::ParseStream,
     token::{Bracket, Paren},
 };
@@ -42,6 +45,7 @@ pub struct FragmentMatchArm {
     pub pat: Pattern,
     pub condition: Option<FragmentExpr>,
     pub body: FragmentExpr,
+    pub unused_warnings: Arc<Mutex<Option<syn::Error>>>,
 }
 
 impl FragmentExpr {
@@ -345,6 +349,7 @@ impl FragmentExpr {
                 let mut arms = Vec::new();
 
                 while !input.is_empty() {
+                    let pat_span = input.span();
                     let pat = Pattern::ctx_parse(input, ctx)?;
 
                     let condition = if input.peek(Token![if]) {
@@ -363,6 +368,8 @@ impl FragmentExpr {
                         pat,
                         condition,
                         body,
+                        unused_warnings: ctx
+                            .push_arc_warning(Error::new(pat_span, "unused match arm")),
                     });
 
                     if !input.is_empty() {
@@ -517,6 +524,8 @@ impl FragmentExpr {
                 }
 
                 if let Some(matched_arm) = matched_arm {
+                    *matched_arm.unused_warnings.lock().unwrap() = None;
+
                     let mut arm_namespace = namespace.fork();
                     arm_namespace.flush();
                     matched_arm
