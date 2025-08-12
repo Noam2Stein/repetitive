@@ -23,6 +23,16 @@ pub struct FragmentValueExpr {
 }
 
 impl FragmentValueExpr {
+    pub fn peek_lit(input: ParseStream) -> bool {
+        input.peek(LitInt)
+            || input.peek(LitFloat)
+            || input.peek(LitBool)
+            || input.peek(LitChar)
+            || input.peek(LitStr)
+            || input.peek(Lifetime)
+            || input.peek(Token![~])
+    }
+
     pub fn option_lit(input: ParseStream) -> syn::Result<Option<Self>> {
         if input.peek(LitInt) {
             return Ok(Some(Self::int_lit(input.parse().unwrap())));

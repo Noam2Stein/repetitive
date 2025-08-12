@@ -6,12 +6,69 @@ use super::*;
 #[derive(Debug, Clone)]
 pub enum Pattern {
     Name(Name),
+    Literal(FragmentValueExpr),
     List(Vec<Pattern>),
 }
 
 impl Pattern {
     pub fn peek(input: ParseStream) -> bool {
-        input.peek(Bracket) || Name::peek(input)
+        input.peek(Bracket) || Name::peek(input) || FragmentExpr::peek(input)
+    }
+
+    pub fn matches(
+        &self,
+        value: &FragmentValueExpr,
+        ctx: &mut Context,
+    ) -> syn::Result<syn::Result<()>> {
+        Ok(match self {
+            Self::Name(_) => Ok(()),
+
+            Self::Literal(lit) => {
+                let eq =
+                    Op::Eq(value.span).compute(&[lit.value.clone(), value.value.clone()], ctx)?;
+
+                let FragmentValue::Bool(eq) = eq else {
+                    unreachable!();
+                };
+
+                match eq {
+                    true => Ok(()),
+                    false => Err(syn::Error::new(value.span, "value does not match pattern")),
+                }
+            }
+
+            Self::List(pat) => {
+                let FragmentValue::List(value_list) = &value.value else {
+                    return Ok(Err(syn::Error::new(
+                        value.span,
+                        "value does not match pattern. pattern is a list",
+                    )));
+                };
+
+                if pat.len() != value_list.len() {
+                    return Ok(Err(syn::Error::new(
+                        value.span,
+                        "value does not match pattern. incorrect list length",
+                    )));
+                }
+
+                pat.iter()
+                    .zip(value_list)
+                    .map(|(pat_item, value_item)| {
+                        pat_item.matches(
+                            &FragmentValueExpr {
+                                span: value.span,
+                                value: value_item.clone(),
+                            },
+                            ctx,
+                        )
+                    })
+                    .collect::<syn::Result<Vec<syn::Result<_>>>>()?
+                    .into_iter()
+                    .collect::<syn::Result<Vec<_>>>()
+                    .map(|_| ())
+            }
+        })
     }
 
     pub fn queue_insert(
@@ -20,28 +77,21 @@ impl Pattern {
         namespace: &mut Namespace,
         ctx: &mut Context,
     ) -> syn::Result<()> {
+        if let Err(e) = self.matches(&value_expr, ctx)? {
+            return Err(e);
+        }
+
         Ok(match self {
             Pattern::Name(name) => {
                 namespace.queue_insert(*name, value_expr.value, ctx)?;
             }
 
+            Pattern::Literal(_) => {}
+
             Pattern::List(pat) => {
-                let value = match &value_expr.value {
-                    FragmentValue::List(list) => {
-                        list.iter().map(|item| item.clone()).collect::<Vec<_>>()
-                    }
-
-                    _ => {
-                        return Err(syn::Error::new(value_expr.span, "expected a list"));
-                    }
+                let FragmentValue::List(value) = value_expr.value else {
+                    unreachable!();
                 };
-
-                if pat.len() != value.len() {
-                    return Err(syn::Error::new(
-                        value_expr.span,
-                        "non compatible list length",
-                    ));
-                }
 
                 for (pat, value) in pat.iter().zip(value) {
                     let value_expr = FragmentValueExpr {
@@ -69,7 +119,15 @@ impl ContextParse for Pattern {
             ));
         }
 
-        Ok(Self::Name(Name::ctx_parse(input, ctx)?))
+        if Name::peek(input) {
+            return Ok(Self::Name(Name::ctx_parse(input, ctx)?));
+        }
+
+        if let Some(lit) = FragmentValueExpr::option_lit(input)? {
+            return Ok(Self::Literal(lit));
+        }
+
+        Err(syn::Error::new(input.span(), "expected pattern"))
     }
 }
 

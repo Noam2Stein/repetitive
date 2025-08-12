@@ -29,6 +29,13 @@ pub struct FragmentOp {
 }
 
 impl FragmentExpr {
+    pub fn peek(input: ParseStream) -> bool {
+        FragmentValueExpr::peek_lit(input)
+            || input.peek(Paren)
+            || input.peek(Bracket)
+            || input.peek(Token![@])
+    }
+
     pub fn temp() -> Self {
         Self {
             span: Span::call_site(),
