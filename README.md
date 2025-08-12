@@ -1,9 +1,12 @@
 # Repetitive
 
-Rust macro for repetitive code generation which is easier to use than declarative macros,
-or a combination of macro crates like `paste` and `seq_macro`.
+Rust macro for writing repetitive code in a simpler,
+more readable and powerful way than declarative macros.
 
-## For Loop
+## Repetition
+
+Repetition is done with the `@for` keyword.
+The body of the for-loop is emitted for each value in the list.
 
 ```rust
 repetitive! {
@@ -21,11 +24,14 @@ struct StructB;
 struct StructC;
 ```
 
-## Concat
+## String/Identifier Concatenation
+
+Concatenation is done with `@["string" "string"]` syntax.
 
 ```rust
 repetitive! {
     @for letter in ['A, 'B, 'C] {
+        #[doc = @str["Letter " letter "!"]]
         struct @['Struct letter];
     }
 }
@@ -34,12 +40,19 @@ repetitive! {
 Generates:
 
 ```rust
+/// Letter A!
 struct StructA;
+/// Letter B!
 struct StructB;
+/// Letter C!
 struct StructC;
 ```
 
-## Expressions
+## Meta Variables
+
+The `@let` keyword is used to store values in the macro context to make the code more readable.
+
+Meta expressions support alot of useful operators and methods.
 
 ```rust
 repetitive! {
@@ -76,7 +89,9 @@ struct Vec4 {
 }
 ```
 
-## If Statement
+## Conditions
+
+Conditions are done with the `@if` keyword.
 
 ```rust
 repetitive! {
@@ -112,27 +127,4 @@ impl Even for Number0 {}
 impl Odd for Number1 {}
 impl Even for Number2 {}
 impl Odd for Number3 {}
-```
-
-## Expression Methods
-
-Expression methods have full auto-completion and documentation.
-
-```rust
-repetitive! {
-    @for N in 2..=4 {
-        @let VecN = @['Vec N];
-        @let components = ['x, 'y, 'z, 'w][0..N];
-
-        println!("{} has: {}", @str[VecN], @(components.concat_string()));
-    }
-}
-```
-
-Generates:
-
-```rust
-println!("{} has: {}", "Vec2", "xy");
-println!("{} has: {}", "Vec3", "xyz");
-println!("{} has: {}", "Vec4", "xyzw");
 ```
