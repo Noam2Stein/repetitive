@@ -46,13 +46,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sandbox"
-version = "0.1.0"
-dependencies = [
- "repetitive",
-]
-
-[[package]]
 name = "serde"
 version = "1.0.219"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -80,13 +73,6 @@ checksum = "23de088478b31c349c9ba67816fa55d9355232d63c3afea8bf513e31f0f1d2c0"
 dependencies = [
  "hashbrown",
  "serde",
-]
-
-[[package]]
-name = "swizzle"
-version = "0.1.0"
-dependencies = [
- "repetitive",
 ]
 
 [[package]]
