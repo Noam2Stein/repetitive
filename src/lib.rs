@@ -177,6 +177,25 @@ use tokens::*;
 /// - range `..`, range_inclusive `..=`.
 ///
 /// Supported methods are known by auto-completion.
+///
+/// # Match
+///
+/// Can be used as an expression or as a fragment.
+///
+/// Example:
+/// ```rust
+/// @for weird in [
+///     "Weird",
+///     [1, 2, 3],
+///     @{ @frag + 1 },
+/// ] {
+///     @match weird {
+///         "Weird" => { println!("Its a string!") },
+///         [1, 2, _] => { println!("It starts with 1 and 2!") },
+///         something_else => { println!("Its something else!") },
+///     }
+/// }
+/// ```
 #[proc_macro]
 pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     main::repetitive(input)
