@@ -2,36 +2,16 @@
 
 #![deny(missing_docs)]
 
-mod ctx;
-mod ctx_parse;
-mod error;
-mod fragment_expr;
-mod fragment_outer;
-mod fragment_value;
-mod keyword;
-mod methods;
-mod name;
-mod namespace;
-mod ops;
-mod paste;
-mod pattern;
+mod context;
+mod expr;
+mod fragment;
+mod stages;
 mod tokens;
-mod unknown;
-use ctx::*;
-use ctx_parse::*;
-use error::*;
-use fragment_expr::*;
-use fragment_outer::*;
-use fragment_value::*;
-use keyword::*;
-use methods::*;
-use name::*;
-use namespace::*;
-use ops::*;
-use paste::*;
-use pattern::*;
+use context::*;
+use expr::*;
+use fragment::*;
+use stages::*;
 use tokens::*;
-use unknown::*;
 
 /// The macro!
 ///
@@ -224,7 +204,7 @@ mod main {
             };
 
             let mut output = TokenStream::new();
-            tokens.paste(&mut output, &mut ctx, &mut Namespace::new());
+            tokens.expand(&mut output, &mut ctx, &mut Namespace::new());
 
             if ctx.has_errors() {
                 break 'tokens Err(());

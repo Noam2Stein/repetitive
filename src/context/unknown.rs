@@ -5,8 +5,8 @@ pub struct UnknownGuard {
     private: (),
 }
 
-impl UnknownGuard {
-    pub fn new(_: &ErrorHandle) -> Self {
-        Self { private: () }
+impl ErrorHandle {
+    pub fn unknown_guard(&self) -> UnknownGuard {
+        UnknownGuard { private: () }
     }
 }

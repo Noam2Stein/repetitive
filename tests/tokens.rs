@@ -26,3 +26,15 @@ const _: _Triangle = _Triangle {
     c: [0, 0, 0],
     d: [0, 0, 0, 0],
 };
+
+repetitive! {
+    @let magic = @{
+        @let val = 5;
+        THREE
+    };
+
+    @let val = 3;
+    const @magic: u8 = @val;
+
+    const _: () = assert!(THREE == 3);
+}

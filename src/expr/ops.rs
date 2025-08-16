@@ -191,16 +191,12 @@ impl Op {
         }
     }
 
-    pub fn compute(
-        self,
-        args: &[FragmentValue],
-        ctx: &mut Context,
-    ) -> Result<FragmentValue, Error> {
+    pub fn compute(self, args: &[Value], ctx: &mut Context) -> Result<Value, Error> {
         if args.iter().any(|arg| arg.is_unknown()) {
-            return Ok(FragmentValue::unknown(
+            return Ok(Value::unknown(
                 args.iter()
                     .find_map(|arg| {
-                        if let FragmentValueKind::Unknown(guard) = arg.kind {
+                        if let ValueKind::Unknown(guard) = arg.kind {
                             Some(guard)
                         } else {
                             None
@@ -223,7 +219,7 @@ impl Op {
                 };
 
                 let cond = match &cond.kind {
-                    FragmentValueKind::Bool(cond) => *cond,
+                    ValueKind::Bool(cond) => *cond,
                     _ => unreachable!("if-else condition must be a bool"),
                 };
 
@@ -246,15 +242,15 @@ impl Op {
                 };
 
                 match &arg.kind {
-                    FragmentValueKind::Int(val) => FragmentValueKind::Int(-val),
-                    FragmentValueKind::Float(val) => FragmentValueKind::Float(-val),
+                    ValueKind::Int(val) => ValueKind::Int(-val),
+                    ValueKind::Float(val) => ValueKind::Float(-val),
 
-                    FragmentValueKind::Bool(_)
-                    | FragmentValueKind::Ident(_)
-                    | FragmentValueKind::String(_)
-                    | FragmentValueKind::Char(_)
-                    | FragmentValueKind::List(_)
-                    | FragmentValueKind::Tokens(_) => {
+                    ValueKind::Bool(_)
+                    | ValueKind::Ident(_)
+                    | ValueKind::String(_)
+                    | ValueKind::Char(_)
+                    | ValueKind::List(_)
+                    | ValueKind::Tokens(_) => {
                         return Err(Error::CannotPerform {
                             span,
                             op: "neg",
@@ -262,7 +258,7 @@ impl Op {
                         });
                     }
 
-                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute neg"),
+                    ValueKind::Unknown(_) => unreachable!("unknown in compute neg"),
                 }
             }
 
@@ -278,15 +274,15 @@ impl Op {
                 };
 
                 match &arg.kind {
-                    FragmentValueKind::Bool(val) => FragmentValueKind::Bool(!val),
+                    ValueKind::Bool(val) => ValueKind::Bool(!val),
 
-                    FragmentValueKind::Int(_)
-                    | FragmentValueKind::Float(_)
-                    | FragmentValueKind::Ident(_)
-                    | FragmentValueKind::String(_)
-                    | FragmentValueKind::Char(_)
-                    | FragmentValueKind::List(_)
-                    | FragmentValueKind::Tokens(_) => {
+                    ValueKind::Int(_)
+                    | ValueKind::Float(_)
+                    | ValueKind::Ident(_)
+                    | ValueKind::String(_)
+                    | ValueKind::Char(_)
+                    | ValueKind::List(_)
+                    | ValueKind::Tokens(_) => {
                         return Err(Error::CannotPerform {
                             span,
                             op: "not",
@@ -294,7 +290,7 @@ impl Op {
                         });
                     }
 
-                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute not"),
+                    ValueKind::Unknown(_) => unreachable!("unknown in compute not"),
                 }
             }
 
@@ -310,8 +306,8 @@ impl Op {
                 };
 
                 match &lhs.kind {
-                    FragmentValueKind::Int(lhs) => match &rhs.kind {
-                        FragmentValueKind::Int(rhs) => FragmentValueKind::Int(lhs + rhs),
+                    ValueKind::Int(lhs) => match &rhs.kind {
+                        ValueKind::Int(rhs) => ValueKind::Int(lhs + rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -323,8 +319,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Float(lhs) => match &rhs.kind {
-                        FragmentValueKind::Float(rhs) => FragmentValueKind::Float(lhs + rhs),
+                    ValueKind::Float(lhs) => match &rhs.kind {
+                        ValueKind::Float(rhs) => ValueKind::Float(lhs + rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -336,16 +332,10 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::String(lhs) => match &rhs.kind {
-                        FragmentValueKind::String(rhs) => {
-                            FragmentValueKind::String(format!("{lhs}{rhs}"))
-                        }
-                        FragmentValueKind::Ident(rhs) => {
-                            FragmentValueKind::String(format!("{lhs}{rhs}"))
-                        }
-                        FragmentValueKind::Char(rhs) => {
-                            FragmentValueKind::String(format!("{lhs}{rhs}"))
-                        }
+                    ValueKind::String(lhs) => match &rhs.kind {
+                        ValueKind::String(rhs) => ValueKind::String(format!("{lhs}{rhs}")),
+                        ValueKind::Ident(rhs) => ValueKind::String(format!("{lhs}{rhs}")),
+                        ValueKind::Char(rhs) => ValueKind::String(format!("{lhs}{rhs}")),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -357,16 +347,10 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Ident(lhs) => match &rhs.kind {
-                        FragmentValueKind::Ident(rhs) => {
-                            FragmentValueKind::Ident(format!("{lhs}{rhs}"))
-                        }
-                        FragmentValueKind::String(rhs) => {
-                            FragmentValueKind::Ident(format!("{lhs}{rhs}"))
-                        }
-                        FragmentValueKind::Char(rhs) => {
-                            FragmentValueKind::Ident(format!("{lhs}{rhs}"))
-                        }
+                    ValueKind::Ident(lhs) => match &rhs.kind {
+                        ValueKind::Ident(rhs) => ValueKind::Ident(format!("{lhs}{rhs}")),
+                        ValueKind::String(rhs) => ValueKind::Ident(format!("{lhs}{rhs}")),
+                        ValueKind::Char(rhs) => ValueKind::Ident(format!("{lhs}{rhs}")),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -378,10 +362,10 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Bool(_)
-                    | FragmentValueKind::Char(_)
-                    | FragmentValueKind::List(_)
-                    | FragmentValueKind::Tokens(_) => {
+                    ValueKind::Bool(_)
+                    | ValueKind::Char(_)
+                    | ValueKind::List(_)
+                    | ValueKind::Tokens(_) => {
                         return Err(Error::CannotPerform {
                             span,
                             op: "add",
@@ -389,7 +373,7 @@ impl Op {
                         });
                     }
 
-                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute add"),
+                    ValueKind::Unknown(_) => unreachable!("unknown in compute add"),
                 }
             }
 
@@ -405,8 +389,8 @@ impl Op {
                 };
 
                 match &lhs.kind {
-                    FragmentValueKind::Int(lhs) => match &rhs.kind {
-                        FragmentValueKind::Int(rhs) => FragmentValueKind::Int(lhs - rhs),
+                    ValueKind::Int(lhs) => match &rhs.kind {
+                        ValueKind::Int(rhs) => ValueKind::Int(lhs - rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -418,8 +402,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Float(lhs) => match &rhs.kind {
-                        FragmentValueKind::Float(rhs) => FragmentValueKind::Float(lhs - rhs),
+                    ValueKind::Float(lhs) => match &rhs.kind {
+                        ValueKind::Float(rhs) => ValueKind::Float(lhs - rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -431,12 +415,12 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::String(_)
-                    | FragmentValueKind::Ident(_)
-                    | FragmentValueKind::Char(_)
-                    | FragmentValueKind::Bool(_)
-                    | FragmentValueKind::List(_)
-                    | FragmentValueKind::Tokens(_) => {
+                    ValueKind::String(_)
+                    | ValueKind::Ident(_)
+                    | ValueKind::Char(_)
+                    | ValueKind::Bool(_)
+                    | ValueKind::List(_)
+                    | ValueKind::Tokens(_) => {
                         return Err(Error::CannotPerform {
                             span,
                             op: "sub",
@@ -444,7 +428,7 @@ impl Op {
                         });
                     }
 
-                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute sub"),
+                    ValueKind::Unknown(_) => unreachable!("unknown in compute sub"),
                 }
             }
 
@@ -460,8 +444,8 @@ impl Op {
                 };
 
                 match &lhs.kind {
-                    FragmentValueKind::Int(lhs) => match &rhs.kind {
-                        FragmentValueKind::Int(rhs) => FragmentValueKind::Int(lhs * rhs),
+                    ValueKind::Int(lhs) => match &rhs.kind {
+                        ValueKind::Int(rhs) => ValueKind::Int(lhs * rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -473,8 +457,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Float(lhs) => match &rhs.kind {
-                        FragmentValueKind::Float(rhs) => FragmentValueKind::Float(lhs * rhs),
+                    ValueKind::Float(lhs) => match &rhs.kind {
+                        ValueKind::Float(rhs) => ValueKind::Float(lhs * rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -486,10 +470,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::String(lhs) => match &rhs.kind {
-                        FragmentValueKind::Int(rhs) => {
-                            FragmentValueKind::String(lhs.repeat(*rhs as usize))
-                        }
+                    ValueKind::String(lhs) => match &rhs.kind {
+                        ValueKind::Int(rhs) => ValueKind::String(lhs.repeat(*rhs as usize)),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -501,10 +483,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Ident(lhs) => match &rhs.kind {
-                        FragmentValueKind::Int(rhs) => {
-                            FragmentValueKind::Ident(lhs.repeat(*rhs as usize))
-                        }
+                    ValueKind::Ident(lhs) => match &rhs.kind {
+                        ValueKind::Int(rhs) => ValueKind::Ident(lhs.repeat(*rhs as usize)),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -516,9 +496,9 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Char(lhs) => match &rhs.kind {
-                        FragmentValueKind::Int(rhs) => {
-                            FragmentValueKind::String(lhs.to_string().repeat(*rhs as usize))
+                    ValueKind::Char(lhs) => match &rhs.kind {
+                        ValueKind::Int(rhs) => {
+                            ValueKind::String(lhs.to_string().repeat(*rhs as usize))
                         }
                         _ => {
                             return Err(Error::ExpectedRhsFound {
@@ -531,9 +511,7 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Bool(_)
-                    | FragmentValueKind::List(_)
-                    | FragmentValueKind::Tokens(_) => {
+                    ValueKind::Bool(_) | ValueKind::List(_) | ValueKind::Tokens(_) => {
                         return Err(Error::CannotPerform {
                             span,
                             op: "mul",
@@ -541,7 +519,7 @@ impl Op {
                         });
                     }
 
-                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute mul"),
+                    ValueKind::Unknown(_) => unreachable!("unknown in compute mul"),
                 }
             }
 
@@ -557,8 +535,8 @@ impl Op {
                 };
 
                 match &lhs.kind {
-                    FragmentValueKind::Int(lhs) => match &rhs.kind {
-                        FragmentValueKind::Int(rhs) => FragmentValueKind::Int(lhs / rhs),
+                    ValueKind::Int(lhs) => match &rhs.kind {
+                        ValueKind::Int(rhs) => ValueKind::Int(lhs / rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -570,8 +548,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Float(lhs) => match &rhs.kind {
-                        FragmentValueKind::Float(rhs) => FragmentValueKind::Float(lhs / rhs),
+                    ValueKind::Float(lhs) => match &rhs.kind {
+                        ValueKind::Float(rhs) => ValueKind::Float(lhs / rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -583,12 +561,12 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::String(_)
-                    | FragmentValueKind::Ident(_)
-                    | FragmentValueKind::Char(_)
-                    | FragmentValueKind::Bool(_)
-                    | FragmentValueKind::List(_)
-                    | FragmentValueKind::Tokens(_) => {
+                    ValueKind::String(_)
+                    | ValueKind::Ident(_)
+                    | ValueKind::Char(_)
+                    | ValueKind::Bool(_)
+                    | ValueKind::List(_)
+                    | ValueKind::Tokens(_) => {
                         return Err(Error::CannotPerform {
                             span,
                             op: "div",
@@ -596,7 +574,7 @@ impl Op {
                         });
                     }
 
-                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute div"),
+                    ValueKind::Unknown(_) => unreachable!("unknown in compute div"),
                 }
             }
 
@@ -612,8 +590,8 @@ impl Op {
                 };
 
                 match &lhs.kind {
-                    FragmentValueKind::Int(lhs) => match &rhs.kind {
-                        FragmentValueKind::Int(rhs) => FragmentValueKind::Int(lhs % rhs),
+                    ValueKind::Int(lhs) => match &rhs.kind {
+                        ValueKind::Int(rhs) => ValueKind::Int(lhs % rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -625,8 +603,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Float(lhs) => match &rhs.kind {
-                        FragmentValueKind::Float(rhs) => FragmentValueKind::Float(lhs % rhs),
+                    ValueKind::Float(lhs) => match &rhs.kind {
+                        ValueKind::Float(rhs) => ValueKind::Float(lhs % rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -638,12 +616,12 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::String(_)
-                    | FragmentValueKind::Ident(_)
-                    | FragmentValueKind::Char(_)
-                    | FragmentValueKind::Bool(_)
-                    | FragmentValueKind::List(_)
-                    | FragmentValueKind::Tokens(_) => {
+                    ValueKind::String(_)
+                    | ValueKind::Ident(_)
+                    | ValueKind::Char(_)
+                    | ValueKind::Bool(_)
+                    | ValueKind::List(_)
+                    | ValueKind::Tokens(_) => {
                         return Err(Error::CannotPerform {
                             span,
                             op: "rem",
@@ -651,7 +629,7 @@ impl Op {
                         });
                     }
 
-                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute rem"),
+                    ValueKind::Unknown(_) => unreachable!("unknown in compute rem"),
                 }
             }
 
@@ -667,8 +645,8 @@ impl Op {
                 };
 
                 match &lhs.kind {
-                    FragmentValueKind::Int(lhs) => match &rhs.kind {
-                        FragmentValueKind::Int(rhs) => FragmentValueKind::Int(lhs & rhs),
+                    ValueKind::Int(lhs) => match &rhs.kind {
+                        ValueKind::Int(rhs) => ValueKind::Int(lhs & rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -680,8 +658,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Bool(lhs) => match &rhs.kind {
-                        FragmentValueKind::Bool(rhs) => FragmentValueKind::Bool(lhs & rhs),
+                    ValueKind::Bool(lhs) => match &rhs.kind {
+                        ValueKind::Bool(rhs) => ValueKind::Bool(lhs & rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -693,12 +671,12 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Float(_)
-                    | FragmentValueKind::String(_)
-                    | FragmentValueKind::Ident(_)
-                    | FragmentValueKind::Char(_)
-                    | FragmentValueKind::List(_)
-                    | FragmentValueKind::Tokens(_) => {
+                    ValueKind::Float(_)
+                    | ValueKind::String(_)
+                    | ValueKind::Ident(_)
+                    | ValueKind::Char(_)
+                    | ValueKind::List(_)
+                    | ValueKind::Tokens(_) => {
                         return Err(Error::CannotPerform {
                             span,
                             op: "bitand",
@@ -706,7 +684,7 @@ impl Op {
                         });
                     }
 
-                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute bitand"),
+                    ValueKind::Unknown(_) => unreachable!("unknown in compute bitand"),
                 }
             }
 
@@ -722,8 +700,8 @@ impl Op {
                 };
 
                 match &lhs.kind {
-                    FragmentValueKind::Int(lhs) => match &rhs.kind {
-                        FragmentValueKind::Int(rhs) => FragmentValueKind::Int(lhs | rhs),
+                    ValueKind::Int(lhs) => match &rhs.kind {
+                        ValueKind::Int(rhs) => ValueKind::Int(lhs | rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -735,8 +713,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Bool(lhs) => match &rhs.kind {
-                        FragmentValueKind::Bool(rhs) => FragmentValueKind::Bool(lhs | rhs),
+                    ValueKind::Bool(lhs) => match &rhs.kind {
+                        ValueKind::Bool(rhs) => ValueKind::Bool(lhs | rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -748,12 +726,12 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Float(_)
-                    | FragmentValueKind::String(_)
-                    | FragmentValueKind::Ident(_)
-                    | FragmentValueKind::Char(_)
-                    | FragmentValueKind::List(_)
-                    | FragmentValueKind::Tokens(_) => {
+                    ValueKind::Float(_)
+                    | ValueKind::String(_)
+                    | ValueKind::Ident(_)
+                    | ValueKind::Char(_)
+                    | ValueKind::List(_)
+                    | ValueKind::Tokens(_) => {
                         return Err(Error::CannotPerform {
                             span,
                             op: "bitor",
@@ -761,7 +739,7 @@ impl Op {
                         });
                     }
 
-                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute bitor"),
+                    ValueKind::Unknown(_) => unreachable!("unknown in compute bitor"),
                 }
             }
 
@@ -777,8 +755,8 @@ impl Op {
                 };
 
                 match &lhs.kind {
-                    FragmentValueKind::Int(lhs) => match &rhs.kind {
-                        FragmentValueKind::Int(rhs) => FragmentValueKind::Int(lhs ^ rhs),
+                    ValueKind::Int(lhs) => match &rhs.kind {
+                        ValueKind::Int(rhs) => ValueKind::Int(lhs ^ rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -790,8 +768,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Bool(lhs) => match &rhs.kind {
-                        FragmentValueKind::Bool(rhs) => FragmentValueKind::Bool(lhs ^ rhs),
+                    ValueKind::Bool(lhs) => match &rhs.kind {
+                        ValueKind::Bool(rhs) => ValueKind::Bool(lhs ^ rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -803,12 +781,12 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Float(_)
-                    | FragmentValueKind::String(_)
-                    | FragmentValueKind::Ident(_)
-                    | FragmentValueKind::Char(_)
-                    | FragmentValueKind::List(_)
-                    | FragmentValueKind::Tokens(_) => {
+                    ValueKind::Float(_)
+                    | ValueKind::String(_)
+                    | ValueKind::Ident(_)
+                    | ValueKind::Char(_)
+                    | ValueKind::List(_)
+                    | ValueKind::Tokens(_) => {
                         return Err(Error::CannotPerform {
                             span,
                             op: "bitxor",
@@ -816,7 +794,7 @@ impl Op {
                         });
                     }
 
-                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute bitxor"),
+                    ValueKind::Unknown(_) => unreachable!("unknown in compute bitxor"),
                 }
             }
 
@@ -832,8 +810,8 @@ impl Op {
                 };
 
                 match &lhs.kind {
-                    FragmentValueKind::Int(lhs) => match &rhs.kind {
-                        FragmentValueKind::Int(rhs) => FragmentValueKind::Int(lhs << rhs),
+                    ValueKind::Int(lhs) => match &rhs.kind {
+                        ValueKind::Int(rhs) => ValueKind::Int(lhs << rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -845,13 +823,13 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Float(_)
-                    | FragmentValueKind::String(_)
-                    | FragmentValueKind::Ident(_)
-                    | FragmentValueKind::Char(_)
-                    | FragmentValueKind::Bool(_)
-                    | FragmentValueKind::List(_)
-                    | FragmentValueKind::Tokens(_) => {
+                    ValueKind::Float(_)
+                    | ValueKind::String(_)
+                    | ValueKind::Ident(_)
+                    | ValueKind::Char(_)
+                    | ValueKind::Bool(_)
+                    | ValueKind::List(_)
+                    | ValueKind::Tokens(_) => {
                         return Err(Error::CannotPerform {
                             span,
                             op: "shl",
@@ -859,7 +837,7 @@ impl Op {
                         });
                     }
 
-                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute shl"),
+                    ValueKind::Unknown(_) => unreachable!("unknown in compute shl"),
                 }
             }
 
@@ -875,8 +853,8 @@ impl Op {
                 };
 
                 match &lhs.kind {
-                    FragmentValueKind::Int(lhs) => match &rhs.kind {
-                        FragmentValueKind::Int(rhs) => FragmentValueKind::Int(lhs >> rhs),
+                    ValueKind::Int(lhs) => match &rhs.kind {
+                        ValueKind::Int(rhs) => ValueKind::Int(lhs >> rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -888,13 +866,13 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Float(_)
-                    | FragmentValueKind::String(_)
-                    | FragmentValueKind::Ident(_)
-                    | FragmentValueKind::Char(_)
-                    | FragmentValueKind::Bool(_)
-                    | FragmentValueKind::List(_)
-                    | FragmentValueKind::Tokens(_) => {
+                    ValueKind::Float(_)
+                    | ValueKind::String(_)
+                    | ValueKind::Ident(_)
+                    | ValueKind::Char(_)
+                    | ValueKind::Bool(_)
+                    | ValueKind::List(_)
+                    | ValueKind::Tokens(_) => {
                         return Err(Error::CannotPerform {
                             span,
                             op: "shr",
@@ -902,7 +880,7 @@ impl Op {
                         });
                     }
 
-                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute shr"),
+                    ValueKind::Unknown(_) => unreachable!("unknown in compute shr"),
                 }
             }
 
@@ -918,8 +896,8 @@ impl Op {
                 };
 
                 match &lhs.kind {
-                    FragmentValueKind::Int(lhs) => match &rhs.kind {
-                        FragmentValueKind::Int(rhs) => FragmentValueKind::Bool(lhs == rhs),
+                    ValueKind::Int(lhs) => match &rhs.kind {
+                        ValueKind::Int(rhs) => ValueKind::Bool(lhs == rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -931,8 +909,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Float(lhs) => match &rhs.kind {
-                        FragmentValueKind::Float(rhs) => FragmentValueKind::Bool(lhs == rhs),
+                    ValueKind::Float(lhs) => match &rhs.kind {
+                        ValueKind::Float(rhs) => ValueKind::Bool(lhs == rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -944,8 +922,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::String(lhs) => match &rhs.kind {
-                        FragmentValueKind::String(rhs) => FragmentValueKind::Bool(lhs == rhs),
+                    ValueKind::String(lhs) => match &rhs.kind {
+                        ValueKind::String(rhs) => ValueKind::Bool(lhs == rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -957,8 +935,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Ident(lhs) => match &rhs.kind {
-                        FragmentValueKind::Ident(rhs) => FragmentValueKind::Bool(lhs == rhs),
+                    ValueKind::Ident(lhs) => match &rhs.kind {
+                        ValueKind::Ident(rhs) => ValueKind::Bool(lhs == rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -970,8 +948,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Char(lhs) => match &rhs.kind {
-                        FragmentValueKind::Char(rhs) => FragmentValueKind::Bool(lhs == rhs),
+                    ValueKind::Char(lhs) => match &rhs.kind {
+                        ValueKind::Char(rhs) => ValueKind::Bool(lhs == rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -983,8 +961,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Bool(lhs) => match &rhs.kind {
-                        FragmentValueKind::Bool(rhs) => FragmentValueKind::Bool(lhs == rhs),
+                    ValueKind::Bool(lhs) => match &rhs.kind {
+                        ValueKind::Bool(rhs) => ValueKind::Bool(lhs == rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -996,8 +974,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::List(lhs) => match &rhs.kind {
-                        FragmentValueKind::List(rhs) => FragmentValueKind::Bool('list_eq: {
+                    ValueKind::List(lhs) => match &rhs.kind {
+                        ValueKind::List(rhs) => ValueKind::Bool('list_eq: {
                             if lhs.len() != rhs.len() {
                                 break 'list_eq false;
                             }
@@ -1006,11 +984,11 @@ impl Op {
                                 let eq = Op::Eq(span).compute(&[a.clone(), b.clone()], ctx)?;
 
                                 match &eq.kind {
-                                    FragmentValueKind::Unknown(guard) => {
-                                        return Ok(FragmentValue::unknown(*guard));
+                                    ValueKind::Unknown(guard) => {
+                                        return Ok(Value::unknown(*guard));
                                     }
 
-                                    FragmentValueKind::Bool(val) => {
+                                    ValueKind::Bool(val) => {
                                         if !val {
                                             break 'list_eq false;
                                         }
@@ -1034,7 +1012,7 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Tokens(_) => {
+                    ValueKind::Tokens(_) => {
                         return Err(Error::CannotPerform {
                             span,
                             op: "eq",
@@ -1042,7 +1020,7 @@ impl Op {
                         });
                     }
 
-                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute eq"),
+                    ValueKind::Unknown(_) => unreachable!("unknown in compute eq"),
                 }
             }
 
@@ -1050,7 +1028,7 @@ impl Op {
                 let eq = Self::Eq(span).compute(args, ctx)?;
 
                 match &eq.kind {
-                    FragmentValueKind::Bool(val) => FragmentValueKind::Bool(!val),
+                    ValueKind::Bool(val) => ValueKind::Bool(!val),
                     _ => unreachable!("ne must be a bool"),
                 }
             }
@@ -1067,8 +1045,8 @@ impl Op {
                 };
 
                 match &lhs.kind {
-                    FragmentValueKind::Int(lhs) => match &rhs.kind {
-                        FragmentValueKind::Int(rhs) => FragmentValueKind::Bool(lhs < rhs),
+                    ValueKind::Int(lhs) => match &rhs.kind {
+                        ValueKind::Int(rhs) => ValueKind::Bool(lhs < rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -1080,8 +1058,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Float(lhs) => match &rhs.kind {
-                        FragmentValueKind::Float(rhs) => FragmentValueKind::Bool(lhs < rhs),
+                    ValueKind::Float(lhs) => match &rhs.kind {
+                        ValueKind::Float(rhs) => ValueKind::Bool(lhs < rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -1093,9 +1071,9 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::String(lhs) => match &rhs.kind {
-                        FragmentValueKind::String(rhs) => FragmentValueKind::Bool(lhs < rhs),
-                        FragmentValueKind::Ident(rhs) => FragmentValueKind::Bool(lhs < rhs),
+                    ValueKind::String(lhs) => match &rhs.kind {
+                        ValueKind::String(rhs) => ValueKind::Bool(lhs < rhs),
+                        ValueKind::Ident(rhs) => ValueKind::Bool(lhs < rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -1107,9 +1085,9 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Ident(lhs) => match &rhs.kind {
-                        FragmentValueKind::Ident(rhs) => FragmentValueKind::Bool(lhs < rhs),
-                        FragmentValueKind::String(rhs) => FragmentValueKind::Bool(lhs < rhs),
+                    ValueKind::Ident(lhs) => match &rhs.kind {
+                        ValueKind::Ident(rhs) => ValueKind::Bool(lhs < rhs),
+                        ValueKind::String(rhs) => ValueKind::Bool(lhs < rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -1121,8 +1099,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Char(lhs) => match &rhs.kind {
-                        FragmentValueKind::Char(rhs) => FragmentValueKind::Bool(lhs < rhs),
+                    ValueKind::Char(lhs) => match &rhs.kind {
+                        ValueKind::Char(rhs) => ValueKind::Bool(lhs < rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -1134,8 +1112,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Bool(lhs) => match &rhs.kind {
-                        FragmentValueKind::Bool(rhs) => FragmentValueKind::Bool(lhs < rhs),
+                    ValueKind::Bool(lhs) => match &rhs.kind {
+                        ValueKind::Bool(rhs) => ValueKind::Bool(lhs < rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -1147,7 +1125,7 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::List(_) | FragmentValueKind::Tokens(_) => {
+                    ValueKind::List(_) | ValueKind::Tokens(_) => {
                         return Err(Error::CannotPerform {
                             span,
                             op: "lt",
@@ -1155,7 +1133,7 @@ impl Op {
                         });
                     }
 
-                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute lt"),
+                    ValueKind::Unknown(_) => unreachable!("unknown in compute lt"),
                 }
             }
 
@@ -1171,8 +1149,8 @@ impl Op {
                 };
 
                 match &lhs.kind {
-                    FragmentValueKind::Int(lhs) => match &rhs.kind {
-                        FragmentValueKind::Int(rhs) => FragmentValueKind::Bool(lhs > rhs),
+                    ValueKind::Int(lhs) => match &rhs.kind {
+                        ValueKind::Int(rhs) => ValueKind::Bool(lhs > rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -1184,8 +1162,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Float(lhs) => match &rhs.kind {
-                        FragmentValueKind::Float(rhs) => FragmentValueKind::Bool(lhs > rhs),
+                    ValueKind::Float(lhs) => match &rhs.kind {
+                        ValueKind::Float(rhs) => ValueKind::Bool(lhs > rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -1197,8 +1175,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Char(lhs) => match &rhs.kind {
-                        FragmentValueKind::Char(rhs) => FragmentValueKind::Bool(lhs > rhs),
+                    ValueKind::Char(lhs) => match &rhs.kind {
+                        ValueKind::Char(rhs) => ValueKind::Bool(lhs > rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -1210,9 +1188,9 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::String(lhs) => match &rhs.kind {
-                        FragmentValueKind::String(rhs) => FragmentValueKind::Bool(lhs > rhs),
-                        FragmentValueKind::Ident(rhs) => FragmentValueKind::Bool(lhs > rhs),
+                    ValueKind::String(lhs) => match &rhs.kind {
+                        ValueKind::String(rhs) => ValueKind::Bool(lhs > rhs),
+                        ValueKind::Ident(rhs) => ValueKind::Bool(lhs > rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -1224,9 +1202,9 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Ident(lhs) => match &rhs.kind {
-                        FragmentValueKind::Ident(rhs) => FragmentValueKind::Bool(lhs > rhs),
-                        FragmentValueKind::String(rhs) => FragmentValueKind::Bool(lhs > rhs),
+                    ValueKind::Ident(lhs) => match &rhs.kind {
+                        ValueKind::Ident(rhs) => ValueKind::Bool(lhs > rhs),
+                        ValueKind::String(rhs) => ValueKind::Bool(lhs > rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -1238,8 +1216,8 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Bool(lhs) => match &rhs.kind {
-                        FragmentValueKind::Bool(rhs) => FragmentValueKind::Bool(lhs > rhs),
+                    ValueKind::Bool(lhs) => match &rhs.kind {
+                        ValueKind::Bool(rhs) => ValueKind::Bool(lhs > rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -1251,7 +1229,7 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::List(_) | FragmentValueKind::Tokens(_) => {
+                    ValueKind::List(_) | ValueKind::Tokens(_) => {
                         return Err(Error::CannotPerform {
                             span,
                             op: "gt",
@@ -1259,7 +1237,7 @@ impl Op {
                         });
                     }
 
-                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute gt"),
+                    ValueKind::Unknown(_) => unreachable!("unknown in compute gt"),
                 }
             }
 
@@ -1267,11 +1245,11 @@ impl Op {
                 let gt = Self::Gt(span).compute(args, ctx)?;
 
                 match &gt.kind {
-                    FragmentValueKind::Unknown(guard) => {
-                        return Ok(FragmentValue::unknown(*guard));
+                    ValueKind::Unknown(guard) => {
+                        return Ok(Value::unknown(*guard));
                     }
 
-                    FragmentValueKind::Bool(val) => FragmentValueKind::Bool(!val),
+                    ValueKind::Bool(val) => ValueKind::Bool(!val),
                     _ => unreachable!("le must be a bool"),
                 }
             }
@@ -1280,11 +1258,11 @@ impl Op {
                 let lt = Self::Lt(span).compute(args, ctx)?;
 
                 match &lt.kind {
-                    FragmentValueKind::Unknown(guard) => {
-                        return Ok(FragmentValue::unknown(*guard));
+                    ValueKind::Unknown(guard) => {
+                        return Ok(Value::unknown(*guard));
                     }
 
-                    FragmentValueKind::Bool(val) => FragmentValueKind::Bool(!val),
+                    ValueKind::Bool(val) => ValueKind::Bool(!val),
                     _ => unreachable!("ge must be a bool"),
                 }
             }
@@ -1302,11 +1280,11 @@ impl Op {
 
                 let lhs_is_greater = Self::Gt(span).compute(&[lhs.clone(), rhs.clone()], ctx)?;
                 let lhs_is_greater = match &lhs_is_greater.kind {
-                    FragmentValueKind::Unknown(guard) => {
-                        return Ok(FragmentValue::unknown(*guard));
+                    ValueKind::Unknown(guard) => {
+                        return Ok(Value::unknown(*guard));
                     }
 
-                    FragmentValueKind::Bool(val) => *val,
+                    ValueKind::Bool(val) => *val,
                     _ => unreachable!("min must be a bool"),
                 };
 
@@ -1330,11 +1308,11 @@ impl Op {
 
                 let lhs_is_greater = Self::Gt(span).compute(&[lhs.clone(), rhs.clone()], ctx)?;
                 let lhs_is_greater = match &lhs_is_greater.kind {
-                    FragmentValueKind::Unknown(guard) => {
-                        return Ok(FragmentValue::unknown(*guard));
+                    ValueKind::Unknown(guard) => {
+                        return Ok(Value::unknown(*guard));
                     }
 
-                    FragmentValueKind::Bool(val) => *val,
+                    ValueKind::Bool(val) => *val,
                     _ => unreachable!("max must be a bool"),
                 };
 
@@ -1358,21 +1336,21 @@ impl Op {
 
                 let is_too_low = Self::Lt(span).compute(&[value.clone(), min.clone()], ctx)?;
                 let is_too_low = match &is_too_low.kind {
-                    FragmentValueKind::Unknown(guard) => {
-                        return Ok(FragmentValue::unknown(*guard));
+                    ValueKind::Unknown(guard) => {
+                        return Ok(Value::unknown(*guard));
                     }
 
-                    FragmentValueKind::Bool(val) => *val,
+                    ValueKind::Bool(val) => *val,
                     _ => unreachable!("clamp must be a bool"),
                 };
 
                 let is_too_high = Self::Gt(span).compute(&[value.clone(), max.clone()], ctx)?;
                 let is_too_high = match &is_too_high.kind {
-                    FragmentValueKind::Unknown(guard) => {
-                        return Ok(FragmentValue::unknown(*guard));
+                    ValueKind::Unknown(guard) => {
+                        return Ok(Value::unknown(*guard));
                     }
 
-                    FragmentValueKind::Bool(val) => *val,
+                    ValueKind::Bool(val) => *val,
                     _ => unreachable!("clamp must be a bool"),
                 };
 
@@ -1397,8 +1375,8 @@ impl Op {
                 };
 
                 match &lhs.kind {
-                    FragmentValueKind::Bool(lhs) => match &rhs.kind {
-                        FragmentValueKind::Bool(rhs) => FragmentValueKind::Bool(lhs & rhs),
+                    ValueKind::Bool(lhs) => match &rhs.kind {
+                        ValueKind::Bool(rhs) => ValueKind::Bool(lhs & rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -1432,8 +1410,8 @@ impl Op {
                 };
 
                 match &lhs.kind {
-                    FragmentValueKind::Bool(lhs) => match &rhs.kind {
-                        FragmentValueKind::Bool(rhs) => FragmentValueKind::Bool(lhs | rhs),
+                    ValueKind::Bool(lhs) => match &rhs.kind {
+                        ValueKind::Bool(rhs) => ValueKind::Bool(lhs | rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -1467,8 +1445,8 @@ impl Op {
                 };
 
                 match &lhs.kind {
-                    FragmentValueKind::Bool(lhs) => match &rhs.kind {
-                        FragmentValueKind::Bool(rhs) => FragmentValueKind::Bool(lhs ^ rhs),
+                    ValueKind::Bool(lhs) => match &rhs.kind {
+                        ValueKind::Bool(rhs) => ValueKind::Bool(lhs ^ rhs),
                         _ => {
                             return Err(Error::ExpectedRhsFound {
                                 span,
@@ -1502,12 +1480,12 @@ impl Op {
                 };
 
                 match &start.kind {
-                    FragmentValueKind::Int(lhs) => match &end.kind {
-                        FragmentValueKind::Int(rhs) => FragmentValueKind::List(
+                    ValueKind::Int(lhs) => match &end.kind {
+                        ValueKind::Int(rhs) => ValueKind::List(
                             (*lhs..*rhs)
-                                .map(|i| FragmentValue {
+                                .map(|i| Value {
                                     span: span,
-                                    kind: FragmentValueKind::Int(i),
+                                    kind: ValueKind::Int(i),
                                 })
                                 .collect(),
                         ),
@@ -1523,25 +1501,25 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Float(_) => {
+                    ValueKind::Float(_) => {
                         return Err(Error::CannotPerform {
                             span,
                             op: "range",
                             kind: "float",
                         });
                     }
-                    FragmentValueKind::Char(_) => {
+                    ValueKind::Char(_) => {
                         return Err(Error::CannotPerform {
                             span,
                             op: "range",
                             kind: "char",
                         });
                     }
-                    FragmentValueKind::String(_)
-                    | FragmentValueKind::Ident(_)
-                    | FragmentValueKind::Bool(_)
-                    | FragmentValueKind::List(_)
-                    | FragmentValueKind::Tokens(_) => {
+                    ValueKind::String(_)
+                    | ValueKind::Ident(_)
+                    | ValueKind::Bool(_)
+                    | ValueKind::List(_)
+                    | ValueKind::Tokens(_) => {
                         return Err(Error::CannotPerform {
                             span,
                             op: "range",
@@ -1549,7 +1527,7 @@ impl Op {
                         });
                     }
 
-                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute range"),
+                    ValueKind::Unknown(_) => unreachable!("unknown in compute range"),
                 }
             }
 
@@ -1565,12 +1543,12 @@ impl Op {
                 };
 
                 match &start.kind {
-                    FragmentValueKind::Int(lhs) => match &end.kind {
-                        FragmentValueKind::Int(rhs) => FragmentValueKind::List(
+                    ValueKind::Int(lhs) => match &end.kind {
+                        ValueKind::Int(rhs) => ValueKind::List(
                             (*lhs..=*rhs)
-                                .map(|i| FragmentValue {
+                                .map(|i| Value {
                                     span: span,
-                                    kind: FragmentValueKind::Int(i),
+                                    kind: ValueKind::Int(i),
                                 })
                                 .collect(),
                         ),
@@ -1586,13 +1564,13 @@ impl Op {
                         }
                     },
 
-                    FragmentValueKind::Float(_)
-                    | FragmentValueKind::String(_)
-                    | FragmentValueKind::Char(_)
-                    | FragmentValueKind::Ident(_)
-                    | FragmentValueKind::Bool(_)
-                    | FragmentValueKind::List(_)
-                    | FragmentValueKind::Tokens(_) => {
+                    ValueKind::Float(_)
+                    | ValueKind::String(_)
+                    | ValueKind::Char(_)
+                    | ValueKind::Ident(_)
+                    | ValueKind::Bool(_)
+                    | ValueKind::List(_)
+                    | ValueKind::Tokens(_) => {
                         return Err(Error::CannotPerform {
                             span,
                             op: "range_inclusive",
@@ -1600,7 +1578,7 @@ impl Op {
                         });
                     }
 
-                    FragmentValueKind::Unknown(_) => {
+                    ValueKind::Unknown(_) => {
                         unreachable!("unknown in compute range_inclusive")
                     }
                 }
@@ -1618,13 +1596,11 @@ impl Op {
                 };
 
                 match &arg.kind {
-                    FragmentValueKind::List(list) => FragmentValueKind::Int(list.len() as i128),
+                    ValueKind::List(list) => ValueKind::Int(list.len() as i128),
 
-                    FragmentValueKind::String(string) => {
-                        FragmentValueKind::Int(string.len() as i128)
-                    }
+                    ValueKind::String(string) => ValueKind::Int(string.len() as i128),
 
-                    FragmentValueKind::Ident(ident) => FragmentValueKind::Int(ident.len() as i128),
+                    ValueKind::Ident(ident) => ValueKind::Int(ident.len() as i128),
 
                     _ => {
                         return Err(Error::ExpectedFound {
@@ -1648,7 +1624,7 @@ impl Op {
                 };
 
                 let items = match &list.kind {
-                    FragmentValueKind::List(list) => list,
+                    ValueKind::List(list) => list,
                     _ => {
                         return Err(Error::ExpectedFound {
                             span,
@@ -1659,9 +1635,9 @@ impl Op {
                 };
 
                 match &index.kind {
-                    FragmentValueKind::Int(index) => items[*index as usize].kind.clone(),
+                    ValueKind::Int(index) => items[*index as usize].kind.clone(),
 
-                    FragmentValueKind::List(indicies) => FragmentValueKind::List(
+                    ValueKind::List(indicies) => ValueKind::List(
                         indicies
                             .iter()
                             .map(|index| {
@@ -1693,15 +1669,15 @@ impl Op {
                 };
 
                 match &list.kind {
-                    FragmentValueKind::List(list) => FragmentValueKind::List(
+                    ValueKind::List(list) => ValueKind::List(
                         list.iter()
                             .enumerate()
-                            .map(|(index, item)| FragmentValue {
+                            .map(|(index, item)| Value {
                                 span: span,
-                                kind: FragmentValueKind::List(vec![
-                                    FragmentValue {
+                                kind: ValueKind::List(vec![
+                                    Value {
                                         span: self.span(),
-                                        kind: FragmentValueKind::Int(index as i128),
+                                        kind: ValueKind::Int(index as i128),
                                     },
                                     item.clone(),
                                 ]),
@@ -1731,13 +1707,13 @@ impl Op {
                 };
 
                 match &lhs.kind {
-                    FragmentValueKind::List(lhs) => match &rhs.kind {
-                        FragmentValueKind::List(rhs) => FragmentValueKind::List(
+                    ValueKind::List(lhs) => match &rhs.kind {
+                        ValueKind::List(rhs) => ValueKind::List(
                             lhs.iter()
                                 .zip(rhs.iter())
-                                .map(|(lhs, rhs)| FragmentValue {
+                                .map(|(lhs, rhs)| Value {
                                     span: span,
-                                    kind: FragmentValueKind::List(vec![lhs.clone(), rhs.clone()]),
+                                    kind: ValueKind::List(vec![lhs.clone(), rhs.clone()]),
                                 })
                                 .collect(),
                         ),
@@ -1775,9 +1751,9 @@ impl Op {
                 };
 
                 match &lhs.kind {
-                    FragmentValueKind::List(lhs) => match &rhs.kind {
-                        FragmentValueKind::List(rhs) => {
-                            FragmentValueKind::List(lhs.iter().chain(rhs.iter()).cloned().collect())
+                    ValueKind::List(lhs) => match &rhs.kind {
+                        ValueKind::List(rhs) => {
+                            ValueKind::List(lhs.iter().chain(rhs.iter()).cloned().collect())
                         }
 
                         _ => {
@@ -1813,16 +1789,16 @@ impl Op {
                 };
 
                 match &list.kind {
-                    FragmentValueKind::List(list) => FragmentValueKind::Bool('contains: {
+                    ValueKind::List(list) => ValueKind::Bool('contains: {
                         for item in list {
                             let eq = Op::Eq(span).compute(&[item.clone(), value.clone()], ctx)?;
 
                             match &eq.kind {
-                                FragmentValueKind::Unknown(guard) => {
-                                    return Ok(FragmentValue::unknown(*guard));
+                                ValueKind::Unknown(guard) => {
+                                    return Ok(Value::unknown(*guard));
                                 }
 
-                                FragmentValueKind::Bool(val) => {
+                                ValueKind::Bool(val) => {
                                     if *val {
                                         break 'contains true;
                                     }
@@ -1857,7 +1833,7 @@ impl Op {
                 };
 
                 let parts = match &parts.kind {
-                    FragmentValueKind::List(parts) => parts,
+                    ValueKind::List(parts) => parts,
                     _ => {
                         return Err(Error::ExpectedFound {
                             span,
@@ -1868,11 +1844,11 @@ impl Op {
                 };
 
                 if parts.iter().any(|part| part.is_unknown()) {
-                    return Ok(FragmentValue::unknown(
+                    return Ok(Value::unknown(
                         parts
                             .iter()
                             .find_map(|part| {
-                                if let FragmentValueKind::Unknown(guard) = part.kind {
+                                if let ValueKind::Unknown(guard) = part.kind {
                                     Some(guard)
                                 } else {
                                     None
@@ -1885,20 +1861,14 @@ impl Op {
                 let mut output_str = String::new();
                 for part in parts {
                     match &part.kind {
-                        FragmentValueKind::Ident(ident) => output_str.push_str(ident.as_str()),
-                        FragmentValueKind::String(string) => output_str.push_str(string.as_str()),
-                        FragmentValueKind::Char(char) => output_str.push(*char),
-                        FragmentValueKind::Int(int) => {
-                            output_str.push_str(int.to_string().as_str())
-                        }
-                        FragmentValueKind::Float(float) => {
-                            output_str.push_str(float.to_string().as_str())
-                        }
-                        FragmentValueKind::Bool(bool) => {
-                            output_str.push_str(bool.to_string().as_str())
-                        }
+                        ValueKind::Ident(ident) => output_str.push_str(ident.as_str()),
+                        ValueKind::String(string) => output_str.push_str(string.as_str()),
+                        ValueKind::Char(char) => output_str.push(*char),
+                        ValueKind::Int(int) => output_str.push_str(int.to_string().as_str()),
+                        ValueKind::Float(float) => output_str.push_str(float.to_string().as_str()),
+                        ValueKind::Bool(bool) => output_str.push_str(bool.to_string().as_str()),
 
-                        FragmentValueKind::List(_) | FragmentValueKind::Tokens(_) => {
+                        ValueKind::List(_) | ValueKind::Tokens(_) => {
                             return Err(Error::CannotPerform {
                                 span,
                                 op: "stringify",
@@ -1906,13 +1876,13 @@ impl Op {
                             });
                         }
 
-                        FragmentValueKind::Unknown(_) => {
+                        ValueKind::Unknown(_) => {
                             unreachable!("unknown in compute concat_ident")
                         }
                     }
                 }
 
-                FragmentValueKind::Ident(output_str)
+                ValueKind::Ident(output_str)
             }
 
             Self::ConcatString(span) => {
@@ -1927,7 +1897,7 @@ impl Op {
                 };
 
                 let parts = match &parts.kind {
-                    FragmentValueKind::List(parts) => parts,
+                    ValueKind::List(parts) => parts,
                     _ => {
                         return Err(Error::ExpectedFound {
                             span,
@@ -1938,11 +1908,11 @@ impl Op {
                 };
 
                 if parts.iter().any(|part| part.is_unknown()) {
-                    return Ok(FragmentValue::unknown(
+                    return Ok(Value::unknown(
                         parts
                             .iter()
                             .find_map(|part| {
-                                if let FragmentValueKind::Unknown(guard) = part.kind {
+                                if let ValueKind::Unknown(guard) = part.kind {
                                     Some(guard)
                                 } else {
                                     None
@@ -1955,20 +1925,14 @@ impl Op {
                 let mut output_str = String::new();
                 for part in parts {
                     match &part.kind {
-                        FragmentValueKind::Ident(ident) => output_str.push_str(ident.as_str()),
-                        FragmentValueKind::String(string) => output_str.push_str(string.as_str()),
-                        FragmentValueKind::Char(char) => output_str.push(*char),
-                        FragmentValueKind::Int(int) => {
-                            output_str.push_str(int.to_string().as_str())
-                        }
-                        FragmentValueKind::Float(float) => {
-                            output_str.push_str(float.to_string().as_str())
-                        }
-                        FragmentValueKind::Bool(bool) => {
-                            output_str.push_str(bool.to_string().as_str())
-                        }
+                        ValueKind::Ident(ident) => output_str.push_str(ident.as_str()),
+                        ValueKind::String(string) => output_str.push_str(string.as_str()),
+                        ValueKind::Char(char) => output_str.push(*char),
+                        ValueKind::Int(int) => output_str.push_str(int.to_string().as_str()),
+                        ValueKind::Float(float) => output_str.push_str(float.to_string().as_str()),
+                        ValueKind::Bool(bool) => output_str.push_str(bool.to_string().as_str()),
 
-                        FragmentValueKind::List(_) | FragmentValueKind::Tokens(_) => {
+                        ValueKind::List(_) | ValueKind::Tokens(_) => {
                             return Err(Error::CannotPerform {
                                 span,
                                 op: "stringify",
@@ -1976,17 +1940,17 @@ impl Op {
                             });
                         }
 
-                        FragmentValueKind::Unknown(_) => {
+                        ValueKind::Unknown(_) => {
                             unreachable!("unknown in compute concat_string")
                         }
                     }
                 }
 
-                FragmentValueKind::String(output_str)
+                ValueKind::String(output_str)
             }
         };
 
-        Ok(FragmentValue {
+        Ok(Value {
             span: self.span(),
             kind: output_kind,
         })

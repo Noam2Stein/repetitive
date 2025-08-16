@@ -62,13 +62,6 @@ pub enum Error {
     NameNotFound(Name),
 }
 
-#[derive(Debug, Clone)]
-pub enum Warning {
-    UnnecessaryPunct { span: Span, punct: &'static str },
-
-    UnusedMatchArm(Span),
-}
-
 impl Error {
     pub fn into_syn_error(self, ctx: &mut Context) -> syn::Error {
         match self {
@@ -164,21 +157,5 @@ impl Error {
 
     pub fn into_compile_error(self, ctx: &mut Context) -> TokenStream {
         self.into_syn_error(ctx).into_compile_error()
-    }
-}
-
-impl Warning {
-    pub fn into_syn_warning(self) -> syn::Error {
-        match self {
-            Warning::UnnecessaryPunct { span, punct } => {
-                syn::Error::new(span, format!("unnecessary `{punct}`"))
-            }
-
-            Warning::UnusedMatchArm(span) => syn::Error::new(span, "unused match arm"),
-        }
-    }
-
-    pub fn into_compile_error(self) -> TokenStream {
-        self.into_syn_warning().into_compile_error()
     }
 }

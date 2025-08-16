@@ -10,45 +10,29 @@ use syn::{
 use super::*;
 
 #[derive(Debug, Clone)]
-pub struct FragmentExpr {
+pub struct Expr {
     pub span: Span,
-    pub kind: FragmentExprKind,
+    pub kind: ExprKind,
 }
 
 #[derive(Debug, Clone)]
-pub enum FragmentExprKind {
-    Value(FragmentValueKind),
+pub enum ExprKind {
+    Value(Value),
     Name(Name),
     Op(FragmentOp),
-    List(Vec<FragmentExpr>),
-    Match(FragmentMatch),
+    List(Vec<Expr>),
+    Match(ExprMatch),
 }
 
 #[derive(Debug, Clone)]
 pub struct FragmentOp {
     pub op: Op,
-    pub args: Vec<FragmentExpr>,
+    pub args: Vec<Expr>,
 }
 
-#[derive(Debug, Clone)]
-pub struct FragmentMatch {
-    #[allow(dead_code)]
-    pub match_span: Span,
-    pub expr: Box<FragmentExpr>,
-    pub match_arms: Vec<FragmentMatchArm>,
-}
-
-#[derive(Debug, Clone)]
-pub struct FragmentMatchArm {
-    pub pat: Pattern,
-    pub condition: Option<FragmentExpr>,
-    pub body: FragmentExpr,
-    pub unused_arm_warning: WarningHandle,
-}
-
-impl FragmentExpr {
+impl Expr {
     pub fn peek(input: ParseStream) -> bool {
-        FragmentValue::peek_lit(input)
+        Value::peek_lit(input)
             || input.peek(Paren)
             || input.peek(Bracket)
             || input.peek(Token![@])
@@ -59,19 +43,22 @@ impl FragmentExpr {
     pub fn temp() -> Self {
         Self {
             span: Span::call_site(),
-            kind: FragmentExprKind::Value(FragmentValueKind::Int(0)),
+            kind: ExprKind::Value(Value {
+                span: Span::call_site(),
+                kind: ValueKind::Int(0),
+            }),
         }
     }
 
     pub fn name(name: Name) -> Self {
         Self {
             span: name.span,
-            kind: FragmentExprKind::Name(name),
+            kind: ExprKind::Name(name),
         }
     }
 }
 
-impl ContextParse for FragmentExpr {
+impl ContextParse for Expr {
     fn ctx_parse(input: ParseStream, ctx: &mut Context) -> Result<Self, Error>
     where
         Self: Sized,
@@ -131,19 +118,19 @@ impl ContextParse for FragmentExpr {
                 left: Box<TempExpr>,
                 right: Box<TempExpr>,
             },
-            Single(FragmentExpr),
+            Single(Expr),
         }
         impl TempExpr {
-            fn to_expr(self) -> FragmentExpr {
+            fn to_expr(self) -> Expr {
                 match self {
                     TempExpr::Bin {
                         op,
                         op_lvl: _,
                         left,
                         right,
-                    } => FragmentExpr {
+                    } => Expr {
                         span: op.span(),
-                        kind: FragmentExprKind::Op(FragmentOp {
+                        kind: ExprKind::Op(FragmentOp {
                             op,
                             args: vec![left.to_expr(), right.to_expr()],
                         }),
@@ -154,12 +141,12 @@ impl ContextParse for FragmentExpr {
             }
         }
 
-        let mut expr = TempExpr::Single(FragmentExpr::ctx_parse_single(input, ctx)?);
+        let mut expr = TempExpr::Single(Expr::ctx_parse_single(input, ctx)?);
 
         while let Some(op) = Op::parse_option_bin(input) {
             let op_lvl = BinOpLvl::try_from_op(op).unwrap();
 
-            let right = FragmentExpr::ctx_parse_single(input, ctx)?;
+            let right = Expr::ctx_parse_single(input, ctx)?;
 
             match &mut expr {
                 TempExpr::Bin {
@@ -172,10 +159,7 @@ impl ContextParse for FragmentExpr {
                         **expr_right = TempExpr::Bin {
                             op,
                             op_lvl,
-                            left: Box::new(replace(
-                                expr_right,
-                                TempExpr::Single(FragmentExpr::temp()),
-                            )),
+                            left: Box::new(replace(expr_right, TempExpr::Single(Expr::temp()))),
                             right: Box::new(TempExpr::Single(right)),
                         };
                     } else {
@@ -192,7 +176,7 @@ impl ContextParse for FragmentExpr {
                     expr = TempExpr::Bin {
                         op,
                         op_lvl,
-                        left: Box::new(TempExpr::Single(replace(left, FragmentExpr::temp()))),
+                        left: Box::new(TempExpr::Single(replace(left, Expr::temp()))),
                         right: Box::new(TempExpr::Single(right)),
                     };
                 }
@@ -200,20 +184,26 @@ impl ContextParse for FragmentExpr {
         }
 
         let mut expr = expr.to_expr();
-        expr.optimize(ctx)?;
+        expr.optimize(ctx);
 
         Ok(expr)
     }
 }
-impl FragmentExpr {
+impl Expr {
     pub fn ctx_parse_single(input: ParseStream, ctx: &mut Context) -> Result<Self, Error> {
         if let Some(op) = Op::parse_option_un(input) {
-            let arg = FragmentExpr::ctx_parse_single(input, ctx)?;
+            let arg = Expr::ctx_parse_single(input, ctx)?;
 
-            return Self::op(op, vec![arg], ctx);
+            return Ok(Self {
+                span: op.span(),
+                kind: ExprKind::Op(FragmentOp {
+                    op,
+                    args: vec![arg],
+                }),
+            });
         }
 
-        let mut expr = FragmentExpr::ctx_parse_base(input, ctx)?;
+        let mut expr = Expr::ctx_parse_base(input, ctx)?;
 
         loop {
             if input.peek(Token![.]) && !input.peek(Token![..]) && !input.peek(Token![...]) {
@@ -230,12 +220,24 @@ impl FragmentExpr {
 
                 let args = ctx_parse_punctuated.ctx_parse2(group.stream(), ctx)?;
 
-                expr = Self::op(op, [expr].into_iter().chain(args).collect(), ctx)?;
+                expr = Self {
+                    span: op.span(),
+                    kind: ExprKind::Op(FragmentOp {
+                        op,
+                        args: [expr].into_iter().chain(args).collect(),
+                    }),
+                };
             } else if input.peek(Bracket) {
                 let group = Group::ctx_parse(input, ctx)?;
-                let idx = FragmentExpr::ctx_parse.ctx_parse2(group.stream(), ctx)?;
+                let idx = Expr::ctx_parse.ctx_parse2(group.stream(), ctx)?;
 
-                expr = Self::op(Op::Index(group.span()), vec![expr, idx], ctx)?;
+                expr = Self {
+                    span: group.span(),
+                    kind: ExprKind::Op(FragmentOp {
+                        op: Op::Index(group.span()),
+                        args: vec![expr, idx],
+                    }),
+                };
             } else {
                 break;
             }
@@ -244,61 +246,50 @@ impl FragmentExpr {
         Ok(expr)
     }
 
-    pub fn op(op: Op, args: Vec<FragmentExpr>, ctx: &mut Context) -> Result<Self, Error> {
-        if let Some(args) = args
-            .iter()
-            .map(|item| match &item.kind {
-                FragmentExprKind::Value(val) => Some(FragmentValue {
-                    span: item.span,
-                    kind: val.clone(),
-                }),
-                _ => None,
-            })
-            .collect::<Option<Vec<_>>>()
-        {
-            let args = args.into_iter().collect::<Vec<_>>();
-
-            return Ok(FragmentExpr {
-                span: op.span(),
-                kind: FragmentExprKind::Value(op.compute(&args, ctx)?.kind),
-            });
-        }
-
-        Ok(Self {
-            span: op.span(),
-            kind: FragmentExprKind::Op(FragmentOp { op, args }),
-        })
-    }
-
     fn ctx_parse_base(input: ParseStream, ctx: &mut Context) -> Result<Self, Error> {
-        if input.peek(Token![@]) {
-            let at_span = <Token![@]>::ctx_parse(input, ctx)?.span;
+        if let Some(frag) = Fragment::ctx_parse_option(input, ctx)? {
+            return Ok(match frag.kind {
+                FragmentKind::Concat(expr) => expr.expr,
+                FragmentKind::Tokens(expr) => Value {
+                    span: frag.at_token.span,
+                    kind: ValueKind::Tokens(expr.tokens),
+                }
+                .into_expr(),
 
-            if input.peek(Paren) || Name::peek(input) {
-                ctx.push_warning(Warning::UnnecessaryPunct {
-                    span: at_span,
-                    punct: "@",
-                });
-            }
+                FragmentKind::If(expr) => {
+                    ctx.push_warning(Warning::UnnecessaryPunct {
+                        span: frag.at_token.span,
+                        punct: "@",
+                    });
 
-            let outer_kind = FragmentOuterKind::ctx_parse(input, ctx)?;
-            let outer = FragmentOuter {
-                at_span,
-                kind: outer_kind,
-            };
+                    expr.expr
+                }
+                FragmentKind::Match(expr) => {
+                    ctx.push_warning(Warning::UnnecessaryPunct {
+                        span: frag.at_token.span,
+                        punct: "@",
+                    });
 
-            return Ok(match outer.kind {
-                FragmentOuterKind::Expr(expr) => expr,
+                    expr.expr
+                }
+                FragmentKind::Expr(expr) => {
+                    ctx.push_warning(Warning::UnnecessaryPunct {
+                        span: frag.at_token.span,
+                        punct: "@",
+                    });
 
-                FragmentOuterKind::For(outer_for) => {
+                    expr.expr
+                }
+
+                FragmentKind::For(outer_for) => {
                     return Err(Error::ParseError(syn::Error::new(
-                        outer_for.for_span,
+                        outer_for.for_token.span,
                         "`@for` is not allowed in expressions",
                     )));
                 }
-                FragmentOuterKind::Let(outer_let) => {
+                FragmentKind::Let(outer_let) => {
                     return Err(Error::ParseError(syn::Error::new(
-                        outer_let.let_span,
+                        outer_let.let_token.span,
                         "`@let` is not allowed in expressions",
                     )));
                 }
@@ -307,7 +298,7 @@ impl FragmentExpr {
 
         if input.peek(Token![if]) {
             let if_span = <Token![if]>::ctx_parse(input, ctx)?.span;
-            let cond = FragmentExpr::ctx_parse(input, ctx)?;
+            let cond = Expr::ctx_parse(input, ctx)?;
 
             let then_group = Group::ctx_parse(input, ctx)?;
             if then_group.delimiter() != Delimiter::Brace {
@@ -317,7 +308,7 @@ impl FragmentExpr {
                 )));
             }
 
-            let then = FragmentExpr::ctx_parse.ctx_parse2(then_group.stream(), ctx)?;
+            let then = Expr::ctx_parse.ctx_parse2(then_group.stream(), ctx)?;
 
             <Token![else]>::ctx_parse(input, ctx)?;
 
@@ -329,14 +320,20 @@ impl FragmentExpr {
                 )));
             }
 
-            let else_ = FragmentExpr::ctx_parse.ctx_parse2(else_group.stream(), ctx)?;
+            let else_ = Expr::ctx_parse.ctx_parse2(else_group.stream(), ctx)?;
 
-            return Ok(Self::op(Op::IfElse(if_span), vec![cond, then, else_], ctx)?);
+            return Ok(Self {
+                span: if_span,
+                kind: ExprKind::Op(FragmentOp {
+                    op: Op::IfElse(if_span),
+                    args: vec![cond, then, else_],
+                }),
+            });
         }
 
         if input.peek(Token![match]) {
-            let match_span = <Token![match]>::ctx_parse(input, ctx)?.span;
-            let expr = Box::new(FragmentExpr::ctx_parse(input, ctx)?);
+            let match_token = <Token![match]>::ctx_parse(input, ctx)?;
+            let expr = Box::new(Expr::ctx_parse(input, ctx)?);
 
             let group = Group::ctx_parse(input, ctx)?;
             if group.delimiter() != Delimiter::Brace {
@@ -356,16 +353,16 @@ impl FragmentExpr {
                     let condition = if input.peek(Token![if]) {
                         <Token![if]>::ctx_parse(input, ctx)?;
 
-                        Some(FragmentExpr::ctx_parse(input, ctx)?)
+                        Some(Expr::ctx_parse(input, ctx)?)
                     } else {
                         None
                     };
 
                     <Token![=>]>::ctx_parse(input, ctx)?;
 
-                    let body = FragmentExpr::ctx_parse(input, ctx)?;
+                    let body = Expr::ctx_parse(input, ctx)?;
 
-                    arms.push(FragmentMatchArm {
+                    arms.push(ExprMatchArm {
                         pat,
                         condition,
                         body,
@@ -382,10 +379,10 @@ impl FragmentExpr {
 
             let match_arms = match_arms_parse_fn.ctx_parse2(group.stream(), ctx)?;
 
-            return Ok(FragmentExpr {
-                span: match_span,
-                kind: FragmentExprKind::Match(FragmentMatch {
-                    match_span,
+            return Ok(Expr {
+                span: match_token.span,
+                kind: ExprKind::Match(ExprMatch {
+                    match_token,
                     expr,
                     match_arms,
                 }),
@@ -398,14 +395,14 @@ impl FragmentExpr {
             return Ok(Self::name(name));
         }
 
-        if let Some(lit) = FragmentValue::ctx_parse_option_lit(input, ctx)? {
+        if let Some(lit) = Value::ctx_parse_option_lit(input, ctx)? {
             return Ok(lit.into_expr());
         }
 
         if let Some(group) = <Option<Group>>::ctx_parse(input, ctx)? {
             match group.delimiter() {
                 Delimiter::Parenthesis => {
-                    let fragment_expr = FragmentExpr::ctx_parse.ctx_parse2(group.stream(), ctx)?;
+                    let fragment_expr = Expr::ctx_parse.ctx_parse2(group.stream(), ctx)?;
 
                     return Ok(fragment_expr);
                 }
@@ -413,23 +410,22 @@ impl FragmentExpr {
                 Delimiter::Brace => {
                     let tokens = Tokens::ctx_parse.ctx_parse2(group.stream(), ctx)?;
 
-                    return Ok(FragmentExpr {
+                    return Ok(Value {
                         span: group.span(),
-                        kind: FragmentExprKind::Value(FragmentValueKind::Tokens(tokens)),
-                    });
+                        kind: ValueKind::Tokens(tokens),
+                    }
+                    .into_expr());
                 }
 
                 Delimiter::Bracket => {
-                    return Ok(FragmentExpr {
+                    return Ok(Expr {
                         span: group.span(),
-                        kind: FragmentExprKind::List(
-                            ctx_parse_punctuated.ctx_parse2(group.stream(), ctx)?,
-                        ),
+                        kind: ExprKind::List(ctx_parse_punctuated.ctx_parse2(group.stream(), ctx)?),
                     });
                 }
 
                 Delimiter::None => {
-                    return FragmentExpr::ctx_parse.ctx_parse2(group.stream(), ctx);
+                    return Expr::ctx_parse.ctx_parse2(group.stream(), ctx);
                 }
             }
         }
@@ -439,61 +435,59 @@ impl FragmentExpr {
             "expected a fragment expr",
         )))
     }
+}
 
-    fn optimize(&mut self, ctx: &mut Context) -> Result<(), Error> {
+impl Optimize for Expr {
+    fn optimize(&mut self, ctx: &mut Context) {
         match &mut self.kind {
-            FragmentExprKind::Value(_) => {}
-            FragmentExprKind::Name(_) => {}
+            ExprKind::Value(_) => {}
+            ExprKind::Name(_) => {}
 
-            FragmentExprKind::List(val) => {
+            ExprKind::List(val) => {
                 for item in val {
-                    item.optimize(ctx)?;
+                    item.optimize(ctx);
                 }
             }
 
-            FragmentExprKind::Op(FragmentOp { op, args }) => {
+            ExprKind::Op(FragmentOp { op: _, args }) => {
                 for item in args.iter_mut() {
-                    item.optimize(ctx)?;
+                    item.optimize(ctx);
                 }
-
-                *self = Self::op(*op, args.clone(), ctx)?;
             }
 
-            FragmentExprKind::Match(FragmentMatch {
-                match_span: _,
+            ExprKind::Match(ExprMatch {
+                match_token: _,
                 expr,
                 match_arms,
             }) => {
-                expr.optimize(ctx)?;
+                expr.optimize(ctx);
 
                 for arm in match_arms.iter_mut() {
-                    arm.body.optimize(ctx)?;
+                    arm.body.optimize(ctx);
 
                     if let Some(condition) = &mut arm.condition {
-                        condition.optimize(ctx)?;
+                        condition.optimize(ctx);
                     }
                 }
             }
         }
-
-        Ok(())
     }
 }
 
-impl FragmentExpr {
-    pub fn eval(&self, ctx: &mut Context, namespace: &Namespace) -> FragmentValue {
+impl Expr {
+    pub fn eval(&self, ctx: &mut Context, namespace: &Namespace) -> Value {
         let value = match &self.kind {
-            FragmentExprKind::Value(val) => val.clone(),
+            ExprKind::Value(val) => val.clone().kind,
 
-            FragmentExprKind::Name(name) => namespace.try_get(*name, ctx).kind,
+            ExprKind::Name(name) => namespace.try_get(*name, ctx).kind,
 
-            FragmentExprKind::List(val) => FragmentValueKind::List(
+            ExprKind::List(val) => ValueKind::List(
                 val.into_iter()
                     .map(|item| item.eval(ctx, namespace))
                     .collect(),
             ),
 
-            FragmentExprKind::Op(FragmentOp { op, args }) => {
+            ExprKind::Op(FragmentOp { op, args }) => {
                 let resolved_args = args
                     .into_iter()
                     .map(|item| item.eval(ctx, namespace))
@@ -501,12 +495,12 @@ impl FragmentExpr {
 
                 match op.compute(&resolved_args, ctx) {
                     Ok(val) => val.kind,
-                    Err(err) => FragmentValueKind::Unknown(UnknownGuard::new(&ctx.push_error(err))),
+                    Err(err) => ValueKind::Unknown(ctx.push_error(err).unknown_guard()),
                 }
             }
 
-            FragmentExprKind::Match(FragmentMatch {
-                match_span: _,
+            ExprKind::Match(ExprMatch {
+                match_token: _,
                 expr,
                 match_arms,
             }) => {
@@ -517,29 +511,30 @@ impl FragmentExpr {
                     match arm.pat.matches(&expr_value, ctx) {
                         PatternMatches::Matches => {}
                         PatternMatches::Mismatched(_) => continue,
-                        PatternMatches::Unknown(guard) => return FragmentValue::unknown(guard),
+                        PatternMatches::Unknown(guard) => return Value::unknown(guard),
                     }
 
                     if let Some(condition) = &arm.condition {
                         let cond_value = condition.eval(ctx, namespace);
                         match cond_value.kind {
-                            FragmentValueKind::Unknown(guard) => {
-                                return FragmentValue::unknown(guard);
+                            ValueKind::Unknown(guard) => {
+                                return Value::unknown(guard);
                             }
 
-                            FragmentValueKind::Bool(val) => {
+                            ValueKind::Bool(val) => {
                                 if !val {
                                     continue;
                                 }
                             }
                             _ => {
-                                return FragmentValue::unknown(UnknownGuard::new(&ctx.push_error(
-                                    Error::ExpectedFound {
+                                return Value::unknown(
+                                    ctx.push_error(Error::ExpectedFound {
                                         span: condition.span,
                                         expected: "bool",
                                         found: cond_value.kind.kind_str(),
-                                    },
-                                )));
+                                    })
+                                    .unknown_guard(),
+                                );
                             }
                         }
                     }
@@ -559,26 +554,27 @@ impl FragmentExpr {
 
                     matched_arm.body.eval(ctx, &mut arm_namespace).kind
                 } else {
-                    FragmentValueKind::Unknown(UnknownGuard::new(&ctx.push_error(
-                        Error::NoMatches {
+                    ValueKind::Unknown(
+                        ctx.push_error(Error::NoMatches {
                             span: expr_value.span,
                             value: expr_value.to_string(),
-                        },
-                    )))
+                        })
+                        .unknown_guard(),
+                    )
                 }
             }
         };
 
-        FragmentValue {
+        Value {
             span: self.span,
             kind: value,
         }
     }
 }
 
-impl Paste for FragmentExpr {
-    fn paste(&self, output: &mut TokenStream, ctx: &mut Context, namespace: &mut Namespace) {
-        self.eval(ctx, namespace).paste(output, ctx, namespace)
+impl Expand for Expr {
+    fn expand(&self, output: &mut TokenStream, ctx: &mut Context, namespace: &Namespace) {
+        self.eval(ctx, namespace).expand(output, ctx, namespace)
     }
 }
 

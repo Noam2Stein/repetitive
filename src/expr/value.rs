@@ -7,29 +7,29 @@ use syn::{Ident, Lifetime, LitBool, LitChar, LitFloat, LitInt, LitStr, Token, pa
 use super::*;
 
 #[derive(Debug, Clone)]
-pub struct FragmentValue {
+pub struct Value {
     pub span: Span,
-    pub kind: FragmentValueKind,
+    pub kind: ValueKind,
 }
 
 #[derive(Debug, Clone)]
-pub enum FragmentValueKind {
+pub enum ValueKind {
     Int(i128),
     Float(f64),
     Bool(bool),
     String(String),
     Char(char),
     Ident(String),
-    List(Vec<FragmentValue>),
+    List(Vec<Value>),
     Tokens(Tokens),
     Unknown(UnknownGuard),
 }
 
-impl FragmentValue {
+impl Value {
     pub fn unknown(guard: UnknownGuard) -> Self {
         Self {
             span: Span::call_site(),
-            kind: FragmentValueKind::Unknown(guard),
+            kind: ValueKind::Unknown(guard),
         }
     }
 
@@ -82,71 +82,71 @@ impl FragmentValue {
     pub fn int_lit(lit: LitInt) -> Self {
         Self {
             span: lit.span(),
-            kind: FragmentValueKind::Int(lit.base10_digits().parse().unwrap()),
+            kind: ValueKind::Int(lit.base10_digits().parse().unwrap()),
         }
     }
     pub fn float_lit(lit: LitFloat) -> Self {
         Self {
             span: lit.span(),
-            kind: FragmentValueKind::Float(lit.base10_digits().parse().unwrap()),
+            kind: ValueKind::Float(lit.base10_digits().parse().unwrap()),
         }
     }
     pub fn bool_lit(lit: LitBool) -> Self {
         Self {
             span: lit.span(),
-            kind: FragmentValueKind::Bool(lit.value),
+            kind: ValueKind::Bool(lit.value),
         }
     }
     pub fn char_lit(lit: LitChar) -> Self {
         Self {
             span: lit.span(),
-            kind: FragmentValueKind::Char(lit.value()),
+            kind: ValueKind::Char(lit.value()),
         }
     }
     pub fn str_lit(lit: LitStr) -> Self {
         Self {
             span: lit.span(),
-            kind: FragmentValueKind::String(lit.value()),
+            kind: ValueKind::String(lit.value()),
         }
     }
     pub fn ident_lit(lit: Lifetime) -> Self {
         Self {
             span: lit.span(),
-            kind: FragmentValueKind::Ident(lit.ident.to_string()),
+            kind: ValueKind::Ident(lit.ident.to_string()),
         }
     }
 
-    pub fn into_expr(self) -> FragmentExpr {
-        FragmentExpr {
+    pub fn into_expr(self) -> Expr {
+        Expr {
             span: self.span,
-            kind: FragmentExprKind::Value(self.kind),
+            kind: ExprKind::Value(self),
         }
     }
 
     pub fn is_unknown(&self) -> bool {
-        matches!(self.kind, FragmentValueKind::Unknown(_))
+        matches!(self.kind, ValueKind::Unknown(_))
     }
 }
-impl FragmentValueKind {
+impl ValueKind {
     pub fn kind_str(&self) -> &'static str {
         match self {
-            FragmentValueKind::Int(_) => "int",
-            FragmentValueKind::Float(_) => "float",
-            FragmentValueKind::Bool(_) => "bool",
-            FragmentValueKind::String(_) => "string",
-            FragmentValueKind::Char(_) => "char",
-            FragmentValueKind::Ident(_) => "ident",
-            FragmentValueKind::List(_) => "list",
-            FragmentValueKind::Tokens(_) => "tokens",
-            FragmentValueKind::Unknown(_) => "unknown",
+            ValueKind::Int(_) => "int",
+            ValueKind::Float(_) => "float",
+            ValueKind::Bool(_) => "bool",
+            ValueKind::String(_) => "string",
+            ValueKind::Char(_) => "char",
+            ValueKind::Ident(_) => "ident",
+            ValueKind::List(_) => "list",
+            ValueKind::Tokens(_) => "tokens",
+            ValueKind::Unknown(_) => "unknown",
         }
     }
 }
 
-impl Paste for FragmentValue {
-    fn paste(&self, output: &mut TokenStream, ctx: &mut Context, namespace: &mut Namespace) {
+impl Expand for Value {
+    fn expand(&self, output: &mut TokenStream, ctx: &mut Context, namespace: &Namespace) {
         match &self.kind {
-            FragmentValueKind::Int(val) => {
+            ValueKind::Int(val) => {
                 let lit = LitInt::new(val.abs().to_string().as_str(), self.span);
                 if *val < 0 {
                     quote_spanned! { self.span => -#lit }.to_tokens(output);
@@ -154,7 +154,8 @@ impl Paste for FragmentValue {
                     lit.to_tokens(output);
                 }
             }
-            FragmentValueKind::Float(val) => {
+
+            ValueKind::Float(val) => {
                 let lit = LitFloat::new(&format!("{:?}", val.abs()), self.span);
                 if *val < 0.0 {
                     quote_spanned! { self.span => -#lit }.to_tokens(output);
@@ -162,17 +163,18 @@ impl Paste for FragmentValue {
                     lit.to_tokens(output);
                 }
             }
-            FragmentValueKind::Bool(val) => LitBool::new(*val, self.span).to_tokens(output),
-            FragmentValueKind::String(val) => LitStr::new(val, self.span).to_tokens(output),
-            FragmentValueKind::Char(val) => LitChar::new(*val, self.span).to_tokens(output),
-            FragmentValueKind::Ident(val) => Ident::new(val, self.span).to_tokens(output),
 
-            FragmentValueKind::Tokens(val) => val.paste(output, ctx, namespace),
+            ValueKind::Bool(val) => LitBool::new(*val, self.span).to_tokens(output),
+            ValueKind::String(val) => LitStr::new(val, self.span).to_tokens(output),
+            ValueKind::Char(val) => LitChar::new(*val, self.span).to_tokens(output),
+            ValueKind::Ident(val) => Ident::new(val, self.span).to_tokens(output),
 
-            FragmentValueKind::List(val) => {
+            ValueKind::Tokens(val) => val.expand(output, ctx, namespace),
+
+            ValueKind::List(val) => {
                 let mut items = TokenStream::new();
                 for item in val {
-                    item.paste(&mut items, ctx, namespace);
+                    item.expand(&mut items, ctx, namespace);
 
                     quote! { , }.to_tokens(&mut items);
                 }
@@ -180,22 +182,22 @@ impl Paste for FragmentValue {
                 quote_spanned! { self.span => [#items] }.to_tokens(output);
             }
 
-            FragmentValueKind::Unknown(_) => return,
+            ValueKind::Unknown(_) => return,
         }
     }
 }
 
-impl Display for FragmentValue {
+impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.kind {
-            FragmentValueKind::Int(val) => write!(f, "{val:?}"),
-            FragmentValueKind::Float(val) => write!(f, "{val:?}"),
-            FragmentValueKind::Bool(val) => write!(f, "{val:?}"),
-            FragmentValueKind::String(val) => write!(f, "{val:?}"),
-            FragmentValueKind::Char(val) => write!(f, "{val:?}"),
-            FragmentValueKind::Ident(val) => write!(f, "'{val}"),
+            ValueKind::Int(val) => write!(f, "{val:?}"),
+            ValueKind::Float(val) => write!(f, "{val:?}"),
+            ValueKind::Bool(val) => write!(f, "{val:?}"),
+            ValueKind::String(val) => write!(f, "{val:?}"),
+            ValueKind::Char(val) => write!(f, "{val:?}"),
+            ValueKind::Ident(val) => write!(f, "'{val}"),
 
-            FragmentValueKind::List(val) => {
+            ValueKind::List(val) => {
                 write!(f, "[")?;
 
                 for (idx, item) in val.iter().enumerate() {
@@ -209,9 +211,9 @@ impl Display for FragmentValue {
                 write!(f, "]")
             }
 
-            FragmentValueKind::Tokens(_) => write!(f, "{{tokens}}"),
+            ValueKind::Tokens(_) => write!(f, "{{tokens}}"),
 
-            FragmentValueKind::Unknown(_) => {
+            ValueKind::Unknown(_) => {
                 unreachable!("display should not be called on unknown values")
             }
         }

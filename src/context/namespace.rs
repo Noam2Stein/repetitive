@@ -5,8 +5,8 @@ use super::*;
 #[derive(Debug, Clone)]
 pub struct Namespace<'p> {
     parent: Option<&'p Namespace<'p>>,
-    names: HashMap<NameId, FragmentValue>,
-    new_names: HashMap<NameId, FragmentValue>,
+    names: HashMap<NameId, Value>,
+    new_names: HashMap<NameId, Value>,
 }
 
 impl<'p> Namespace<'p> {
@@ -26,7 +26,7 @@ impl<'p> Namespace<'p> {
         }
     }
 
-    pub fn queue_insert(&mut self, name: Name, fragment: FragmentValue, _ctx: &mut Context) {
+    pub fn queue_insert(&mut self, name: Name, fragment: Value, _ctx: &mut Context) {
         if self.new_names.contains_key(&name.id) {
             _ctx.push_error(Error::NameAlreadyExists(name));
             return;
@@ -38,29 +38,29 @@ impl<'p> Namespace<'p> {
         self.names.extend(self.new_names.drain());
     }
 
-    pub fn get(&self, name: Name) -> Option<FragmentValue> {
+    pub fn get(&self, name: Name) -> Option<Value> {
         if let Some(fragment) = self.names.get(&name.id) {
-            Some(FragmentValue {
+            Some(Value {
                 span: name.span,
                 kind: match &fragment.kind {
-                    FragmentValueKind::List(val) => FragmentValueKind::List(
+                    ValueKind::List(val) => ValueKind::List(
                         val.iter()
-                            .map(|item| FragmentValue {
+                            .map(|item| Value {
                                 span: name.span,
                                 kind: item.kind.clone(),
                             })
                             .collect(),
                     ),
 
-                    FragmentValueKind::Int(val) => FragmentValueKind::Int(*val),
-                    FragmentValueKind::Float(val) => FragmentValueKind::Float(*val),
-                    FragmentValueKind::Bool(val) => FragmentValueKind::Bool(*val),
-                    FragmentValueKind::String(val) => FragmentValueKind::String(val.clone()),
-                    FragmentValueKind::Char(val) => FragmentValueKind::Char(*val),
-                    FragmentValueKind::Ident(val) => FragmentValueKind::Ident(val.clone()),
-                    FragmentValueKind::Tokens(val) => FragmentValueKind::Tokens(val.clone()),
+                    ValueKind::Int(val) => ValueKind::Int(*val),
+                    ValueKind::Float(val) => ValueKind::Float(*val),
+                    ValueKind::Bool(val) => ValueKind::Bool(*val),
+                    ValueKind::String(val) => ValueKind::String(val.clone()),
+                    ValueKind::Char(val) => ValueKind::Char(*val),
+                    ValueKind::Ident(val) => ValueKind::Ident(val.clone()),
+                    ValueKind::Tokens(val) => ValueKind::Tokens(val.clone()),
 
-                    FragmentValueKind::Unknown(guard) => FragmentValueKind::Unknown(*guard),
+                    ValueKind::Unknown(guard) => ValueKind::Unknown(*guard),
                 },
             })
         } else if let Some(parent) = self.parent {
@@ -70,12 +70,10 @@ impl<'p> Namespace<'p> {
         }
     }
 
-    pub fn try_get(&self, name: Name, ctx: &mut Context) -> FragmentValue {
+    pub fn try_get(&self, name: Name, ctx: &mut Context) -> Value {
         match self.get(name) {
             Some(fragment) => fragment,
-            None => FragmentValue::unknown(UnknownGuard::new(
-                &ctx.push_error(Error::NameNotFound(name)),
-            )),
+            None => Value::unknown(ctx.push_error(Error::NameNotFound(name)).unknown_guard()),
         }
     }
 }

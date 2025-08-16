@@ -7,7 +7,7 @@ use super::*;
 pub enum Pattern {
     Empty,
     Name(Name),
-    Literal(FragmentValue),
+    Literal(Value),
     List(Vec<Pattern>),
 }
 
@@ -19,25 +19,22 @@ pub enum PatternMatches {
 
 impl Pattern {
     pub fn peek(input: ParseStream) -> bool {
-        input.peek(Bracket)
-            || Name::peek(input)
-            || FragmentExpr::peek(input)
-            || input.peek(Token![_])
+        input.peek(Bracket) || Name::peek(input) || Expr::peek(input) || input.peek(Token![_])
     }
 
-    pub fn matches(&self, value: &FragmentValue, ctx: &mut Context) -> PatternMatches {
+    pub fn matches(&self, value: &Value, ctx: &mut Context) -> PatternMatches {
         match self {
             Self::Empty => PatternMatches::Matches,
             Self::Name(_) => PatternMatches::Matches,
 
             Self::Literal(lit) => {
                 let is_same_kind = match (&lit.kind, &value.kind) {
-                    (FragmentValueKind::Bool(_), FragmentValueKind::Bool(_)) => true,
-                    (FragmentValueKind::Int(_), FragmentValueKind::Int(_)) => true,
-                    (FragmentValueKind::Float(_), FragmentValueKind::Float(_)) => true,
-                    (FragmentValueKind::String(_), FragmentValueKind::String(_)) => true,
-                    (FragmentValueKind::Char(_), FragmentValueKind::Char(_)) => true,
-                    (FragmentValueKind::Ident(_), FragmentValueKind::Ident(_)) => true,
+                    (ValueKind::Bool(_), ValueKind::Bool(_)) => true,
+                    (ValueKind::Int(_), ValueKind::Int(_)) => true,
+                    (ValueKind::Float(_), ValueKind::Float(_)) => true,
+                    (ValueKind::String(_), ValueKind::String(_)) => true,
+                    (ValueKind::Char(_), ValueKind::Char(_)) => true,
+                    (ValueKind::Ident(_), ValueKind::Ident(_)) => true,
                     _ => false,
                 };
 
@@ -52,12 +49,12 @@ impl Pattern {
                 let eq = match Op::Eq(value.span).compute(&[lit.clone(), value.clone()], ctx) {
                     Ok(val) => val,
                     Err(err) => {
-                        return PatternMatches::Unknown(UnknownGuard::new(&ctx.push_error(err)));
+                        return PatternMatches::Unknown(ctx.push_error(err).unknown_guard());
                     }
                 };
 
-                let FragmentValueKind::Bool(eq) = eq.kind else {
-                    if let FragmentValueKind::Unknown(guard) = &eq.kind {
+                let ValueKind::Bool(eq) = eq.kind else {
+                    if let ValueKind::Unknown(guard) = &eq.kind {
                         return PatternMatches::Unknown(*guard);
                     }
 
@@ -73,7 +70,7 @@ impl Pattern {
             }
 
             Self::List(pat) => {
-                let FragmentValueKind::List(value_list) = &value.kind else {
+                let ValueKind::List(value_list) = &value.kind else {
                     return PatternMatches::Mismatched(Error::PatternKindMismatch {
                         span: value.span,
                         expected: "list",
@@ -102,12 +99,7 @@ impl Pattern {
         }
     }
 
-    pub fn queue_insert(
-        &self,
-        value_expr: FragmentValue,
-        namespace: &mut Namespace,
-        ctx: &mut Context,
-    ) {
+    pub fn queue_insert(&self, value_expr: Value, namespace: &mut Namespace, ctx: &mut Context) {
         match self.matches(&value_expr, ctx) {
             PatternMatches::Matches => {}
             PatternMatches::Mismatched(err) => {
@@ -126,7 +118,7 @@ impl Pattern {
             Pattern::Literal(_) => {}
 
             Pattern::List(pat) => {
-                let FragmentValueKind::List(value) = value_expr.kind else {
+                let ValueKind::List(value) = value_expr.kind else {
                     unreachable!("pattern list must be a list");
                 };
 
@@ -155,7 +147,7 @@ impl ContextParse for Pattern {
             return Ok(Self::Name(Name::ctx_parse(input, ctx)?));
         }
 
-        if let Some(lit) = FragmentValue::ctx_parse_option_lit(input, ctx)? {
+        if let Some(lit) = Value::ctx_parse_option_lit(input, ctx)? {
             return Ok(Self::Literal(lit));
         }
 

@@ -14,16 +14,6 @@ pub struct NameId {
     pub strid: StrId,
 }
 
-impl Name {
-    pub fn peek(input: ParseStream) -> bool {
-        if Keyword::peek(input) {
-            return false;
-        }
-
-        input.peek(Ident) && !input.peek(Token![_])
-    }
-}
-
 impl ContextParse for Name {
     fn ctx_parse(input: ParseStream, ctx: &mut Context) -> Result<Self, Error>
     where
@@ -46,5 +36,15 @@ impl ContextParse for Name {
             id,
             span: ident.span(),
         })
+    }
+}
+
+impl Peek for Name {
+    fn peek(input: ParseStream) -> bool {
+        if Keyword::peek(input) {
+            return false;
+        }
+
+        input.peek(Ident) && !input.peek(Token![_])
     }
 }
