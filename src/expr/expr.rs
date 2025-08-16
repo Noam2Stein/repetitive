@@ -249,6 +249,8 @@ impl Expr {
     fn ctx_parse_base(input: ParseStream, ctx: &mut Context) -> Result<Self, Error> {
         if let Some(frag) = Fragment::ctx_parse_option(input, ctx)? {
             return Ok(match frag.kind {
+                FragmentKind::If(expr) => expr.expr,
+                FragmentKind::Match(expr) => expr.expr,
                 FragmentKind::Concat(expr) => expr.expr,
                 FragmentKind::Tokens(expr) => Value {
                     span: frag.at_token.span,
@@ -256,22 +258,6 @@ impl Expr {
                 }
                 .into_expr(),
 
-                FragmentKind::If(expr) => {
-                    ctx.push_warning(Warning::UnnecessaryPunct {
-                        span: frag.at_token.span,
-                        punct: "@",
-                    });
-
-                    expr.expr
-                }
-                FragmentKind::Match(expr) => {
-                    ctx.push_warning(Warning::UnnecessaryPunct {
-                        span: frag.at_token.span,
-                        punct: "@",
-                    });
-
-                    expr.expr
-                }
                 FragmentKind::Expr(expr) => {
                     ctx.push_warning(Warning::UnnecessaryPunct {
                         span: frag.at_token.span,
