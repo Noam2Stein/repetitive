@@ -26,19 +26,13 @@ impl<'p> Namespace<'p> {
         }
     }
 
-    pub fn queue_insert(
-        &mut self,
-        name: Name,
-        fragment: FragmentValue,
-        _ctx: &mut Context,
-    ) -> Result<(), Error> {
+    pub fn queue_insert(&mut self, name: Name, fragment: FragmentValue, _ctx: &mut Context) {
         if self.new_names.contains_key(&name.id) {
-            return Err(Error::NameAlreadyExists(name));
+            _ctx.push_error(Error::NameAlreadyExists(name));
+            return;
         }
 
         self.new_names.insert(name.id, fragment);
-
-        Ok(())
     }
     pub fn flush(&mut self) {
         self.names.extend(self.new_names.drain());
@@ -65,6 +59,8 @@ impl<'p> Namespace<'p> {
                     FragmentValueKind::Char(val) => FragmentValueKind::Char(*val),
                     FragmentValueKind::Ident(val) => FragmentValueKind::Ident(val.clone()),
                     FragmentValueKind::Tokens(val) => FragmentValueKind::Tokens(val.clone()),
+
+                    FragmentValueKind::Unknown(guard) => FragmentValueKind::Unknown(*guard),
                 },
             })
         } else if let Some(parent) = self.parent {
@@ -74,10 +70,12 @@ impl<'p> Namespace<'p> {
         }
     }
 
-    pub fn try_get(&self, name: Name) -> Result<FragmentValue, Error> {
+    pub fn try_get(&self, name: Name, ctx: &mut Context) -> FragmentValue {
         match self.get(name) {
-            Some(fragment) => Ok(fragment),
-            None => Err(Error::NameNotFound(name)),
+            Some(fragment) => fragment,
+            None => FragmentValue::unknown(UnknownGuard::new(
+                &ctx.push_error(Error::NameNotFound(name)),
+            )),
         }
     }
 }

@@ -16,6 +16,7 @@ mod ops;
 mod paste;
 mod pattern;
 mod tokens;
+mod unknown;
 use ctx::*;
 use ctx_parse::*;
 use error::*;
@@ -30,6 +31,7 @@ use ops::*;
 use paste::*;
 use pattern::*;
 use tokens::*;
+use unknown::*;
 
 /// The macro!
 ///
@@ -200,7 +202,7 @@ use tokens::*;
 /// ```
 #[proc_macro]
 pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    main::repetitive(input)
+    main::repetitive(input.into()).into()
 }
 
 mod main {
@@ -209,27 +211,36 @@ mod main {
 
     use super::*;
 
-    pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    pub fn repetitive(input: TokenStream) -> TokenStream {
         let mut ctx = Context::new();
 
-        let tokens = Tokens::ctx_parse.ctx_parse2(input.into(), &mut ctx);
-        let result = 'result: {
-            Ok(match tokens {
-                Ok(tokens) => {
-                    let mut output = TokenStream::new();
-
-                    match tokens.paste(&mut output, &mut ctx, &mut Namespace::new()) {
-                        Ok(()) => output,
-                        Err(err) => break 'result Err(err),
-                    }
+        let tokens = 'tokens: {
+            let tokens = match Tokens::ctx_parse.ctx_parse2(input.into(), &mut ctx) {
+                Ok(tokens) => tokens,
+                Err(err) => {
+                    ctx.push_error(err);
+                    break 'tokens Err(());
                 }
-                Err(err) => break 'result Err(err),
-            })
+            };
+
+            let mut output = TokenStream::new();
+            tokens.paste(&mut output, &mut ctx, &mut Namespace::new());
+
+            if ctx.has_errors() {
+                break 'tokens Err(());
+            }
+
+            Ok(output)
         };
 
-        let result = match result {
+        let tokens = match tokens {
             Ok(output) => output,
-            Err(err) => err.into_compile_error(&mut ctx).into(),
+            Err(()) => ctx
+                .take_errors()
+                .collect::<Vec<_>>()
+                .into_iter()
+                .map(|err| err.into_compile_error(&mut ctx))
+                .collect(),
         };
 
         let warnings = ctx
@@ -243,7 +254,7 @@ mod main {
         let doc = TokenStream::new();
 
         quote! {
-            #result
+            #tokens
 
             #(#warnings)*
 

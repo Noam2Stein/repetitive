@@ -75,39 +75,25 @@ impl ContextParse for TokensSegment {
 }
 
 impl Paste for Tokens {
-    fn paste(
-        &self,
-        output: &mut TokenStream,
-        ctx: &mut Context,
-        namespace: &mut Namespace,
-    ) -> Result<(), Error> {
+    fn paste(&self, output: &mut TokenStream, ctx: &mut Context, namespace: &mut Namespace) {
         for segment in &self.segments {
             match segment {
-                TokensSegment::TokenStream(seg) => seg.paste(output, ctx, namespace)?,
-                TokensSegment::Group(seg) => seg.paste(output, ctx, namespace)?,
-                TokensSegment::Fragment(seg) => seg.paste(output, ctx, namespace)?,
+                TokensSegment::TokenStream(seg) => seg.paste(output, ctx, namespace),
+                TokensSegment::Group(seg) => seg.paste(output, ctx, namespace),
+                TokensSegment::Fragment(seg) => seg.paste(output, ctx, namespace),
             }
         }
-
-        Ok(())
     }
 }
 impl Paste for TokensGroup {
-    fn paste(
-        &self,
-        output: &mut TokenStream,
-        ctx: &mut Context,
-        namespace: &mut Namespace,
-    ) -> Result<(), Error> {
+    fn paste(&self, output: &mut TokenStream, ctx: &mut Context, namespace: &mut Namespace) {
         let mut group_namespace = namespace.fork();
 
         let mut group_tokens = TokenStream::new();
         self.tokens
-            .paste(&mut group_tokens, ctx, &mut group_namespace)?;
+            .paste(&mut group_tokens, ctx, &mut group_namespace);
 
         let group = Group::new(self.delimiter, group_tokens);
         group.to_tokens(output);
-
-        Ok(())
     }
 }

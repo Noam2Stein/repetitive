@@ -20,9 +20,17 @@ pub enum FragmentValueKind {
     Ident(String),
     List(Vec<FragmentValue>),
     Tokens(Tokens),
+    Unknown(UnknownGuard),
 }
 
 impl FragmentValue {
+    pub fn unknown(guard: UnknownGuard) -> Self {
+        Self {
+            span: Span::call_site(),
+            kind: FragmentValueKind::Unknown(guard),
+        }
+    }
+
     pub fn peek_lit(input: ParseStream) -> bool {
         input.peek(LitInt)
             || input.peek(LitFloat)
@@ -112,6 +120,10 @@ impl FragmentValue {
             kind: FragmentExprKind::Value(self.kind),
         }
     }
+
+    pub fn is_unknown(&self) -> bool {
+        matches!(self.kind, FragmentValueKind::Unknown(_))
+    }
 }
 impl FragmentValueKind {
     pub fn kind_str(&self) -> &'static str {
@@ -124,18 +136,14 @@ impl FragmentValueKind {
             FragmentValueKind::Ident(_) => "ident",
             FragmentValueKind::List(_) => "list",
             FragmentValueKind::Tokens(_) => "tokens",
+            FragmentValueKind::Unknown(_) => "unknown",
         }
     }
 }
 
 impl Paste for FragmentValue {
-    fn paste(
-        &self,
-        output: &mut TokenStream,
-        ctx: &mut Context,
-        namespace: &mut Namespace,
-    ) -> Result<(), Error> {
-        Ok(match &self.kind {
+    fn paste(&self, output: &mut TokenStream, ctx: &mut Context, namespace: &mut Namespace) {
+        match &self.kind {
             FragmentValueKind::Int(val) => {
                 let lit = LitInt::new(val.abs().to_string().as_str(), self.span);
                 if *val < 0 {
@@ -157,18 +165,20 @@ impl Paste for FragmentValue {
             FragmentValueKind::Char(val) => LitChar::new(*val, self.span).to_tokens(output),
             FragmentValueKind::Ident(val) => Ident::new(val, self.span).to_tokens(output),
 
-            FragmentValueKind::Tokens(val) => val.paste(output, ctx, namespace)?,
+            FragmentValueKind::Tokens(val) => val.paste(output, ctx, namespace),
 
             FragmentValueKind::List(val) => {
                 let mut items = TokenStream::new();
                 for item in val {
-                    item.paste(&mut items, ctx, namespace)?;
+                    item.paste(&mut items, ctx, namespace);
 
                     quote! { , }.to_tokens(&mut items);
                 }
 
                 quote_spanned! { self.span => [#items] }.to_tokens(output);
             }
-        })
+
+            FragmentValueKind::Unknown(_) => return,
+        }
     }
 }

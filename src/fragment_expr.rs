@@ -481,25 +481,28 @@ impl FragmentExpr {
 }
 
 impl FragmentExpr {
-    pub fn eval(&self, ctx: &mut Context, namespace: &Namespace) -> Result<FragmentValue, Error> {
+    pub fn eval(&self, ctx: &mut Context, namespace: &Namespace) -> FragmentValue {
         let value = match &self.kind {
             FragmentExprKind::Value(val) => val.clone(),
 
-            FragmentExprKind::Name(name) => namespace.try_get(*name)?.kind,
+            FragmentExprKind::Name(name) => namespace.try_get(*name, ctx).kind,
 
             FragmentExprKind::List(val) => FragmentValueKind::List(
                 val.into_iter()
                     .map(|item| item.eval(ctx, namespace))
-                    .collect::<Result<_, _>>()?,
+                    .collect(),
             ),
 
             FragmentExprKind::Op(FragmentOp { op, args }) => {
                 let resolved_args = args
                     .into_iter()
                     .map(|item| item.eval(ctx, namespace))
-                    .collect::<Result<Vec<_>, _>>()?;
+                    .collect::<Vec<_>>();
 
-                op.compute(&resolved_args, ctx)?.kind
+                match op.compute(&resolved_args, ctx) {
+                    Ok(val) => val.kind,
+                    Err(err) => FragmentValueKind::Unknown(UnknownGuard::new(&ctx.push_error(err))),
+                }
             }
 
             FragmentExprKind::Match(FragmentMatch {
@@ -507,28 +510,42 @@ impl FragmentExpr {
                 expr,
                 match_arms,
             }) => {
-                let expr_value = expr.eval(ctx, namespace)?;
+                let expr_value = expr.eval(ctx, namespace);
 
                 let mut matched_arm = None;
                 for arm in match_arms {
-                    let matches = arm.pat.matches(&expr_value, ctx)?.is_ok();
-
-                    let passed_condition = arm.condition.as_ref().map_or(Ok(true), |cond| {
-                        let cond_value = cond.eval(ctx, namespace)?;
-                        match cond_value.kind {
-                            FragmentValueKind::Bool(val) => Ok(val),
-                            _ => Err(Error::ExpectedFound {
-                                span: cond.span,
-                                expected: "bool",
-                                found: cond_value.kind.kind_str(),
-                            }),
-                        }
-                    })?;
-
-                    if matches && passed_condition {
-                        matched_arm = Some(arm);
-                        break;
+                    match arm.pat.matches(&expr_value, ctx) {
+                        PatternMatches::Matches => {}
+                        PatternMatches::Mismatched(_) => continue,
+                        PatternMatches::Unknown(guard) => return FragmentValue::unknown(guard),
                     }
+
+                    if let Some(condition) = &arm.condition {
+                        let cond_value = condition.eval(ctx, namespace);
+                        match cond_value.kind {
+                            FragmentValueKind::Unknown(guard) => {
+                                return FragmentValue::unknown(guard);
+                            }
+
+                            FragmentValueKind::Bool(val) => {
+                                if !val {
+                                    continue;
+                                }
+                            }
+                            _ => {
+                                return FragmentValue::unknown(UnknownGuard::new(&ctx.push_error(
+                                    Error::ExpectedFound {
+                                        span: condition.span,
+                                        expected: "bool",
+                                        found: cond_value.kind.kind_str(),
+                                    },
+                                )));
+                            }
+                        }
+                    }
+
+                    matched_arm = Some(arm);
+                    break;
                 }
 
                 if let Some(matched_arm) = matched_arm {
@@ -538,32 +555,29 @@ impl FragmentExpr {
                     arm_namespace.flush();
                     matched_arm
                         .pat
-                        .queue_insert(expr_value.clone(), &mut arm_namespace, ctx)?;
+                        .queue_insert(expr_value.clone(), &mut arm_namespace, ctx);
 
-                    matched_arm.body.eval(ctx, &mut arm_namespace)?.kind
+                    matched_arm.body.eval(ctx, &mut arm_namespace).kind
                 } else {
-                    return Err(Error::NoMatches {
-                        span: expr_value.span,
-                    });
+                    FragmentValueKind::Unknown(UnknownGuard::new(&ctx.push_error(
+                        Error::NoMatches {
+                            span: expr_value.span,
+                        },
+                    )))
                 }
             }
         };
 
-        Ok(FragmentValue {
+        FragmentValue {
             span: self.span,
             kind: value,
-        })
+        }
     }
 }
 
 impl Paste for FragmentExpr {
-    fn paste(
-        &self,
-        output: &mut TokenStream,
-        ctx: &mut Context,
-        namespace: &mut Namespace,
-    ) -> Result<(), Error> {
-        self.eval(ctx, namespace)?.paste(output, ctx, namespace)
+    fn paste(&self, output: &mut TokenStream, ctx: &mut Context, namespace: &mut Namespace) {
+        self.eval(ctx, namespace).paste(output, ctx, namespace)
     }
 }
 

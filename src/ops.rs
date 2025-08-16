@@ -196,6 +196,20 @@ impl Op {
         args: &[FragmentValue],
         ctx: &mut Context,
     ) -> Result<FragmentValue, Error> {
+        if args.iter().any(|arg| arg.is_unknown()) {
+            return Ok(FragmentValue::unknown(
+                args.iter()
+                    .find_map(|arg| {
+                        if let FragmentValueKind::Unknown(guard) = arg.kind {
+                            Some(guard)
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap(),
+            ));
+        }
+
         let output_kind = match self {
             Self::IfElse(span) => {
                 let [cond, then, otherwise] = args else {
@@ -210,7 +224,7 @@ impl Op {
 
                 let cond = match &cond.kind {
                     FragmentValueKind::Bool(cond) => *cond,
-                    _ => unreachable!(),
+                    _ => unreachable!("if-else condition must be a bool"),
                 };
 
                 if cond {
@@ -247,6 +261,8 @@ impl Op {
                             kind: arg.kind.kind_str(),
                         });
                     }
+
+                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute neg"),
                 }
             }
 
@@ -277,6 +293,8 @@ impl Op {
                             kind: arg.kind.kind_str(),
                         });
                     }
+
+                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute not"),
                 }
             }
 
@@ -370,6 +388,8 @@ impl Op {
                             kind: lhs.kind.kind_str(),
                         });
                     }
+
+                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute add"),
                 }
             }
 
@@ -423,6 +443,8 @@ impl Op {
                             kind: lhs.kind.kind_str(),
                         });
                     }
+
+                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute sub"),
                 }
             }
 
@@ -518,6 +540,8 @@ impl Op {
                             kind: lhs.kind.kind_str(),
                         });
                     }
+
+                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute mul"),
                 }
             }
 
@@ -571,6 +595,8 @@ impl Op {
                             kind: lhs.kind.kind_str(),
                         });
                     }
+
+                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute div"),
                 }
             }
 
@@ -624,6 +650,8 @@ impl Op {
                             kind: lhs.kind.kind_str(),
                         });
                     }
+
+                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute rem"),
                 }
             }
 
@@ -677,6 +705,8 @@ impl Op {
                             kind: lhs.kind.kind_str(),
                         });
                     }
+
+                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute bitand"),
                 }
             }
 
@@ -730,6 +760,8 @@ impl Op {
                             kind: lhs.kind.kind_str(),
                         });
                     }
+
+                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute bitor"),
                 }
             }
 
@@ -783,6 +815,8 @@ impl Op {
                             kind: lhs.kind.kind_str(),
                         });
                     }
+
+                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute bitxor"),
                 }
             }
 
@@ -824,6 +858,8 @@ impl Op {
                             kind: lhs.kind.kind_str(),
                         });
                     }
+
+                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute shl"),
                 }
             }
 
@@ -865,6 +901,8 @@ impl Op {
                             kind: lhs.kind.kind_str(),
                         });
                     }
+
+                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute shr"),
                 }
             }
 
@@ -968,13 +1006,17 @@ impl Op {
                                 let eq = Op::Eq(span).compute(&[a.clone(), b.clone()], ctx)?;
 
                                 match &eq.kind {
+                                    FragmentValueKind::Unknown(guard) => {
+                                        return Ok(FragmentValue::unknown(*guard));
+                                    }
+
                                     FragmentValueKind::Bool(val) => {
                                         if !val {
                                             break 'list_eq false;
                                         }
                                     }
 
-                                    _ => unreachable!(),
+                                    _ => unreachable!("list eq must be a bool"),
                                 }
                             }
 
@@ -999,6 +1041,8 @@ impl Op {
                             kind: lhs.kind.kind_str(),
                         });
                     }
+
+                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute eq"),
                 }
             }
 
@@ -1007,7 +1051,7 @@ impl Op {
 
                 match &eq.kind {
                     FragmentValueKind::Bool(val) => FragmentValueKind::Bool(!val),
-                    _ => unreachable!(),
+                    _ => unreachable!("ne must be a bool"),
                 }
             }
 
@@ -1110,6 +1154,8 @@ impl Op {
                             kind: lhs.kind.kind_str(),
                         });
                     }
+
+                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute lt"),
                 }
             }
 
@@ -1212,6 +1258,8 @@ impl Op {
                             kind: lhs.kind.kind_str(),
                         });
                     }
+
+                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute gt"),
                 }
             }
 
@@ -1219,8 +1267,12 @@ impl Op {
                 let gt = Self::Gt(span).compute(args, ctx)?;
 
                 match &gt.kind {
+                    FragmentValueKind::Unknown(guard) => {
+                        return Ok(FragmentValue::unknown(*guard));
+                    }
+
                     FragmentValueKind::Bool(val) => FragmentValueKind::Bool(!val),
-                    _ => unreachable!(),
+                    _ => unreachable!("le must be a bool"),
                 }
             }
 
@@ -1228,8 +1280,12 @@ impl Op {
                 let lt = Self::Lt(span).compute(args, ctx)?;
 
                 match &lt.kind {
+                    FragmentValueKind::Unknown(guard) => {
+                        return Ok(FragmentValue::unknown(*guard));
+                    }
+
                     FragmentValueKind::Bool(val) => FragmentValueKind::Bool(!val),
-                    _ => unreachable!(),
+                    _ => unreachable!("ge must be a bool"),
                 }
             }
 
@@ -1246,8 +1302,12 @@ impl Op {
 
                 let lhs_is_greater = Self::Gt(span).compute(&[lhs.clone(), rhs.clone()], ctx)?;
                 let lhs_is_greater = match &lhs_is_greater.kind {
+                    FragmentValueKind::Unknown(guard) => {
+                        return Ok(FragmentValue::unknown(*guard));
+                    }
+
                     FragmentValueKind::Bool(val) => *val,
-                    _ => unreachable!(),
+                    _ => unreachable!("min must be a bool"),
                 };
 
                 if lhs_is_greater {
@@ -1270,8 +1330,12 @@ impl Op {
 
                 let lhs_is_greater = Self::Gt(span).compute(&[lhs.clone(), rhs.clone()], ctx)?;
                 let lhs_is_greater = match &lhs_is_greater.kind {
+                    FragmentValueKind::Unknown(guard) => {
+                        return Ok(FragmentValue::unknown(*guard));
+                    }
+
                     FragmentValueKind::Bool(val) => *val,
-                    _ => unreachable!(),
+                    _ => unreachable!("max must be a bool"),
                 };
 
                 if lhs_is_greater {
@@ -1294,14 +1358,22 @@ impl Op {
 
                 let is_too_low = Self::Lt(span).compute(&[value.clone(), min.clone()], ctx)?;
                 let is_too_low = match &is_too_low.kind {
+                    FragmentValueKind::Unknown(guard) => {
+                        return Ok(FragmentValue::unknown(*guard));
+                    }
+
                     FragmentValueKind::Bool(val) => *val,
-                    _ => unreachable!(),
+                    _ => unreachable!("clamp must be a bool"),
                 };
 
                 let is_too_high = Self::Gt(span).compute(&[value.clone(), max.clone()], ctx)?;
                 let is_too_high = match &is_too_high.kind {
+                    FragmentValueKind::Unknown(guard) => {
+                        return Ok(FragmentValue::unknown(*guard));
+                    }
+
                     FragmentValueKind::Bool(val) => *val,
-                    _ => unreachable!(),
+                    _ => unreachable!("clamp must be a bool"),
                 };
 
                 if is_too_low {
@@ -1476,6 +1548,8 @@ impl Op {
                             kind: "string",
                         });
                     }
+
+                    FragmentValueKind::Unknown(_) => unreachable!("unknown in compute range"),
                 }
             }
 
@@ -1524,6 +1598,10 @@ impl Op {
                             op: "range_inclusive",
                             kind: "float",
                         });
+                    }
+
+                    FragmentValueKind::Unknown(_) => {
+                        unreachable!("unknown in compute range_inclusive")
                     }
                 }
             }
@@ -1735,16 +1813,27 @@ impl Op {
                 };
 
                 match &list.kind {
-                    FragmentValueKind::List(list) => FragmentValueKind::Bool(
-                        list.iter()
-                            .map(|item| Op::Eq(span).compute(&[item.clone(), value.clone()], ctx))
-                            .collect::<Result<Vec<_>, _>>()?
-                            .iter()
-                            .any(|eq| match eq.kind {
-                                FragmentValueKind::Bool(bool) => bool,
-                                _ => unreachable!(),
-                            }),
-                    ),
+                    FragmentValueKind::List(list) => FragmentValueKind::Bool('contains: {
+                        for item in list {
+                            let eq = Op::Eq(span).compute(&[item.clone(), value.clone()], ctx)?;
+
+                            match &eq.kind {
+                                FragmentValueKind::Unknown(guard) => {
+                                    return Ok(FragmentValue::unknown(*guard));
+                                }
+
+                                FragmentValueKind::Bool(val) => {
+                                    if *val {
+                                        break 'contains true;
+                                    }
+                                }
+
+                                _ => unreachable!("contains eq must be a bool"),
+                            }
+                        }
+
+                        false
+                    }),
 
                     _ => {
                         return Err(Error::ExpectedFound {
@@ -1778,6 +1867,21 @@ impl Op {
                     }
                 };
 
+                if parts.iter().any(|part| part.is_unknown()) {
+                    return Ok(FragmentValue::unknown(
+                        parts
+                            .iter()
+                            .find_map(|part| {
+                                if let FragmentValueKind::Unknown(guard) = part.kind {
+                                    Some(guard)
+                                } else {
+                                    None
+                                }
+                            })
+                            .unwrap(),
+                    ));
+                }
+
                 let mut output_str = String::new();
                 for part in parts {
                     match &part.kind {
@@ -1800,6 +1904,10 @@ impl Op {
                                 op: "stringify",
                                 kind: part.kind.kind_str(),
                             });
+                        }
+
+                        FragmentValueKind::Unknown(_) => {
+                            unreachable!("unknown in compute concat_ident")
                         }
                     }
                 }
@@ -1829,6 +1937,21 @@ impl Op {
                     }
                 };
 
+                if parts.iter().any(|part| part.is_unknown()) {
+                    return Ok(FragmentValue::unknown(
+                        parts
+                            .iter()
+                            .find_map(|part| {
+                                if let FragmentValueKind::Unknown(guard) = part.kind {
+                                    Some(guard)
+                                } else {
+                                    None
+                                }
+                            })
+                            .unwrap(),
+                    ));
+                }
+
                 let mut output_str = String::new();
                 for part in parts {
                     match &part.kind {
@@ -1851,6 +1974,10 @@ impl Op {
                                 op: "stringify",
                                 kind: part.kind.kind_str(),
                             });
+                        }
+
+                        FragmentValueKind::Unknown(_) => {
+                            unreachable!("unknown in compute concat_string")
                         }
                     }
                 }

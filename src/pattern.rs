@@ -11,6 +11,12 @@ pub enum Pattern {
     List(Vec<Pattern>),
 }
 
+pub enum PatternMatches {
+    Matches,
+    Mismatched(Error),
+    Unknown(UnknownGuard),
+}
+
 impl Pattern {
     pub fn peek(input: ParseStream) -> bool {
         input.peek(Bracket)
@@ -19,14 +25,10 @@ impl Pattern {
             || input.peek(Token![_])
     }
 
-    pub fn matches(
-        &self,
-        value: &FragmentValue,
-        ctx: &mut Context,
-    ) -> Result<Result<(), Error>, Error> {
-        Ok(match self {
-            Self::Empty => Ok(()),
-            Self::Name(_) => Ok(()),
+    pub fn matches(&self, value: &FragmentValue, ctx: &mut Context) -> PatternMatches {
+        match self {
+            Self::Empty => PatternMatches::Matches,
+            Self::Name(_) => PatternMatches::Matches,
 
             Self::Literal(lit) => {
                 let is_same_kind = match (&lit.kind, &value.kind) {
@@ -40,51 +42,64 @@ impl Pattern {
                 };
 
                 if !is_same_kind {
-                    return Ok(Err(Error::PatternKindMismatch {
+                    return PatternMatches::Mismatched(Error::PatternKindMismatch {
                         span: value.span,
                         expected: lit.kind.kind_str(),
                         found: value.kind.kind_str(),
-                    }));
+                    });
                 }
 
-                let eq = Op::Eq(value.span).compute(&[lit.clone(), value.clone()], ctx)?;
+                let eq = match Op::Eq(value.span).compute(&[lit.clone(), value.clone()], ctx) {
+                    Ok(val) => val,
+                    Err(err) => {
+                        return PatternMatches::Unknown(UnknownGuard::new(&ctx.push_error(err)));
+                    }
+                };
 
                 let FragmentValueKind::Bool(eq) = eq.kind else {
-                    unreachable!();
+                    if let FragmentValueKind::Unknown(guard) = &eq.kind {
+                        return PatternMatches::Unknown(*guard);
+                    }
+
+                    unreachable!("pattern literal eq must be a bool");
                 };
 
                 match eq {
-                    true => Ok(()),
-                    false => Err(Error::PatternValueMismatch { span: value.span }),
+                    true => PatternMatches::Matches,
+                    false => {
+                        PatternMatches::Mismatched(Error::PatternValueMismatch { span: value.span })
+                    }
                 }
             }
 
             Self::List(pat) => {
                 let FragmentValueKind::List(value_list) = &value.kind else {
-                    return Ok(Err(Error::PatternKindMismatch {
+                    return PatternMatches::Mismatched(Error::PatternKindMismatch {
                         span: value.span,
                         expected: "list",
                         found: value.kind.kind_str(),
-                    }));
+                    });
                 };
 
                 if pat.len() != value_list.len() {
-                    return Ok(Err(Error::PatternListLengthMismatch {
+                    return PatternMatches::Mismatched(Error::PatternListLengthMismatch {
                         span: value.span,
                         expected: pat.len(),
                         found: value_list.len(),
-                    }));
+                    });
                 }
 
-                pat.iter()
-                    .zip(value_list)
-                    .map(|(pat_item, value_item)| pat_item.matches(value_item, ctx))
-                    .collect::<Result<Vec<Result<_, _>>, _>>()?
-                    .into_iter()
-                    .collect::<Result<Vec<_>, _>>()
-                    .map(|_| ())
+                for (pat_item, value_item) in pat.iter().zip(value_list) {
+                    match pat_item.matches(value_item, ctx) {
+                        PatternMatches::Matches => {}
+                        PatternMatches::Mismatched(err) => return PatternMatches::Mismatched(err),
+                        PatternMatches::Unknown(guard) => return PatternMatches::Unknown(guard),
+                    }
+                }
+
+                PatternMatches::Matches
             }
-        })
+        }
     }
 
     pub fn queue_insert(
@@ -92,14 +107,19 @@ impl Pattern {
         value_expr: FragmentValue,
         namespace: &mut Namespace,
         ctx: &mut Context,
-    ) -> Result<(), Error> {
-        if let Err(e) = self.matches(&value_expr, ctx)? {
-            return Err(e);
+    ) {
+        match self.matches(&value_expr, ctx) {
+            PatternMatches::Matches => {}
+            PatternMatches::Mismatched(err) => {
+                ctx.push_error(err);
+                return;
+            }
+            PatternMatches::Unknown(_) => return,
         }
 
-        Ok(match self {
+        match self {
             Pattern::Name(name) => {
-                namespace.queue_insert(*name, value_expr, ctx)?;
+                namespace.queue_insert(*name, value_expr, ctx);
             }
 
             Pattern::Empty => {}
@@ -107,14 +127,14 @@ impl Pattern {
 
             Pattern::List(pat) => {
                 let FragmentValueKind::List(value) = value_expr.kind else {
-                    unreachable!();
+                    unreachable!("pattern list must be a list");
                 };
 
                 for (pat, value) in pat.iter().zip(value) {
-                    pat.queue_insert(value, namespace, ctx)?;
+                    pat.queue_insert(value, namespace, ctx);
                 }
             }
-        })
+        }
     }
 }
 

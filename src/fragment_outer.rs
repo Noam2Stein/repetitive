@@ -214,7 +214,7 @@ impl FragmentOuterKind {
 
                 match else_if {
                     FragmentOuterKind::Expr(expr) => expr,
-                    _ => unreachable!(),
+                    _ => unreachable!("else if (already peeked) must be an expression"),
                 }
             } else {
                 let else_group = Group::ctx_parse(input, ctx)?;
@@ -366,30 +366,18 @@ impl FragmentOuterKind {
 }
 
 impl Paste for FragmentOuter {
-    fn paste(
-        &self,
-        output: &mut TokenStream,
-        ctx: &mut Context,
-        namespace: &mut Namespace,
-    ) -> Result<(), Error> {
-        Ok(match &self.kind {
-            FragmentOuterKind::Expr(frag) => frag.paste(output, ctx, namespace)?,
-            FragmentOuterKind::For(frag) => frag.paste(output, ctx, namespace)?,
-            FragmentOuterKind::Let(frag) => frag.paste(output, ctx, namespace)?,
-        })
+    fn paste(&self, output: &mut TokenStream, ctx: &mut Context, namespace: &mut Namespace) {
+        match &self.kind {
+            FragmentOuterKind::Expr(frag) => frag.paste(output, ctx, namespace),
+            FragmentOuterKind::For(frag) => frag.paste(output, ctx, namespace),
+            FragmentOuterKind::Let(frag) => frag.paste(output, ctx, namespace),
+        }
     }
 }
 
 impl Paste for FragmentFor {
-    fn paste(
-        &self,
-        output: &mut TokenStream,
-        ctx: &mut Context,
-        namespace: &mut Namespace,
-    ) -> Result<(), Error> {
-        self.paste_from_iter_items(0, output, ctx, namespace)?;
-
-        Ok(())
+    fn paste(&self, output: &mut TokenStream, ctx: &mut Context, namespace: &mut Namespace) {
+        self.paste_from_iter_items(0, output, ctx, namespace);
     }
 }
 impl FragmentFor {
@@ -399,50 +387,44 @@ impl FragmentFor {
         output: &mut TokenStream,
         ctx: &mut Context,
         namespace: &mut Namespace,
-    ) -> Result<(), Error> {
+    ) {
         let iter = &self.iters[iter_idx];
-        let iter_items = iter.iter.eval(ctx, namespace)?;
+        let iter_items = iter.iter.eval(ctx, namespace);
 
         let iter_items = match iter_items.kind {
+            FragmentValueKind::Unknown(_) => return,
+
             FragmentValueKind::List(val) => val,
             _ => {
-                return Err(Error::ExpectedFound {
+                ctx.push_error(Error::ExpectedFound {
                     span: iter_items.span,
                     expected: "list",
                     found: iter_items.kind.kind_str(),
                 });
+                return;
             }
         };
 
         for item in iter_items {
             let mut item_namespace = namespace.fork();
-            iter.pat.queue_insert(item, &mut item_namespace, ctx)?;
+            iter.pat.queue_insert(item, &mut item_namespace, ctx);
             item_namespace.flush();
 
             if self.iters.get(iter_idx + 1).is_some() {
-                self.paste_from_iter_items(iter_idx + 1, output, ctx, &mut item_namespace)?;
+                self.paste_from_iter_items(iter_idx + 1, output, ctx, &mut item_namespace);
             } else {
-                self.body.paste(output, ctx, &mut item_namespace)?;
+                self.body.paste(output, ctx, &mut item_namespace);
             }
         }
-
-        Ok(())
     }
 }
 
 impl Paste for FragmentLet {
-    fn paste(
-        &self,
-        _output: &mut TokenStream,
-        ctx: &mut Context,
-        namespace: &mut Namespace,
-    ) -> Result<(), Error> {
-        let val_expr = self.expr.eval(ctx, namespace)?;
+    fn paste(&self, _output: &mut TokenStream, ctx: &mut Context, namespace: &mut Namespace) {
+        let val_expr = self.expr.eval(ctx, namespace);
 
         namespace.flush();
-        self.pat.queue_insert(val_expr, namespace, ctx)?;
+        self.pat.queue_insert(val_expr, namespace, ctx);
         namespace.flush();
-
-        Ok(())
     }
 }
