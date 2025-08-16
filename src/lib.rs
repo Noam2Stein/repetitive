@@ -204,17 +204,11 @@ pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 mod main {
     use proc_macro2::TokenStream;
     use quote::quote;
-    use string_interner::DefaultStringInterner;
 
     use super::*;
 
     pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-        let mut ctx = Context {
-            interner: DefaultStringInterner::new(),
-            method_idents: Vec::new(),
-            warnings: Vec::new(),
-            arc_warnings: Vec::new(),
-        };
+        let mut ctx = Context::new();
 
         let tokens = Tokens::ctx_parse.ctx_parse2(input.into(), &mut ctx);
         let result = 'result: {
@@ -237,19 +231,11 @@ mod main {
         };
 
         let warnings = ctx
-            .warnings
-            .into_iter()
-            .map(|warning| warning.into_compile_error())
-            .chain(ctx.arc_warnings.iter().filter_map(|arc_warning| {
-                arc_warning
-                    .lock()
-                    .unwrap()
-                    .as_ref()
-                    .map(|warning| warning.to_compile_error())
-            }));
+            .take_warnings()
+            .map(|warning| warning.into_compile_error());
 
         #[cfg(feature = "doc")]
-        let doc = paste_method_doc(ctx.method_idents);
+        let doc = paste_method_doc(ctx.get_method_calls());
 
         #[cfg(not(feature = "doc"))]
         let doc = TokenStream::new();

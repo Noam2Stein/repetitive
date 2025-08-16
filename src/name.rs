@@ -1,5 +1,4 @@
 use proc_macro2::Span;
-use string_interner::DefaultSymbol;
 use syn::{Ident, Token, parse::ParseStream};
 
 use super::*;
@@ -12,7 +11,7 @@ pub struct Name {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NameId {
-    pub inner: DefaultSymbol,
+    pub inner: StrId,
 }
 
 impl Name {
@@ -39,7 +38,7 @@ impl ContextParse for Name {
 
         let ident = input.parse::<Ident>()?;
         let id = NameId {
-            inner: ctx.interner.get_or_intern(ident.to_string()),
+            inner: ctx.intern(&ident.to_string()),
         };
 
         Ok(Self {

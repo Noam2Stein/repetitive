@@ -1,7 +1,4 @@
-use std::{
-    mem::replace,
-    sync::{Arc, Mutex},
-};
+use std::mem::replace;
 
 use proc_macro2::{Delimiter, Group, Span, TokenStream};
 use syn::{
@@ -45,7 +42,7 @@ pub struct FragmentMatchArm {
     pub pat: Pattern,
     pub condition: Option<FragmentExpr>,
     pub body: FragmentExpr,
-    pub unused_warnings: Arc<Mutex<Option<syn::Error>>>,
+    pub unused_arm_warning: WarningHandle,
 }
 
 impl FragmentExpr {
@@ -276,8 +273,7 @@ impl FragmentExpr {
             let at_span = input.parse::<Token![@]>()?.span;
 
             if input.peek(Paren) || Name::peek(input) {
-                ctx.warnings
-                    .push(syn::Error::new(at_span, "unnecessary `@`"));
+                ctx.push_warning(syn::Error::new(at_span, "unnecessary `@`"));
             }
 
             let outer_kind = FragmentOuterKind::ctx_parse(input, ctx)?;
@@ -368,8 +364,8 @@ impl FragmentExpr {
                         pat,
                         condition,
                         body,
-                        unused_warnings: ctx
-                            .push_arc_warning(Error::new(pat_span, "unused match arm")),
+                        unused_arm_warning: ctx
+                            .push_warning(Error::new(pat_span, "unused match arm")),
                     });
 
                     if !input.is_empty() {
@@ -524,7 +520,7 @@ impl FragmentExpr {
                 }
 
                 if let Some(matched_arm) = matched_arm {
-                    *matched_arm.unused_warnings.lock().unwrap() = None;
+                    matched_arm.unused_arm_warning.remove();
 
                     let mut arm_namespace = namespace.fork();
                     arm_namespace.flush();

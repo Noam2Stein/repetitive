@@ -288,12 +288,11 @@ impl FragmentOuterKind {
                         span: group.span(),
                         kind: FragmentExprKind::Value(FragmentValueKind::Tokens(body)),
                     },
-                    unused_warnings: ctx.push_arc_warning(Error::new(pat_span, "unused match arm")),
+                    unused_arm_warning: ctx.push_warning(Error::new(pat_span, "unused match arm")),
                 });
 
                 if let Some(token) = input.parse::<Option<Token![,]>>()? {
-                    ctx.warnings
-                        .push(Error::new_spanned(token, "unnecessary comma"));
+                    ctx.push_warning(Error::new_spanned(token, "unnecessary `,`"));
                 }
             }
 

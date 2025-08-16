@@ -55,12 +55,12 @@ impl ContextParse for Method {
 
         let ident = match input.parse::<Ident>() {
             Ok(ident) => {
-                ctx.method_idents.push((dot, Some(ident.clone())));
+                ctx.push_method_call(dot, Some(ident.clone()));
 
                 ident
             }
             Err(err) => {
-                ctx.method_idents.push((dot, None));
+                ctx.push_method_call(dot, None);
 
                 return Err(err);
             }
@@ -111,7 +111,7 @@ impl ContextParse for Method {
 }
 
 #[cfg(feature = "doc")]
-pub fn paste_method_doc(idents: Vec<(Token![.], Option<Ident>)>) -> TokenStream {
+pub fn paste_method_doc(idents: &[(Token![.], Option<Ident>)]) -> TokenStream {
     let ident_calls = idents.iter().map(|(dot, ident)| {
         match ident
             .as_ref()
@@ -331,7 +331,7 @@ pub fn paste_method_doc(idents: Vec<(Token![.], Option<Ident>)>) -> TokenStream 
     }
 }
 
-fn fn_doc(name: &str, doc: &'static str, idents: &Vec<(Token![.], Option<Ident>)>) -> &'static str {
+fn fn_doc(name: &str, doc: &'static str, idents: &[(Token![.], Option<Ident>)]) -> &'static str {
     if idents.iter().any(|(_, ident)| {
         ident
             .as_ref()
