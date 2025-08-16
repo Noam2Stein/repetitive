@@ -1,4 +1,5 @@
 use proc_macro2::TokenStream;
+use quote::ToTokens;
 use syn::{Token, parse::ParseStream};
 
 use super::*;
@@ -18,6 +19,7 @@ pub enum FragmentKind {
     Concat(FragmentConcat),
     Tokens(FragmentTokens),
     Expr(FragmentExpr),
+    At(Token![@]),
 }
 
 impl ContextParse for Fragment {
@@ -51,6 +53,8 @@ impl ContextParse for FragmentKind {
                 Self::Tokens(frag)
             } else if let Some(frag) = FragmentExpr::ctx_parse_option(input, ctx)? {
                 Self::Expr(frag)
+            } else if let Some(at_token) = Option::<Token![@]>::ctx_parse(input, ctx)? {
+                Self::At(at_token)
             } else {
                 return Err(Error::ParseError(syn::Error::new(
                     input.span(),
@@ -77,6 +81,7 @@ impl Optimize for Fragment {
             FragmentKind::Concat(frag) => frag.optimize(ctx),
             FragmentKind::Tokens(frag) => frag.optimize(ctx),
             FragmentKind::Expr(frag) => frag.optimize(ctx),
+            FragmentKind::At(_) => {}
         }
     }
 }
@@ -91,6 +96,7 @@ impl ExpandInto for Fragment {
             FragmentKind::Concat(frag) => frag.expand(output, ctx, namespace),
             FragmentKind::Tokens(frag) => frag.expand(output, ctx, namespace),
             FragmentKind::Expr(frag) => frag.expand(output, ctx, namespace),
+            FragmentKind::At(at) => at.to_tokens(output),
         }
     }
 }

@@ -279,6 +279,12 @@ impl Expr {
                         "`@let` is not allowed in expressions",
                     )));
                 }
+                FragmentKind::At(at) => {
+                    return Err(Error::ParseError(syn::Error::new(
+                        at.span,
+                        "`@` is not allowed in expressions",
+                    )));
+                }
             });
         }
 
