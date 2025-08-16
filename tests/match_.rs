@@ -18,6 +18,14 @@ repetitive! {
             'u128 => 'U128,
         };
 
+        @let unused_size = match uint {
+            'u8 => 'ueight,
+            'u16 => 'usixteen,
+            'u32 => 'uthirtytwo,
+            'u64 => 'usixtyfour,
+            'u128 => 'uonehundredtwentyeight,
+        };
+
         const @[UINT '_SIZE]: @uint = @size;
     }
 }
