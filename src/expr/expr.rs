@@ -408,13 +408,10 @@ impl Expr {
                 }
 
                 Delimiter::Brace => {
-                    let tokens = Tokens::ctx_parse.ctx_parse2(group.stream(), ctx)?;
-
-                    return Ok(Value {
-                        span: group.span(),
-                        kind: ValueKind::Tokens(tokens),
-                    }
-                    .into_expr());
+                    return Err(Error::ParseError(syn::Error::new(
+                        group.span(),
+                        "block expressions are not supported",
+                    )));
                 }
 
                 Delimiter::Bracket => {
