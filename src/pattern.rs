@@ -23,7 +23,7 @@ impl Pattern {
         &self,
         value: &FragmentValue,
         ctx: &mut Context,
-    ) -> syn::Result<syn::Result<()>> {
+    ) -> Result<Result<(), Error>, Error> {
         Ok(match self {
             Self::Empty => Ok(()),
             Self::Name(_) => Ok(()),
@@ -40,10 +40,11 @@ impl Pattern {
                 };
 
                 if !is_same_kind {
-                    return Ok(Err(syn::Error::new(
-                        value.span,
-                        "value does not match pattern. different types",
-                    )));
+                    return Ok(Err(Error::PatternKindMismatch {
+                        span: value.span,
+                        expected: lit.kind.kind_str(),
+                        found: value.kind.kind_str(),
+                    }));
                 }
 
                 let eq = Op::Eq(value.span).compute(&[lit.clone(), value.clone()], ctx)?;
@@ -54,31 +55,33 @@ impl Pattern {
 
                 match eq {
                     true => Ok(()),
-                    false => Err(syn::Error::new(value.span, "value does not match pattern")),
+                    false => Err(Error::PatternValueMismatch { span: value.span }),
                 }
             }
 
             Self::List(pat) => {
                 let FragmentValueKind::List(value_list) = &value.kind else {
-                    return Ok(Err(syn::Error::new(
-                        value.span,
-                        "value does not match pattern. pattern is a list",
-                    )));
+                    return Ok(Err(Error::PatternKindMismatch {
+                        span: value.span,
+                        expected: "list",
+                        found: value.kind.kind_str(),
+                    }));
                 };
 
                 if pat.len() != value_list.len() {
-                    return Ok(Err(syn::Error::new(
-                        value.span,
-                        "value does not match pattern. incorrect list length",
-                    )));
+                    return Ok(Err(Error::PatternListLengthMismatch {
+                        span: value.span,
+                        expected: pat.len(),
+                        found: value_list.len(),
+                    }));
                 }
 
                 pat.iter()
                     .zip(value_list)
                     .map(|(pat_item, value_item)| pat_item.matches(value_item, ctx))
-                    .collect::<syn::Result<Vec<syn::Result<_>>>>()?
+                    .collect::<Result<Vec<Result<_, _>>, _>>()?
                     .into_iter()
-                    .collect::<syn::Result<Vec<_>>>()
+                    .collect::<Result<Vec<_>, _>>()
                     .map(|_| ())
             }
         })
@@ -89,7 +92,7 @@ impl Pattern {
         value_expr: FragmentValue,
         namespace: &mut Namespace,
         ctx: &mut Context,
-    ) -> syn::Result<()> {
+    ) -> Result<(), Error> {
         if let Err(e) = self.matches(&value_expr, ctx)? {
             return Err(e);
         }
@@ -116,12 +119,12 @@ impl Pattern {
 }
 
 impl ContextParse for Pattern {
-    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
+    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> Result<Self, Error>
     where
         Self: Sized,
     {
         if input.peek(Bracket) {
-            let group = input.parse::<Group>()?;
+            let group = Group::ctx_parse(input, ctx)?;
 
             return Ok(Self::List(
                 ctx_parse_punctuated.ctx_parse2(group.stream(), ctx)?,
@@ -132,22 +135,22 @@ impl ContextParse for Pattern {
             return Ok(Self::Name(Name::ctx_parse(input, ctx)?));
         }
 
-        if let Some(lit) = FragmentValue::option_lit(input)? {
+        if let Some(lit) = FragmentValue::ctx_parse_option_lit(input, ctx)? {
             return Ok(Self::Literal(lit));
         }
 
-        if let Some(_) = input.parse::<Option<Token![_]>>()? {
+        if let Some(_) = <Option<Token![_]>>::ctx_parse(input, ctx)? {
             return Ok(Self::Empty);
         }
 
-        Err(syn::Error::new(input.span(), "expected pattern"))
+        Err(Error::ParseError(input.error("expected pattern")))
     }
 }
 
 fn ctx_parse_punctuated<T: ContextParse>(
     input: ParseStream,
     ctx: &mut Context,
-) -> syn::Result<Vec<T>> {
+) -> Result<Vec<T>, Error> {
     let mut items = Vec::new();
 
     while !input.is_empty() {
@@ -158,7 +161,7 @@ fn ctx_parse_punctuated<T: ContextParse>(
             break;
         }
 
-        input.parse::<Token![,]>()?;
+        <Token![,]>::ctx_parse(input, ctx)?;
     }
 
     Ok(items)

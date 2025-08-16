@@ -1,12 +1,14 @@
 use std::sync::{Arc, Mutex};
 
 use string_interner::{DefaultStringInterner, DefaultSymbol};
-use syn::{Error, Ident, Token};
+use syn::{Ident, Token};
+
+use super::*;
 
 pub struct Context {
     interner: DefaultStringInterner,
     method_calls: Vec<(Token![.], Option<Ident>)>,
-    warning_arcs: Vec<Arc<Mutex<Option<syn::Error>>>>,
+    warning_arcs: Vec<Arc<Mutex<Option<Warning>>>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -16,7 +18,7 @@ pub struct StrId {
 
 #[derive(Debug, Clone)]
 pub struct WarningHandle {
-    option_arc: Arc<Mutex<Option<Error>>>,
+    option_arc: Arc<Mutex<Option<Warning>>>,
 }
 
 impl Context {
@@ -33,7 +35,6 @@ impl Context {
             inner: self.interner.get_or_intern(s.to_string()),
         }
     }
-    #[expect(dead_code)]
     pub fn unintern(&self, id: StrId) -> &str {
         self.interner.resolve(id.inner).unwrap()
     }
@@ -45,13 +46,13 @@ impl Context {
         &self.method_calls
     }
 
-    pub fn push_warning(&mut self, warning: Error) -> WarningHandle {
+    pub fn push_warning(&mut self, warning: Warning) -> WarningHandle {
         let option_arc = Arc::new(Mutex::new(Some(warning)));
         self.warning_arcs.push(option_arc.clone());
 
         WarningHandle { option_arc }
     }
-    pub fn take_warnings(&self) -> impl Iterator<Item = Error> {
+    pub fn take_warnings(&self) -> impl Iterator<Item = Warning> {
         self.warning_arcs
             .iter()
             .filter_map(|arc| arc.lock().unwrap().take())

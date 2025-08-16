@@ -48,13 +48,13 @@ pub enum Method {
 }
 
 impl ContextParse for Method {
-    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
+    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> Result<Self, Error>
     where
         Self: Sized,
     {
-        let dot = input.parse::<Token![.]>()?;
+        let dot = <Token![.]>::ctx_parse(input, ctx)?;
 
-        let ident = match input.parse::<Ident>() {
+        let ident = match Ident::ctx_parse(input, ctx) {
             Ok(ident) => {
                 ctx.push_method_call(dot, Some(ident.clone()));
 
@@ -107,7 +107,12 @@ impl ContextParse for Method {
             "concat_ident" => Self::ConcatIdent(ident.span()),
             "concat_string" => Self::ConcatString(ident.span()),
 
-            _ => return Err(syn::Error::new(ident.span(), "unknown method")),
+            _ => {
+                return Err(Error::ParseError(syn::Error::new(
+                    ident.span(),
+                    "unknown method",
+                )));
+            }
         })
     }
 }

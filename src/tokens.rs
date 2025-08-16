@@ -27,7 +27,7 @@ struct TokensGroup {
 }
 
 impl ContextParse for Tokens {
-    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
+    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> Result<Self, Error>
     where
         Self: Sized,
     {
@@ -43,11 +43,11 @@ impl ContextParse for Tokens {
 }
 
 impl ContextParse for TokensSegment {
-    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
+    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> Result<Self, Error>
     where
         Self: Sized,
     {
-        if let Some(group) = input.parse::<Option<Group>>()? {
+        if let Some(group) = Option::<Group>::ctx_parse(input, ctx)? {
             let tokens = Tokens::ctx_parse.ctx_parse2(group.stream(), ctx)?;
 
             Ok(TokensSegment::Group(TokensGroup {
@@ -66,7 +66,7 @@ impl ContextParse for TokensSegment {
                 && !input.peek(Brace)
                 && !input.peek(Bracket)
             {
-                stream.append(input.parse::<TokenTree>()?);
+                stream.append(TokenTree::ctx_parse(input, ctx)?);
             }
 
             Ok(TokensSegment::TokenStream(stream))
@@ -80,7 +80,7 @@ impl Paste for Tokens {
         output: &mut TokenStream,
         ctx: &mut Context,
         namespace: &mut Namespace,
-    ) -> syn::Result<()> {
+    ) -> Result<(), Error> {
         for segment in &self.segments {
             match segment {
                 TokensSegment::TokenStream(seg) => seg.paste(output, ctx, namespace)?,
@@ -98,7 +98,7 @@ impl Paste for TokensGroup {
         output: &mut TokenStream,
         ctx: &mut Context,
         namespace: &mut Namespace,
-    ) -> syn::Result<()> {
+    ) -> Result<(), Error> {
         let mut group_namespace = namespace.fork();
 
         let mut group_tokens = TokenStream::new();

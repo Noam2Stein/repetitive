@@ -9,7 +9,7 @@ pub trait Paste {
         output: &mut TokenStream,
         ctx: &mut Context,
         namespace: &mut Namespace,
-    ) -> syn::Result<()>;
+    ) -> Result<(), Error>;
 }
 
 impl Paste for TokenStream {
@@ -18,7 +18,7 @@ impl Paste for TokenStream {
         output: &mut TokenStream,
         _ctx: &mut Context,
         _namespace: &mut Namespace,
-    ) -> syn::Result<()> {
+    ) -> Result<(), Error> {
         self.to_tokens(output);
 
         Ok(())

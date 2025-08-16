@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use syn::{
     Ident,
     parse::{Parse, ParseStream},
@@ -15,6 +17,14 @@ impl Parse for Keyword {
             "str" => Ok(Keyword::Str),
 
             _ => Err(syn::Error::new(ident.span(), "expected keyword")),
+        }
+    }
+}
+
+impl Display for Keyword {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Keyword::Str => write!(f, "str"),
         }
     }
 }

@@ -11,7 +11,7 @@ pub struct Name {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NameId {
-    pub inner: StrId,
+    pub strid: StrId,
 }
 
 impl Name {
@@ -25,20 +25,21 @@ impl Name {
 }
 
 impl ContextParse for Name {
-    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
+    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> Result<Self, Error>
     where
         Self: Sized,
     {
         if Keyword::peek(input) {
-            return Err(syn::Error::new(
-                input.span(),
-                "expected name, found keyword",
-            ));
+            return Err(Error::IsKeyword {
+                span: input.span(),
+                keyword: input.parse::<Keyword>().unwrap().to_string(),
+            });
         }
 
-        let ident = input.parse::<Ident>()?;
+        let ident = Ident::ctx_parse(input, ctx)?;
+
         let id = NameId {
-            inner: ctx.intern(&ident.to_string()),
+            strid: ctx.intern(&ident.to_string()),
         };
 
         Ok(Self {

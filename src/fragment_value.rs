@@ -33,7 +33,10 @@ impl FragmentValue {
             || input.peek(Token![~])
     }
 
-    pub fn option_lit(input: ParseStream) -> syn::Result<Option<Self>> {
+    pub fn ctx_parse_option_lit(
+        input: ParseStream,
+        ctx: &mut Context,
+    ) -> Result<Option<Self>, Error> {
         if input.peek(LitInt) {
             return Ok(Some(Self::int_lit(input.parse().unwrap())));
         }
@@ -54,7 +57,7 @@ impl FragmentValue {
         }
         if input.peek(Token![~]) {
             let punct_span = input.parse::<Token![~]>().unwrap().span;
-            let ident = input.parse::<Ident>()?;
+            let ident = <Ident>::ctx_parse(input, ctx)?;
 
             let lifetime = Lifetime {
                 apostrophe: punct_span,
@@ -111,7 +114,7 @@ impl FragmentValue {
     }
 }
 impl FragmentValueKind {
-    pub fn kind(&self) -> &str {
+    pub fn kind_str(&self) -> &'static str {
         match self {
             FragmentValueKind::Int(_) => "int",
             FragmentValueKind::Float(_) => "float",
@@ -131,7 +134,7 @@ impl Paste for FragmentValue {
         output: &mut TokenStream,
         ctx: &mut Context,
         namespace: &mut Namespace,
-    ) -> syn::Result<()> {
+    ) -> Result<(), Error> {
         Ok(match &self.kind {
             FragmentValueKind::Int(val) => {
                 let lit = LitInt::new(val.abs().to_string().as_str(), self.span);

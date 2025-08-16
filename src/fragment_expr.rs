@@ -2,7 +2,7 @@ use std::mem::replace;
 
 use proc_macro2::{Delimiter, Group, Span, TokenStream};
 use syn::{
-    Error, Ident, Token,
+    Ident, Token,
     parse::ParseStream,
     token::{Bracket, Paren},
 };
@@ -14,6 +14,7 @@ pub struct FragmentExpr {
     pub span: Span,
     pub kind: FragmentExprKind,
 }
+
 #[derive(Debug, Clone)]
 pub enum FragmentExprKind {
     Value(FragmentValueKind),
@@ -71,7 +72,7 @@ impl FragmentExpr {
 }
 
 impl ContextParse for FragmentExpr {
-    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
+    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> Result<Self, Error>
     where
         Self: Sized,
     {
@@ -89,6 +90,7 @@ impl ContextParse for FragmentExpr {
             AddSub,
             MulDivRem,
         }
+
         impl BinOpLvl {
             fn try_from_op(op: Op) -> Option<Self> {
                 match op {
@@ -204,7 +206,7 @@ impl ContextParse for FragmentExpr {
     }
 }
 impl FragmentExpr {
-    pub fn ctx_parse_single(input: ParseStream, ctx: &mut Context) -> syn::Result<Self> {
+    pub fn ctx_parse_single(input: ParseStream, ctx: &mut Context) -> Result<Self, Error> {
         if let Some(op) = Op::parse_option_un(input) {
             let arg = FragmentExpr::ctx_parse_single(input, ctx)?;
 
@@ -218,19 +220,19 @@ impl FragmentExpr {
                 let method = Method::ctx_parse(input, ctx)?;
                 let op = Op::from_method_ident(method);
 
-                let group = input.parse::<Group>()?;
+                let group = Group::ctx_parse(input, ctx)?;
                 if group.delimiter() != Delimiter::Parenthesis {
-                    return Err(syn::Error::new(
+                    return Err(Error::ParseError(syn::Error::new(
                         group.span(),
                         "expected a parenthesized list",
-                    ));
+                    )));
                 }
 
                 let args = ctx_parse_punctuated.ctx_parse2(group.stream(), ctx)?;
 
                 expr = Self::op(op, [expr].into_iter().chain(args).collect(), ctx)?;
             } else if input.peek(Bracket) {
-                let group = input.parse::<Group>()?;
+                let group = Group::ctx_parse(input, ctx)?;
                 let idx = FragmentExpr::ctx_parse.ctx_parse2(group.stream(), ctx)?;
 
                 expr = Self::op(Op::Index(group.span()), vec![expr, idx], ctx)?;
@@ -242,7 +244,7 @@ impl FragmentExpr {
         Ok(expr)
     }
 
-    pub fn op(op: Op, args: Vec<FragmentExpr>, ctx: &mut Context) -> syn::Result<Self> {
+    pub fn op(op: Op, args: Vec<FragmentExpr>, ctx: &mut Context) -> Result<Self, Error> {
         if let Some(args) = args
             .iter()
             .map(|item| match &item.kind {
@@ -268,12 +270,15 @@ impl FragmentExpr {
         })
     }
 
-    fn ctx_parse_base(input: ParseStream, ctx: &mut Context) -> syn::Result<Self> {
+    fn ctx_parse_base(input: ParseStream, ctx: &mut Context) -> Result<Self, Error> {
         if input.peek(Token![@]) {
-            let at_span = input.parse::<Token![@]>()?.span;
+            let at_span = <Token![@]>::ctx_parse(input, ctx)?.span;
 
             if input.peek(Paren) || Name::peek(input) {
-                ctx.push_warning(syn::Error::new(at_span, "unnecessary `@`"));
+                ctx.push_warning(Warning::UnnecessaryPunct {
+                    span: at_span,
+                    punct: "@",
+                });
             }
 
             let outer_kind = FragmentOuterKind::ctx_parse(input, ctx)?;
@@ -286,42 +291,42 @@ impl FragmentExpr {
                 FragmentOuterKind::Expr(expr) => expr,
 
                 FragmentOuterKind::For(outer_for) => {
-                    return Err(syn::Error::new(
+                    return Err(Error::ParseError(syn::Error::new(
                         outer_for.for_span,
-                        "`@for` is not allowed here",
-                    ));
+                        "`@for` is not allowed in expressions",
+                    )));
                 }
                 FragmentOuterKind::Let(outer_let) => {
-                    return Err(syn::Error::new(
+                    return Err(Error::ParseError(syn::Error::new(
                         outer_let.let_span,
-                        "`@let` is not allowed here",
-                    ));
+                        "`@let` is not allowed in expressions",
+                    )));
                 }
             });
         }
 
         if input.peek(Token![if]) {
-            let if_span = input.parse::<Token![if]>()?.span;
+            let if_span = <Token![if]>::ctx_parse(input, ctx)?.span;
             let cond = FragmentExpr::ctx_parse(input, ctx)?;
 
-            let then_group = input.parse::<Group>()?;
+            let then_group = Group::ctx_parse(input, ctx)?;
             if then_group.delimiter() != Delimiter::Brace {
-                return Err(syn::Error::new(
+                return Err(Error::ParseError(syn::Error::new(
                     then_group.span(),
                     "expected a brace-delimited block",
-                ));
+                )));
             }
 
             let then = FragmentExpr::ctx_parse.ctx_parse2(then_group.stream(), ctx)?;
 
-            input.parse::<Token![else]>()?;
+            <Token![else]>::ctx_parse(input, ctx)?;
 
-            let else_group = input.parse::<Group>()?;
+            let else_group = Group::ctx_parse(input, ctx)?;
             if else_group.delimiter() != Delimiter::Brace {
-                return Err(syn::Error::new(
+                return Err(Error::ParseError(syn::Error::new(
                     else_group.span(),
                     "expected a brace-delimited block",
-                ));
+                )));
             }
 
             let else_ = FragmentExpr::ctx_parse.ctx_parse2(else_group.stream(), ctx)?;
@@ -330,15 +335,15 @@ impl FragmentExpr {
         }
 
         if input.peek(Token![match]) {
-            let match_span = input.parse::<Token![match]>()?.span;
+            let match_span = <Token![match]>::ctx_parse(input, ctx)?.span;
             let expr = Box::new(FragmentExpr::ctx_parse(input, ctx)?);
 
-            let group = input.parse::<Group>()?;
+            let group = Group::ctx_parse(input, ctx)?;
             if group.delimiter() != Delimiter::Brace {
-                return Err(syn::Error::new(
+                return Err(Error::ParseError(syn::Error::new(
                     group.span(),
                     "expected a brace-delimited block",
-                ));
+                )));
             }
 
             let match_arms_parse_fn = |input: ParseStream, ctx: &mut Context| {
@@ -349,14 +354,14 @@ impl FragmentExpr {
                     let pat = Pattern::ctx_parse(input, ctx)?;
 
                     let condition = if input.peek(Token![if]) {
-                        input.parse::<Token![if]>()?;
+                        <Token![if]>::ctx_parse(input, ctx)?;
 
                         Some(FragmentExpr::ctx_parse(input, ctx)?)
                     } else {
                         None
                     };
 
-                    input.parse::<Token![=>]>()?;
+                    <Token![=>]>::ctx_parse(input, ctx)?;
 
                     let body = FragmentExpr::ctx_parse(input, ctx)?;
 
@@ -364,16 +369,15 @@ impl FragmentExpr {
                         pat,
                         condition,
                         body,
-                        unused_arm_warning: ctx
-                            .push_warning(Error::new(pat_span, "unused match arm")),
+                        unused_arm_warning: ctx.push_warning(Warning::UnusedMatchArm(pat_span)),
                     });
 
                     if !input.is_empty() {
-                        input.parse::<Token![,]>()?;
+                        <Token![,]>::ctx_parse(input, ctx)?;
                     }
                 }
 
-                Ok::<_, syn::Error>(arms)
+                Ok::<_, Error>(arms)
             };
 
             let match_arms = match_arms_parse_fn.ctx_parse2(group.stream(), ctx)?;
@@ -394,11 +398,11 @@ impl FragmentExpr {
             return Ok(Self::name(name));
         }
 
-        if let Some(lit) = FragmentValue::option_lit(input)? {
+        if let Some(lit) = FragmentValue::ctx_parse_option_lit(input, ctx)? {
             return Ok(lit.into_expr());
         }
 
-        if let Some(group) = input.parse::<Option<Group>>()? {
+        if let Some(group) = <Option<Group>>::ctx_parse(input, ctx)? {
             match group.delimiter() {
                 Delimiter::Parenthesis => {
                     let fragment_expr = FragmentExpr::ctx_parse.ctx_parse2(group.stream(), ctx)?;
@@ -430,10 +434,13 @@ impl FragmentExpr {
             }
         }
 
-        Err(syn::Error::new(input.span(), "expected a fragment expr"))
+        Err(Error::ParseError(syn::Error::new(
+            input.span(),
+            "expected a fragment expr",
+        )))
     }
 
-    fn optimize(&mut self, ctx: &mut Context) -> syn::Result<()> {
+    fn optimize(&mut self, ctx: &mut Context) -> Result<(), Error> {
         match &mut self.kind {
             FragmentExprKind::Value(_) => {}
             FragmentExprKind::Name(_) => {}
@@ -474,7 +481,7 @@ impl FragmentExpr {
 }
 
 impl FragmentExpr {
-    pub fn eval(&self, ctx: &mut Context, namespace: &Namespace) -> syn::Result<FragmentValue> {
+    pub fn eval(&self, ctx: &mut Context, namespace: &Namespace) -> Result<FragmentValue, Error> {
         let value = match &self.kind {
             FragmentExprKind::Value(val) => val.clone(),
 
@@ -483,14 +490,14 @@ impl FragmentExpr {
             FragmentExprKind::List(val) => FragmentValueKind::List(
                 val.into_iter()
                     .map(|item| item.eval(ctx, namespace))
-                    .collect::<syn::Result<_>>()?,
+                    .collect::<Result<_, _>>()?,
             ),
 
             FragmentExprKind::Op(FragmentOp { op, args }) => {
                 let resolved_args = args
                     .into_iter()
                     .map(|item| item.eval(ctx, namespace))
-                    .collect::<syn::Result<Vec<_>>>()?;
+                    .collect::<Result<Vec<_>, _>>()?;
 
                 op.compute(&resolved_args, ctx)?.kind
             }
@@ -507,9 +514,14 @@ impl FragmentExpr {
                     let matches = arm.pat.matches(&expr_value, ctx)?.is_ok();
 
                     let passed_condition = arm.condition.as_ref().map_or(Ok(true), |cond| {
-                        match cond.eval(ctx, namespace)?.kind {
+                        let cond_value = cond.eval(ctx, namespace)?;
+                        match cond_value.kind {
                             FragmentValueKind::Bool(val) => Ok(val),
-                            _ => Err(syn::Error::new(cond.span, "expected a boolean")),
+                            _ => Err(Error::ExpectedFound {
+                                span: cond.span,
+                                expected: "bool",
+                                found: cond_value.kind.kind_str(),
+                            }),
                         }
                     })?;
 
@@ -530,10 +542,9 @@ impl FragmentExpr {
 
                     matched_arm.body.eval(ctx, &mut arm_namespace)?.kind
                 } else {
-                    return Err(syn::Error::new(
-                        expr_value.span,
-                        "none of the match arms matched",
-                    ));
+                    return Err(Error::NoMatches {
+                        span: expr_value.span,
+                    });
                 }
             }
         };
@@ -551,7 +562,7 @@ impl Paste for FragmentExpr {
         output: &mut TokenStream,
         ctx: &mut Context,
         namespace: &mut Namespace,
-    ) -> syn::Result<()> {
+    ) -> Result<(), Error> {
         self.eval(ctx, namespace)?.paste(output, ctx, namespace)
     }
 }
@@ -559,7 +570,7 @@ impl Paste for FragmentExpr {
 fn ctx_parse_punctuated<T: ContextParse>(
     input: ParseStream,
     ctx: &mut Context,
-) -> syn::Result<Vec<T>> {
+) -> Result<Vec<T>, Error> {
     let mut items = Vec::new();
 
     while !input.is_empty() {
@@ -570,7 +581,7 @@ fn ctx_parse_punctuated<T: ContextParse>(
             break;
         }
 
-        input.parse::<Token![,]>()?;
+        <Token![,]>::ctx_parse(input, ctx)?;
     }
 
     Ok(items)

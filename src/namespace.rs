@@ -31,9 +31,9 @@ impl<'p> Namespace<'p> {
         name: Name,
         fragment: FragmentValue,
         _ctx: &mut Context,
-    ) -> syn::Result<()> {
+    ) -> Result<(), Error> {
         if self.new_names.contains_key(&name.id) {
-            return Err(syn::Error::new(name.span, "Name already exists"));
+            return Err(Error::NameAlreadyExists(name));
         }
 
         self.new_names.insert(name.id, fragment);
@@ -74,10 +74,10 @@ impl<'p> Namespace<'p> {
         }
     }
 
-    pub fn try_get(&self, name: Name) -> syn::Result<FragmentValue> {
+    pub fn try_get(&self, name: Name) -> Result<FragmentValue, Error> {
         match self.get(name) {
             Some(fragment) => Ok(fragment),
-            None => Err(syn::Error::new(name.span, "Name not found")),
+            None => Err(Error::NameNotFound(name)),
         }
     }
 }

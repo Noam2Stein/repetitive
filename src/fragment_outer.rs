@@ -1,7 +1,7 @@
 use proc_macro2::{Delimiter, Group, Span, TokenStream};
 use syn::{
-    Error, Ident, Token,
-    parse::{ParseStream, Parser},
+    Ident, Token,
+    parse::ParseStream,
     token::{Brace, Bracket, Paren},
 };
 
@@ -13,6 +13,7 @@ pub struct FragmentOuter {
     pub at_span: Span,
     pub kind: FragmentOuterKind,
 }
+
 #[derive(Debug, Clone)]
 pub enum FragmentOuterKind {
     For(FragmentFor),
@@ -26,6 +27,7 @@ pub struct FragmentFor {
     pub iters: Vec<FragmentForIter>,
     pub body: Tokens,
 }
+
 #[derive(Debug, Clone)]
 pub struct FragmentForIter {
     pub pat: Pattern,
@@ -40,11 +42,11 @@ pub struct FragmentLet {
 }
 
 impl ContextParse for FragmentOuter {
-    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
+    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> Result<Self, Error>
     where
         Self: Sized,
     {
-        let at_token = input.parse::<Token![@]>()?;
+        let at_token = <Token![@]>::ctx_parse(input, ctx)?;
         let kind = FragmentOuterKind::ctx_parse(input, ctx)?;
 
         Ok(Self {
@@ -54,7 +56,7 @@ impl ContextParse for FragmentOuter {
     }
 }
 impl ContextParse for FragmentOuterKind {
-    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
+    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> Result<Self, Error>
     where
         Self: Sized,
     {
@@ -85,7 +87,7 @@ impl ContextParse for FragmentOuterKind {
         }
 
         if input.peek(Paren) {
-            let group = input.parse::<Group>()?;
+            let group = Group::ctx_parse(input, ctx)?;
 
             let expr = FragmentExpr::ctx_parse.ctx_parse2(group.stream(), ctx)?;
 
@@ -93,7 +95,7 @@ impl ContextParse for FragmentOuterKind {
         }
 
         if input.peek(Brace) {
-            let group = input.parse::<Group>()?;
+            let group = Group::ctx_parse(input, ctx)?;
 
             let tokens = Tokens::ctx_parse.ctx_parse2(group.stream(), ctx)?;
 
@@ -103,16 +105,19 @@ impl ContextParse for FragmentOuterKind {
             }));
         }
 
-        Err(syn::Error::new(input.span(), "expected a fragment"))
+        Err(Error::ParseError(syn::Error::new(
+            input.span(),
+            "expected a fragment",
+        )))
     }
 }
 
 impl ContextParse for FragmentFor {
-    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
+    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> Result<Self, Error>
     where
         Self: Sized,
     {
-        let for_span = input.parse::<Token![for]>()?.span;
+        let for_span = <Token![for]>::ctx_parse(input, ctx)?.span;
 
         let mut iters = Vec::new();
         while Pattern::peek(input) {
@@ -123,15 +128,15 @@ impl ContextParse for FragmentFor {
                 break;
             }
 
-            input.parse::<Token![,]>()?;
+            <Token![,]>::ctx_parse(input, ctx)?;
         }
 
-        let body_group = input.parse::<Group>()?;
+        let body_group = Group::ctx_parse(input, ctx)?;
         if body_group.delimiter() != Delimiter::Brace {
-            return Err(syn::Error::new(
+            return Err(Error::ParseError(syn::Error::new(
                 body_group.span(),
                 "expected a brace-delimited block",
-            ));
+            )));
         }
 
         let body = Tokens::ctx_parse.ctx_parse2(body_group.stream(), ctx)?;
@@ -144,13 +149,13 @@ impl ContextParse for FragmentFor {
     }
 }
 impl ContextParse for FragmentForIter {
-    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
+    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> Result<Self, Error>
     where
         Self: Sized,
     {
         let pat = Pattern::ctx_parse(input, ctx)?;
 
-        input.parse::<Token![in]>()?;
+        <Token![in]>::ctx_parse(input, ctx)?;
 
         let iter = FragmentExpr::ctx_parse(input, ctx)?;
 
@@ -159,19 +164,19 @@ impl ContextParse for FragmentForIter {
 }
 
 impl ContextParse for FragmentLet {
-    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> syn::Result<Self>
+    fn ctx_parse(input: ParseStream, ctx: &mut Context) -> Result<Self, Error>
     where
         Self: Sized,
     {
-        let let_span = input.parse::<Token![let]>()?.span;
+        let let_span = <Token![let]>::ctx_parse(input, ctx)?.span;
 
         let pat = Pattern::ctx_parse(input, ctx)?;
 
-        input.parse::<Token![=]>()?;
+        <Token![=]>::ctx_parse(input, ctx)?;
 
         let expr = FragmentExpr::ctx_parse(input, ctx)?;
 
-        input.parse::<Token![;]>()?;
+        <Token![;]>::ctx_parse(input, ctx)?;
 
         return Ok(Self {
             let_span,
@@ -182,16 +187,16 @@ impl ContextParse for FragmentLet {
 }
 
 impl FragmentOuterKind {
-    fn ctx_parse_if(input: ParseStream, ctx: &mut Context) -> syn::Result<Self> {
-        let if_span = input.parse::<Token![if]>()?.span;
+    fn ctx_parse_if(input: ParseStream, ctx: &mut Context) -> Result<Self, Error> {
+        let if_span = <Token![if]>::ctx_parse(input, ctx)?.span;
         let cond = FragmentExpr::ctx_parse(input, ctx)?;
 
-        let then_group = input.parse::<Group>()?;
+        let then_group = Group::ctx_parse(input, ctx)?;
         if then_group.delimiter() != Delimiter::Brace {
-            return Err(syn::Error::new(
+            return Err(Error::ParseError(syn::Error::new(
                 then_group.span(),
                 "expected a brace-delimited block",
-            ));
+            )));
         }
 
         let then = FragmentExpr {
@@ -202,7 +207,7 @@ impl FragmentOuterKind {
         };
 
         let else_ = if input.peek(Token![else]) {
-            input.parse::<Token![else]>()?;
+            <Token![else]>::ctx_parse(input, ctx)?;
 
             if input.peek(Token![if]) {
                 let else_if = FragmentOuterKind::ctx_parse(input, ctx)?;
@@ -212,12 +217,12 @@ impl FragmentOuterKind {
                     _ => unreachable!(),
                 }
             } else {
-                let else_group = input.parse::<Group>()?;
+                let else_group = Group::ctx_parse(input, ctx)?;
                 if else_group.delimiter() != Delimiter::Brace {
-                    return Err(syn::Error::new(
+                    return Err(Error::ParseError(syn::Error::new(
                         else_group.span(),
                         "expected a brace-delimited block",
-                    ));
+                    )));
                 }
 
                 FragmentExpr {
@@ -241,17 +246,17 @@ impl FragmentOuterKind {
         )?));
     }
 
-    fn ctx_parse_match(input: ParseStream, ctx: &mut Context) -> syn::Result<Self> {
-        let match_span = input.parse::<Token![match]>()?.span;
+    fn ctx_parse_match(input: ParseStream, ctx: &mut Context) -> Result<Self, Error> {
+        let match_span = <Token![match]>::ctx_parse(input, ctx)?.span;
 
         let expr = Box::new(FragmentExpr::ctx_parse(input, ctx)?);
 
-        let group = input.parse::<Group>()?;
+        let group = Group::ctx_parse(input, ctx)?;
         if group.delimiter() != Delimiter::Brace {
-            return Err(syn::Error::new(
+            return Err(Error::ParseError(syn::Error::new(
                 group.span(),
                 "expected a brace-delimited block",
-            ));
+            )));
         }
 
         let match_arms_parse_fn = |input: ParseStream, ctx: &mut Context| {
@@ -262,21 +267,21 @@ impl FragmentOuterKind {
                 let pat = Pattern::ctx_parse(input, ctx)?;
 
                 let condition = if input.peek(Token![if]) {
-                    input.parse::<Token![if]>()?;
+                    <Token![if]>::ctx_parse(input, ctx)?;
 
                     Some(FragmentExpr::ctx_parse(input, ctx)?)
                 } else {
                     None
                 };
 
-                input.parse::<Token![=>]>()?;
+                <Token![=>]>::ctx_parse(input, ctx)?;
 
-                let body_group = input.parse::<Group>()?;
+                let body_group = Group::ctx_parse(input, ctx)?;
                 if body_group.delimiter() != Delimiter::Brace {
-                    return Err(syn::Error::new(
+                    return Err(Error::ParseError(syn::Error::new(
                         body_group.span(),
                         "expected a brace-delimited block",
-                    ));
+                    )));
                 }
 
                 let body = Tokens::ctx_parse.ctx_parse2(body_group.stream(), ctx)?;
@@ -288,15 +293,18 @@ impl FragmentOuterKind {
                         span: group.span(),
                         kind: FragmentExprKind::Value(FragmentValueKind::Tokens(body)),
                     },
-                    unused_arm_warning: ctx.push_warning(Error::new(pat_span, "unused match arm")),
+                    unused_arm_warning: ctx.push_warning(Warning::UnusedMatchArm(pat_span)),
                 });
 
-                if let Some(token) = input.parse::<Option<Token![,]>>()? {
-                    ctx.push_warning(Error::new_spanned(token, "unnecessary `,`"));
+                if let Some(token) = <Option<Token![,]>>::ctx_parse(input, ctx)? {
+                    ctx.push_warning(Warning::UnnecessaryPunct {
+                        span: token.span,
+                        punct: ",",
+                    });
                 }
             }
 
-            Ok::<_, syn::Error>(arms)
+            Ok::<_, Error>(arms)
         };
 
         let match_arms = match_arms_parse_fn.ctx_parse2(group.stream(), ctx)?;
@@ -311,22 +319,22 @@ impl FragmentOuterKind {
         }))
     }
 
-    fn parse_concat(input: ParseStream, ctx: &mut Context) -> syn::Result<Self> {
+    fn parse_concat(input: ParseStream, ctx: &mut Context) -> Result<Self, Error> {
         let keyword = if Keyword::peek(input) {
-            Some(input.parse::<Keyword>()?)
+            Some(<Keyword>::ctx_parse(input, ctx)?)
         } else {
             None
         };
 
-        let group = input.parse::<Group>()?;
+        let group = Group::ctx_parse(input, ctx)?;
         if group.delimiter() != Delimiter::Bracket {
-            return Err(syn::Error::new(
+            return Err(Error::ParseError(syn::Error::new(
                 group.span(),
                 "expected a bracket-delimited list",
-            ));
+            )));
         }
 
-        let parse_fn = |input: ParseStream| {
+        let parse_fn = |input: ParseStream, ctx: &mut Context| {
             let mut parts = Vec::new();
 
             loop {
@@ -338,10 +346,10 @@ impl FragmentOuterKind {
                 parts.push(item);
             }
 
-            Ok::<_, syn::Error>(parts)
+            Ok::<_, Error>(parts)
         };
 
-        let parts = parse_fn.parse2(group.stream())?;
+        let parts = parse_fn.ctx_parse2(group.stream(), ctx)?;
 
         let op = if let Some(Keyword::Str) = keyword {
             Op::ConcatString(group.span())
@@ -363,7 +371,7 @@ impl Paste for FragmentOuter {
         output: &mut TokenStream,
         ctx: &mut Context,
         namespace: &mut Namespace,
-    ) -> syn::Result<()> {
+    ) -> Result<(), Error> {
         Ok(match &self.kind {
             FragmentOuterKind::Expr(frag) => frag.paste(output, ctx, namespace)?,
             FragmentOuterKind::For(frag) => frag.paste(output, ctx, namespace)?,
@@ -378,7 +386,7 @@ impl Paste for FragmentFor {
         output: &mut TokenStream,
         ctx: &mut Context,
         namespace: &mut Namespace,
-    ) -> syn::Result<()> {
+    ) -> Result<(), Error> {
         self.paste_from_iter_items(0, output, ctx, namespace)?;
 
         Ok(())
@@ -391,13 +399,19 @@ impl FragmentFor {
         output: &mut TokenStream,
         ctx: &mut Context,
         namespace: &mut Namespace,
-    ) -> syn::Result<()> {
+    ) -> Result<(), Error> {
         let iter = &self.iters[iter_idx];
         let iter_items = iter.iter.eval(ctx, namespace)?;
 
         let iter_items = match iter_items.kind {
             FragmentValueKind::List(val) => val,
-            _ => return Err(syn::Error::new(iter_items.span, "expected a list")),
+            _ => {
+                return Err(Error::ExpectedFound {
+                    span: iter_items.span,
+                    expected: "list",
+                    found: iter_items.kind.kind_str(),
+                });
+            }
         };
 
         for item in iter_items {
@@ -416,13 +430,13 @@ impl FragmentFor {
     }
 }
 
-impl FragmentLet {
-    pub fn paste(
+impl Paste for FragmentLet {
+    fn paste(
         &self,
         _output: &mut TokenStream,
         ctx: &mut Context,
         namespace: &mut Namespace,
-    ) -> syn::Result<()> {
+    ) -> Result<(), Error> {
         let val_expr = self.expr.eval(ctx, namespace)?;
 
         namespace.flush();

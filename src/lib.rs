@@ -4,6 +4,7 @@
 
 mod ctx;
 mod ctx_parse;
+mod error;
 mod fragment_expr;
 mod fragment_outer;
 mod fragment_value;
@@ -17,6 +18,7 @@ mod pattern;
 mod tokens;
 use ctx::*;
 use ctx_parse::*;
+use error::*;
 use fragment_expr::*;
 use fragment_outer::*;
 use fragment_value::*;
@@ -227,7 +229,7 @@ mod main {
 
         let result = match result {
             Ok(output) => output,
-            Err(err) => err.to_compile_error().into(),
+            Err(err) => err.into_compile_error(&mut ctx).into(),
         };
 
         let warnings = ctx
