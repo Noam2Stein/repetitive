@@ -38,3 +38,14 @@ repetitive! {
 
     const _: () = assert!(THREE == 3);
 }
+
+repetitive! {
+    @let val = 3;
+
+    @{
+        @let val = 5;
+        const _: () = assert!(@val == 5);
+    }
+
+    const _: () = assert!(@val == 3);
+}
