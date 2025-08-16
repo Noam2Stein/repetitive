@@ -42,6 +42,7 @@ pub enum Method {
     Enumerate(Span),
     Zip(Span),
     Chain(Span),
+    Contains(Span),
     ConcatIdent(Span),
     ConcatString(Span),
 }
@@ -102,6 +103,7 @@ impl ContextParse for Method {
             "enumerate" => Self::Enumerate(ident.span()),
             "zip" => Self::Zip(ident.span()),
             "chain" => Self::Chain(ident.span()),
+            "contains" => Self::Contains(ident.span()),
             "concat_ident" => Self::ConcatIdent(ident.span()),
             "concat_string" => Self::ConcatString(ident.span()),
 
@@ -154,6 +156,7 @@ pub fn paste_method_doc(idents: &[(Token![.], Option<Ident>)]) -> TokenStream {
             Some("enumerate") => quote! { val #dot #ident() },
             Some("zip") => quote! { val #dot #ident(other) },
             Some("chain") => quote! { val #dot #ident(other) },
+            Some("contains") => quote! { val #dot #ident(value) },
             Some("concat_ident") => quote! { val #dot #ident() },
             Some("concat_string") => quote! { val #dot #ident() },
 
@@ -192,6 +195,7 @@ pub fn paste_method_doc(idents: &[(Token![.], Option<Ident>)]) -> TokenStream {
     let enumerate_doc = fn_doc("enumerate", ENUMERATE_DOC, &idents);
     let zip_doc = fn_doc("zip", ZIP_DOC, &idents);
     let chain_doc = fn_doc("chain", CHAIN_DOC, &idents);
+    let contains_doc = fn_doc("contains", CONTAINS_DOC, &idents);
     let concat_ident_doc = fn_doc("concat_ident", CONCAT_IDENT_DOC, &idents);
     let concat_string_doc = fn_doc("concat_string", CONCAT_STRING_DOC, &idents);
 
@@ -307,6 +311,10 @@ pub fn paste_method_doc(idents: &[(Token![.], Option<Ident>)]) -> TokenStream {
                 const fn chain(self, other: Self) -> Self { Self }
 
                 #[allow(dead_code)]
+                #[doc = #contains_doc]
+                const fn contains(self, value: Self) -> Self { Self }
+
+                #[allow(dead_code)]
                 #[doc = #concat_ident_doc]
                 const fn concat_ident(self) -> Self { Self }
 
@@ -317,6 +325,8 @@ pub fn paste_method_doc(idents: &[(Token![.], Option<Ident>)]) -> TokenStream {
 
             #[allow(dead_code)]
             let val = Fragment;
+            #[allow(dead_code)]
+            let value = Fragment;
             #[allow(dead_code)]
             let other = Fragment;
             #[allow(dead_code)]
@@ -422,6 +432,8 @@ const ZIP_DOC: &str =
 
 const CHAIN_DOC: &str =
     "Returns a list that has the elements of the first list, then of the second list.";
+
+const CONTAINS_DOC: &str = "Checks if the specified value is contained in the list.";
 
 const CONCAT_IDENT_DOC: &str =
     "Concatenates the items of a list into an `ident`, this works exactly like `@[...]`.";

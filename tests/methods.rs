@@ -13,6 +13,9 @@ repetitive! {
     const _: () = assert!(@([1, 2, 3].enumerate() == [[0, 1], [1, 2], [2, 3]]));
     const _: () = assert!(@([1, 2, 3].zip([4, 5, 6]) == [[1, 4], [2, 5], [3, 6]]));
     const _: () = assert!(@([1, 2, 3].chain([4, 5, 6]) == [1, 2, 3, 4, 5, 6]));
+    const _: () = assert!(@([1, 2, 3].contains(2)));
+    const _: () = assert!(!(@([1, 2, 3].contains(4))));
+
 
     const _: () = assert!(@(1.neg().add(-1) == -2));
     const _: () = assert!(@([1, 2][0].add(1) == 2));

@@ -52,6 +52,7 @@ pub enum Op {
     Enumerate(Span),
     Zip(Span),
     Chain(Span),
+    Contains(Span),
     ConcatIdent(Span),
     ConcatString(Span),
 }
@@ -91,6 +92,7 @@ impl Op {
             Self::Enumerate(span) => *span,
             Self::Zip(span) => *span,
             Self::Chain(span) => *span,
+            Self::Contains(span) => *span,
             Self::ConcatIdent(span) => *span,
             Self::ConcatString(span) => *span,
         }
@@ -183,6 +185,7 @@ impl Op {
             Method::Enumerate(span) => Op::Enumerate(span),
             Method::Zip(span) => Op::Zip(span),
             Method::Chain(span) => Op::Chain(span),
+            Method::Contains(span) => Op::Contains(span),
             Method::ConcatIdent(span) => Op::ConcatIdent(span),
             Method::ConcatString(span) => Op::ConcatString(span),
         }
@@ -1281,6 +1284,35 @@ impl Op {
                         return Err(Error::new(
                             span,
                             format!("expected `list`, found `{}`", lhs.kind.kind()),
+                        ));
+                    }
+                }
+            }
+
+            Self::Contains(span) => {
+                let [list, value] = args else {
+                    return Err(Error::new(
+                        span,
+                        format!("expected 2 arguments, found {}", args.len()),
+                    ));
+                };
+
+                match &list.kind {
+                    FragmentValueKind::List(list) => FragmentValueKind::Bool(
+                        list.iter()
+                            .map(|item| Op::Eq(span).compute(&[item.clone(), value.clone()], ctx))
+                            .collect::<syn::Result<Vec<_>>>()?
+                            .iter()
+                            .any(|eq| match eq.kind {
+                                FragmentValueKind::Bool(bool) => bool,
+                                _ => unreachable!(),
+                            }),
+                    ),
+
+                    _ => {
+                        return Err(Error::new(
+                            span,
+                            format!("expected `list`, found `{}`", list.kind.kind()),
                         ));
                     }
                 }
