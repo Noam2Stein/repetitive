@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use proc_macro2::{Span, TokenStream};
 use quote::{ToTokens, quote, quote_spanned};
 use syn::{Ident, Lifetime, LitBool, LitChar, LitFloat, LitInt, LitStr, Token, parse::ParseStream};
@@ -179,6 +181,39 @@ impl Paste for FragmentValue {
             }
 
             FragmentValueKind::Unknown(_) => return,
+        }
+    }
+}
+
+impl Display for FragmentValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.kind {
+            FragmentValueKind::Int(val) => write!(f, "{val:?}"),
+            FragmentValueKind::Float(val) => write!(f, "{val:?}"),
+            FragmentValueKind::Bool(val) => write!(f, "{val:?}"),
+            FragmentValueKind::String(val) => write!(f, "{val:?}"),
+            FragmentValueKind::Char(val) => write!(f, "{val:?}"),
+            FragmentValueKind::Ident(val) => write!(f, "'{val}"),
+
+            FragmentValueKind::List(val) => {
+                write!(f, "[")?;
+
+                for (idx, item) in val.iter().enumerate() {
+                    if idx > 0 {
+                        write!(f, ", ")?;
+                    }
+
+                    write!(f, "{item}")?;
+                }
+
+                write!(f, "]")
+            }
+
+            FragmentValueKind::Tokens(_) => write!(f, "{{tokens}}"),
+
+            FragmentValueKind::Unknown(_) => {
+                unreachable!("display should not be called on unknown values")
+            }
         }
     }
 }

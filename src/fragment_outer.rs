@@ -351,8 +351,8 @@ impl FragmentOuterKind {
 
         let parts = parse_fn.ctx_parse2(group.stream(), ctx)?;
 
-        let op = if let Some(Keyword::Str) = keyword {
-            Op::ConcatString(group.span())
+        let op = if let Some(Keyword::Str(span)) = keyword {
+            Op::ConcatString(span)
         } else {
             Op::ConcatIdent(group.span())
         };

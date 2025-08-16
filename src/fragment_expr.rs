@@ -562,6 +562,7 @@ impl FragmentExpr {
                     FragmentValueKind::Unknown(UnknownGuard::new(&ctx.push_error(
                         Error::NoMatches {
                             span: expr_value.span,
+                            value: expr_value.to_string(),
                         },
                     )))
                 }

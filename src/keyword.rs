@@ -1,12 +1,13 @@
 use std::fmt::Display;
 
+use proc_macro2::Span;
 use syn::{
     Ident,
     parse::{Parse, ParseStream},
 };
 
 pub enum Keyword {
-    Str,
+    Str(Span),
 }
 
 impl Parse for Keyword {
@@ -14,7 +15,7 @@ impl Parse for Keyword {
         let ident = input.parse::<Ident>()?;
 
         match ident.to_string().as_str() {
-            "str" => Ok(Keyword::Str),
+            "str" => Ok(Keyword::Str(ident.span())),
 
             _ => Err(syn::Error::new(ident.span(), "expected keyword")),
         }
@@ -24,7 +25,7 @@ impl Parse for Keyword {
 impl Display for Keyword {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Keyword::Str => write!(f, "str"),
+            Keyword::Str(_) => write!(f, "str"),
         }
     }
 }

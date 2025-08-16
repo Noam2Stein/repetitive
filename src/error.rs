@@ -55,6 +55,7 @@ pub enum Error {
 
     NoMatches {
         span: Span,
+        value: String,
     },
 
     NameAlreadyExists(Name),
@@ -145,7 +146,9 @@ impl Error {
                 ),
             ),
 
-            Error::NoMatches { span } => syn::Error::new(span, "none of the match arms matched"),
+            Error::NoMatches { span, value } => {
+                syn::Error::new(span, format!("no matches found for `{value}`"))
+            }
 
             Error::NameAlreadyExists(name) => syn::Error::new(
                 name.span,
