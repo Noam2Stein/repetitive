@@ -55,6 +55,9 @@ pub enum Op {
     Contains(Span),
     ConcatIdent(Span),
     ConcatString(Span),
+
+    // Conversion
+    ToFloat(Span),
 }
 
 impl Op {
@@ -95,6 +98,7 @@ impl Op {
             Self::Contains(span) => *span,
             Self::ConcatIdent(span) => *span,
             Self::ConcatString(span) => *span,
+            Self::ToFloat(span) => *span,
         }
     }
 }
@@ -188,6 +192,7 @@ impl Op {
             Method::Contains(span) => Op::Contains(span),
             Method::ConcatIdent(span) => Op::ConcatIdent(span),
             Method::ConcatString(span) => Op::ConcatString(span),
+            Method::ToFloat(span) => Op::ToFloat(span),
         }
     }
 
@@ -1947,6 +1952,30 @@ impl Op {
                 }
 
                 ValueKind::String(output_str)
+            }
+
+            Self::ToFloat(span) => {
+                let [value] = args else {
+                    return Err(Error::ArgCount {
+                        op: "to_float",
+                        span,
+                        expected: 1,
+                        inputs_desc: Some("value to convert"),
+                        found: args.len(),
+                    });
+                };
+
+                match &value.kind {
+                    ValueKind::Int(int) => ValueKind::Float(*int as f64),
+                    ValueKind::Float(float) => ValueKind::Float(*float),
+                    _ => {
+                        return Err(Error::ExpectedFound {
+                            span,
+                            expected: "int",
+                            found: value.kind.kind_str(),
+                        });
+                    }
+                }
             }
         };
 

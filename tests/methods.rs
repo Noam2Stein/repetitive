@@ -16,7 +16,10 @@ repetitive! {
     const _: () = assert!(@([1, 2, 3].contains(2)));
     const _: () = assert!(!(@([1, 2, 3].contains(4))));
 
-
     const _: () = assert!(@(1.neg().add(-1) == -2));
     const _: () = assert!(@([1, 2][0].add(1) == 2));
+
+    const _: () = assert!(@(1.to_float() == 1.0));
+    const _: () = assert!(@(1.0.to_float() == 1.0));
+    const _: () = assert!(@((-900).to_float() == -900.0));
 }

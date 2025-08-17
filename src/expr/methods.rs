@@ -45,6 +45,9 @@ pub enum Method {
     Contains(Span),
     ConcatIdent(Span),
     ConcatString(Span),
+
+    // Conversion
+    ToFloat(Span),
 }
 
 impl ContextParse for Method {
@@ -107,6 +110,9 @@ impl ContextParse for Method {
             "concat_ident" => Self::ConcatIdent(ident.span()),
             "concat_string" => Self::ConcatString(ident.span()),
 
+            // Conversion
+            "to_float" => Self::ToFloat(ident.span()),
+
             _ => {
                 return Err(Error::ParseError(syn::Error::new(
                     ident.span(),
@@ -165,6 +171,9 @@ pub fn paste_method_doc(idents: &[(Token![.], Option<Ident>)]) -> TokenStream {
             Some("concat_ident") => quote! { val #dot #ident() },
             Some("concat_string") => quote! { val #dot #ident() },
 
+            // Conversion
+            Some("to_float") => quote! { val #dot #ident() },
+
             Some(_) => quote! { val #dot #ident },
             None => quote! { val #dot },
         }
@@ -203,6 +212,8 @@ pub fn paste_method_doc(idents: &[(Token![.], Option<Ident>)]) -> TokenStream {
     let contains_doc = fn_doc("contains", CONTAINS_DOC, &idents);
     let concat_ident_doc = fn_doc("concat_ident", CONCAT_IDENT_DOC, &idents);
     let concat_string_doc = fn_doc("concat_string", CONCAT_STRING_DOC, &idents);
+
+    let to_float_doc = fn_doc("to_float", TO_FLOAT_DOC, &idents);
 
     quote! {
         const _: () = {
@@ -326,6 +337,10 @@ pub fn paste_method_doc(idents: &[(Token![.], Option<Ident>)]) -> TokenStream {
                 #[allow(dead_code)]
                 #[doc = #concat_string_doc]
                 const fn concat_string(self) -> Self { Self }
+
+                #[allow(dead_code)]
+                #[doc = #to_float_doc]
+                const fn to_float(self) -> Self { Self }
             }
 
             #[allow(dead_code)]
@@ -445,3 +460,5 @@ const CONCAT_IDENT_DOC: &str =
 
 const CONCAT_STRING_DOC: &str =
     "Concatenates the items of a list into a `str`, this works exactly like `@[...]`.";
+
+const TO_FLOAT_DOC: &str = "Converts a fragment to a `float`. This works for `int` fragments.";
