@@ -72,4 +72,19 @@ repetitive! {
     const _: () = assert!(@(1.6.iatrunc() == 2));
     const _: () = assert!(@((-1.4).iatrunc() == -2));
     const _: () = assert!(@((-1.6).iatrunc() == -2));
+
+    const _: () = assert!(@(1.0.log(2.0) == 0.0));
+    const _: () = assert!(@(2.0.log(2.0) == 1.0));
+    const _: () = assert!(@(4.0.log(2.0) == 2.0));
+    const _: () = assert!(@(8.0.log(2.0) == 3.0));
+
+    const _: () = assert!(@(1.0.log2() == 0.0));
+    const _: () = assert!(@(2.0.log2() == 1.0));
+    const _: () = assert!(@(4.0.log2() == 2.0));
+    const _: () = assert!(@(8.0.log2() == 3.0));
+
+    const _: () = assert!(@(1.0.log10() == 0.0));
+    const _: () = assert!(@(10.0.log10() == 1.0));
+    const _: () = assert!(@(100.0.log10() == 2.0));
+    const _: () = assert!(@(1000.0.log10() == 3.0));
 }

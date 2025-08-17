@@ -70,6 +70,11 @@ pub enum Op {
     ICeil(Span),
     ITrunc(Span),
     IAtrunc(Span),
+
+    // Log
+    Log(Span),
+    Log2(Span),
+    Log10(Span),
 }
 
 impl Op {
@@ -121,6 +126,9 @@ impl Op {
             Self::ICeil(span) => *span,
             Self::ITrunc(span) => *span,
             Self::IAtrunc(span) => *span,
+            Self::Log(span) => *span,
+            Self::Log2(span) => *span,
+            Self::Log10(span) => *span,
         }
     }
 }
@@ -225,6 +233,9 @@ impl Op {
             Method::ICeil(span) => Op::ICeil(span),
             Method::ITrunc(span) => Op::ITrunc(span),
             Method::IAtrunc(span) => Op::IAtrunc(span),
+            Method::Log(span) => Op::Log(span),
+            Method::Log2(span) => Op::Log2(span),
+            Method::Log10(span) => Op::Log10(span),
         }
     }
 
@@ -2067,6 +2078,80 @@ impl Op {
                 } else {
                     ValueKind::Float(float_output)
                 }
+            }
+
+            Self::Log(span) => {
+                let [value, base] = args else {
+                    return Err(Error::ArgCount {
+                        op: "log",
+                        span,
+                        expected: 2,
+                        inputs_desc: Some("value and base"),
+                        found: args.len(),
+                    });
+                };
+
+                let ValueKind::Float(float) = value.kind else {
+                    return Err(Error::ExpectedFound {
+                        span,
+                        expected: "float",
+                        found: value.kind.kind_str(),
+                    });
+                };
+
+                let ValueKind::Float(base) = base.kind else {
+                    return Err(Error::ExpectedFound {
+                        span,
+                        expected: "float",
+                        found: base.kind.kind_str(),
+                    });
+                };
+
+                ValueKind::Float(float.log(base))
+            }
+
+            Self::Log2(span) => {
+                let [value] = args else {
+                    return Err(Error::ArgCount {
+                        op: "log2",
+                        span,
+                        expected: 1,
+                        inputs_desc: Some("value"),
+                        found: args.len(),
+                    });
+                };
+
+                let ValueKind::Float(float) = value.kind else {
+                    return Err(Error::ExpectedFound {
+                        span,
+                        expected: "float",
+                        found: value.kind.kind_str(),
+                    });
+                };
+
+                ValueKind::Float(float.log2())
+            }
+
+            Self::Log10(span) => {
+                let [value] = args else {
+                    return Err(Error::ArgCount {
+                        op: "log10",
+                        span,
+                        expected: 1,
+                        inputs_desc: Some("value"),
+                        found: args.len(),
+                    });
+                };
+
+                let ValueKind::Float(float) = value.kind else {
+                    return Err(Error::ExpectedFound {
+                        span,
+                        expected: "float",
+                        found: value.kind.kind_str(),
+                    });
+                };
+
+                ValueKind::Float(float.log10())
             }
         };
 

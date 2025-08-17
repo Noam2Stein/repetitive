@@ -60,6 +60,11 @@ pub enum Method {
     ICeil(Span),
     ITrunc(Span),
     IAtrunc(Span),
+
+    // Log
+    Log(Span),
+    Log2(Span),
+    Log10(Span),
 }
 
 impl ContextParse for Method {
@@ -137,6 +142,11 @@ impl ContextParse for Method {
             "itrunc" => Self::ITrunc(ident.span()),
             "iatrunc" => Self::IAtrunc(ident.span()),
 
+            // Log
+            "log" => Self::Log(ident.span()),
+            "log2" => Self::Log2(ident.span()),
+            "log10" => Self::Log10(ident.span()),
+
             _ => {
                 return Err(Error::ParseError(syn::Error::new(
                     ident.span(),
@@ -210,6 +220,11 @@ pub fn paste_method_doc(idents: &[(Token![.], Option<Ident>)]) -> TokenStream {
             Some("itrunc") => quote! { val #dot #ident() },
             Some("iatrunc") => quote! { val #dot #ident() },
 
+            // Log
+            Some("log") => quote! { val #dot #ident(base) },
+            Some("log2") => quote! { val #dot #ident() },
+            Some("log10") => quote! { val #dot #ident() },
+
             Some(_) => quote! { val #dot #ident },
             None => quote! { val #dot },
         }
@@ -261,6 +276,10 @@ pub fn paste_method_doc(idents: &[(Token![.], Option<Ident>)]) -> TokenStream {
     let iceil_doc = fn_doc("iceil", ICEIL_DOC, &idents);
     let itrunc_doc = fn_doc("itrunc", ITRUNC_DOC, &idents);
     let iatrunc_doc = fn_doc("iatrunc", IATRUNC_DOC, &idents);
+
+    let log_doc = fn_doc("log", LOG_DOC, &idents);
+    let log2_doc = fn_doc("log2", LOG2_DOC, &idents);
+    let log10_doc = fn_doc("log10", LOG10_DOC, &idents);
 
     quote! {
         const _: () = {
@@ -428,6 +447,18 @@ pub fn paste_method_doc(idents: &[(Token![.], Option<Ident>)]) -> TokenStream {
                 #[allow(dead_code)]
                 #[doc = #iatrunc_doc]
                 const fn iatrunc(self) -> Self { Self }
+
+                #[allow(dead_code)]
+                #[doc = #log_doc]
+                const fn log(self, base: Self) -> Self { Self }
+
+                #[allow(dead_code)]
+                #[doc = #log2_doc]
+                const fn log2(self) -> Self { Self }
+
+                #[allow(dead_code)]
+                #[doc = #log10_doc]
+                const fn log10(self) -> Self { Self }
             }
 
             #[allow(dead_code)]
@@ -442,6 +473,8 @@ pub fn paste_method_doc(idents: &[(Token![.], Option<Ident>)]) -> TokenStream {
             let min = Fragment;
             #[allow(dead_code)]
             let max = Fragment;
+            #[allow(dead_code)]
+            let base = Fragment;
 
             #(#ident_calls;)*
         };
@@ -572,3 +605,9 @@ const ICEIL_DOC: &str =
 const ITRUNC_DOC: &str = "Rounds a float fragment to an integer towards zero (trunc to int).";
 
 const IATRUNC_DOC: &str = "Rounds a float fragment to an integer away from zero (atrunc to int). `atrunc` is the opposite of `trunc`.";
+
+const LOG_DOC: &str = "Calculates the logarithm of a float fragment with the given base.";
+
+const LOG2_DOC: &str = "Calculates the logarithm of a float fragment with base 2.";
+
+const LOG10_DOC: &str = "Calculates the logarithm of a float fragment with base 10.";
