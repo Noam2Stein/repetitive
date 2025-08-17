@@ -22,4 +22,54 @@ repetitive! {
     const _: () = assert!(@(1.to_float() == 1.0));
     const _: () = assert!(@(1.0.to_float() == 1.0));
     const _: () = assert!(@((-900).to_float() == -900.0));
+
+    const _: () = assert!(@(1.4.round() == 1.0));
+    const _: () = assert!(@(1.6.round() == 2.0));
+    const _: () = assert!(@((-1.4).round() == -1.0));
+    const _: () = assert!(@((-1.6).round() == -2.0));
+
+    const _: () = assert!(@(1.4.floor() == 1.0));
+    const _: () = assert!(@(1.6.floor() == 1.0));
+    const _: () = assert!(@((-1.4).floor() == -2.0));
+    const _: () = assert!(@((-1.6).floor() == -2.0));
+
+    const _: () = assert!(@(1.4.ceil() == 2.0));
+    const _: () = assert!(@(1.6.ceil() == 2.0));
+    const _: () = assert!(@((-1.4).ceil() == -1.0));
+    const _: () = assert!(@((-1.6).ceil() == -1.0));
+
+    const _: () = assert!(@(1.4.trunc() == 1.0));
+    const _: () = assert!(@(1.6.trunc() == 1.0));
+    const _: () = assert!(@((-1.4).trunc() == -1.0));
+    const _: () = assert!(@((-1.6).trunc() == -1.0));
+
+    const _: () = assert!(@(1.4.atrunc() == 2.0));
+    const _: () = assert!(@(1.6.atrunc() == 2.0));
+    const _: () = assert!(@((-1.4).atrunc() == -2.0));
+    const _: () = assert!(@((-1.6).atrunc() == -2.0));
+
+    const _: () = assert!(@(1.4.iround() == 1));
+    const _: () = assert!(@(1.6.iround() == 2));
+    const _: () = assert!(@((-1.4).iround() == -1));
+    const _: () = assert!(@((-1.6).iround() == -2));
+
+    const _: () = assert!(@(1.4.ifloor() == 1));
+    const _: () = assert!(@(1.6.ifloor() == 1));
+    const _: () = assert!(@((-1.4).ifloor() == -2));
+    const _: () = assert!(@((-1.6).ifloor() == -2));
+
+    const _: () = assert!(@(1.4.iceil() == 2));
+    const _: () = assert!(@(1.6.iceil() == 2));
+    const _: () = assert!(@((-1.4).iceil() == -1));
+    const _: () = assert!(@((-1.6).iceil() == -1));
+
+    const _: () = assert!(@(1.4.itrunc() == 1));
+    const _: () = assert!(@(1.6.itrunc() == 1));
+    const _: () = assert!(@((-1.4).itrunc() == -1));
+    const _: () = assert!(@((-1.6).itrunc() == -1));
+
+    const _: () = assert!(@(1.4.iatrunc() == 2));
+    const _: () = assert!(@(1.6.iatrunc() == 2));
+    const _: () = assert!(@((-1.4).iatrunc() == -2));
+    const _: () = assert!(@((-1.6).iatrunc() == -2));
 }

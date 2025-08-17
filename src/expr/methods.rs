@@ -48,6 +48,18 @@ pub enum Method {
 
     // Conversion
     ToFloat(Span),
+
+    // Rounding
+    Round(Span),
+    Floor(Span),
+    Ceil(Span),
+    Trunc(Span),
+    Atrunc(Span),
+    IRound(Span),
+    IFloor(Span),
+    ICeil(Span),
+    ITrunc(Span),
+    IAtrunc(Span),
 }
 
 impl ContextParse for Method {
@@ -113,6 +125,18 @@ impl ContextParse for Method {
             // Conversion
             "to_float" => Self::ToFloat(ident.span()),
 
+            // Rounding
+            "round" => Self::Round(ident.span()),
+            "floor" => Self::Floor(ident.span()),
+            "ceil" => Self::Ceil(ident.span()),
+            "trunc" => Self::Trunc(ident.span()),
+            "atrunc" => Self::Atrunc(ident.span()),
+            "iround" => Self::IRound(ident.span()),
+            "ifloor" => Self::IFloor(ident.span()),
+            "iceil" => Self::ICeil(ident.span()),
+            "itrunc" => Self::ITrunc(ident.span()),
+            "iatrunc" => Self::IAtrunc(ident.span()),
+
             _ => {
                 return Err(Error::ParseError(syn::Error::new(
                     ident.span(),
@@ -174,6 +198,18 @@ pub fn paste_method_doc(idents: &[(Token![.], Option<Ident>)]) -> TokenStream {
             // Conversion
             Some("to_float") => quote! { val #dot #ident() },
 
+            // Rounding
+            Some("round") => quote! { val #dot #ident() },
+            Some("floor") => quote! { val #dot #ident() },
+            Some("ceil") => quote! { val #dot #ident() },
+            Some("trunc") => quote! { val #dot #ident() },
+            Some("atrunc") => quote! { val #dot #ident() },
+            Some("iround") => quote! { val #dot #ident() },
+            Some("ifloor") => quote! { val #dot #ident() },
+            Some("iceil") => quote! { val #dot #ident() },
+            Some("itrunc") => quote! { val #dot #ident() },
+            Some("iatrunc") => quote! { val #dot #ident() },
+
             Some(_) => quote! { val #dot #ident },
             None => quote! { val #dot },
         }
@@ -214,6 +250,17 @@ pub fn paste_method_doc(idents: &[(Token![.], Option<Ident>)]) -> TokenStream {
     let concat_string_doc = fn_doc("concat_string", CONCAT_STRING_DOC, &idents);
 
     let to_float_doc = fn_doc("to_float", TO_FLOAT_DOC, &idents);
+
+    let round_doc = fn_doc("round", ROUND_DOC, &idents);
+    let floor_doc = fn_doc("floor", FLOOR_DOC, &idents);
+    let ceil_doc = fn_doc("ceil", CEIL_DOC, &idents);
+    let trunc_doc = fn_doc("trunc", TRUNC_DOC, &idents);
+    let atrunc_doc = fn_doc("atrunc", ATRUNC_DOC, &idents);
+    let iround_doc = fn_doc("iround", IROUND_DOC, &idents);
+    let ifloor_doc = fn_doc("ifloor", IFLOR_DOC, &idents);
+    let iceil_doc = fn_doc("iceil", ICEIL_DOC, &idents);
+    let itrunc_doc = fn_doc("itrunc", ITRUNC_DOC, &idents);
+    let iatrunc_doc = fn_doc("iatrunc", IATRUNC_DOC, &idents);
 
     quote! {
         const _: () = {
@@ -341,6 +388,46 @@ pub fn paste_method_doc(idents: &[(Token![.], Option<Ident>)]) -> TokenStream {
                 #[allow(dead_code)]
                 #[doc = #to_float_doc]
                 const fn to_float(self) -> Self { Self }
+
+                #[allow(dead_code)]
+                #[doc = #round_doc]
+                const fn round(self) -> Self { Self }
+
+                #[allow(dead_code)]
+                #[doc = #floor_doc]
+                const fn floor(self) -> Self { Self }
+
+                #[allow(dead_code)]
+                #[doc = #ceil_doc]
+                const fn ceil(self) -> Self { Self }
+
+                #[allow(dead_code)]
+                #[doc = #trunc_doc]
+                const fn trunc(self) -> Self { Self }
+
+                #[allow(dead_code)]
+                #[doc = #atrunc_doc]
+                const fn atrunc(self) -> Self { Self }
+
+                #[allow(dead_code)]
+                #[doc = #iround_doc]
+                const fn iround(self) -> Self { Self }
+
+                #[allow(dead_code)]
+                #[doc = #ifloor_doc]
+                const fn ifloor(self) -> Self { Self }
+
+                #[allow(dead_code)]
+                #[doc = #iceil_doc]
+                const fn iceil(self) -> Self { Self }
+
+                #[allow(dead_code)]
+                #[doc = #itrunc_doc]
+                const fn itrunc(self) -> Self { Self }
+
+                #[allow(dead_code)]
+                #[doc = #iatrunc_doc]
+                const fn iatrunc(self) -> Self { Self }
             }
 
             #[allow(dead_code)]
@@ -462,3 +549,26 @@ const CONCAT_STRING_DOC: &str =
     "Concatenates the items of a list into a `str`, this works exactly like `@[...]`.";
 
 const TO_FLOAT_DOC: &str = "Converts a fragment to a `float`. This works for `int` fragments.";
+
+const ROUND_DOC: &str = "Rounds a float fragment to the nearest whole number.";
+
+const FLOOR_DOC: &str = "Rounds a float fragment to a whole number towards negative infinity.";
+
+const CEIL_DOC: &str = "Rounds a float fragment to a whole number towards positive infinity.";
+
+const TRUNC_DOC: &str = "Rounds a float fragment to a whole number towards zero.";
+
+const ATRUNC_DOC: &str =
+    "Rounds a float fragment to a whole number away from zero. opposite of `trunc`.";
+
+const IROUND_DOC: &str = "Rounds a float fragment to the nearest integer (round to int).";
+
+const IFLOR_DOC: &str =
+    "Rounds a float fragment to an integer towards negative infinity (floor to int).";
+
+const ICEIL_DOC: &str =
+    "Rounds a float fragment to an integer towards positive infinity (ceil to int).";
+
+const ITRUNC_DOC: &str = "Rounds a float fragment to an integer towards zero (trunc to int).";
+
+const IATRUNC_DOC: &str = "Rounds a float fragment to an integer away from zero (atrunc to int). `atrunc` is the opposite of `trunc`.";

@@ -58,6 +58,18 @@ pub enum Op {
 
     // Conversion
     ToFloat(Span),
+
+    // Rounding
+    Round(Span),
+    Floor(Span),
+    Ceil(Span),
+    Trunc(Span),
+    Atrunc(Span),
+    IRound(Span),
+    IFloor(Span),
+    ICeil(Span),
+    ITrunc(Span),
+    IAtrunc(Span),
 }
 
 impl Op {
@@ -99,6 +111,16 @@ impl Op {
             Self::ConcatIdent(span) => *span,
             Self::ConcatString(span) => *span,
             Self::ToFloat(span) => *span,
+            Self::Round(span) => *span,
+            Self::Floor(span) => *span,
+            Self::Ceil(span) => *span,
+            Self::Trunc(span) => *span,
+            Self::Atrunc(span) => *span,
+            Self::IRound(span) => *span,
+            Self::IFloor(span) => *span,
+            Self::ICeil(span) => *span,
+            Self::ITrunc(span) => *span,
+            Self::IAtrunc(span) => *span,
         }
     }
 }
@@ -193,6 +215,16 @@ impl Op {
             Method::ConcatIdent(span) => Op::ConcatIdent(span),
             Method::ConcatString(span) => Op::ConcatString(span),
             Method::ToFloat(span) => Op::ToFloat(span),
+            Method::Round(span) => Op::Round(span),
+            Method::Floor(span) => Op::Floor(span),
+            Method::Ceil(span) => Op::Ceil(span),
+            Method::Trunc(span) => Op::Trunc(span),
+            Method::Atrunc(span) => Op::Atrunc(span),
+            Method::IRound(span) => Op::IRound(span),
+            Method::IFloor(span) => Op::IFloor(span),
+            Method::ICeil(span) => Op::ICeil(span),
+            Method::ITrunc(span) => Op::ITrunc(span),
+            Method::IAtrunc(span) => Op::IAtrunc(span),
         }
     }
 
@@ -1975,6 +2007,65 @@ impl Op {
                             found: value.kind.kind_str(),
                         });
                     }
+                }
+            }
+
+            Self::Round(span)
+            | Self::Floor(span)
+            | Self::Ceil(span)
+            | Self::Trunc(span)
+            | Self::Atrunc(span)
+            | Self::IRound(span)
+            | Self::IFloor(span)
+            | Self::ICeil(span)
+            | Self::ITrunc(span)
+            | Self::IAtrunc(span) => {
+                let [value] = args else {
+                    return Err(Error::ArgCount {
+                        op: "round",
+                        span,
+                        expected: 1,
+                        inputs_desc: Some("value to round"),
+                        found: args.len(),
+                    });
+                };
+
+                let ValueKind::Float(float) = value.kind else {
+                    return Err(Error::ExpectedFound {
+                        span,
+                        expected: "float",
+                        found: value.kind.kind_str(),
+                    });
+                };
+
+                let float_output = match self {
+                    Self::Round(_) | Self::IRound(_) => float.round(),
+                    Self::Floor(_) | Self::IFloor(_) => float.floor(),
+                    Self::Ceil(_) | Self::ICeil(_) => float.ceil(),
+                    Self::Trunc(_) | Self::ITrunc(_) => float.trunc(),
+                    Self::Atrunc(_) | Self::IAtrunc(_) => {
+                        if float.is_sign_negative() {
+                            float.floor()
+                        } else {
+                            float.ceil()
+                        }
+                    }
+                    _ => unreachable!("round op guarenteed"),
+                };
+
+                let is_to_int = matches!(
+                    self,
+                    Self::IRound(_)
+                        | Self::IFloor(_)
+                        | Self::ICeil(_)
+                        | Self::ITrunc(_)
+                        | Self::IAtrunc(_)
+                );
+
+                if is_to_int {
+                    ValueKind::Int(float_output as i128)
+                } else {
+                    ValueKind::Float(float_output)
                 }
             }
         };
