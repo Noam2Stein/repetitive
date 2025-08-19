@@ -1,3 +1,6 @@
+[workspace]
+members = [ ".", "sandbox" ]
+
 [package]
 categories  = [ "rust-patterns" ]
 description = "Macro for generating repetitive code"

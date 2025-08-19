@@ -308,7 +308,8 @@ impl Expr {
                     let path_lit = LitStr::ctx_parse.ctx_parse2(group.stream(), ctx)?;
                     let path = PathBuf::from(path_lit.value());
 
-                    let root = env!("CARGO_MANIFEST_DIR");
+                    let root =
+                        std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is not set");
                     let path = PathBuf::from(root).join(path);
 
                     let mut file = File::open(path)
