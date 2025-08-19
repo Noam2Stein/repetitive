@@ -45,6 +45,7 @@ pub enum Method {
     Contains(Span),
     ConcatIdent(Span),
     ConcatString(Span),
+    Unique(Span),
 
     // Conversion
     ToFloat(Span),
@@ -126,6 +127,7 @@ impl ContextParse for Method {
             "contains" => Self::Contains(ident.span()),
             "concat_ident" => Self::ConcatIdent(ident.span()),
             "concat_string" => Self::ConcatString(ident.span()),
+            "unique" => Self::Unique(ident.span()),
 
             // Conversion
             "to_float" => Self::ToFloat(ident.span()),
@@ -204,6 +206,7 @@ pub fn paste_method_doc(idents: &[(Token![.], Option<Ident>)]) -> TokenStream {
             Some("contains") => quote! { val #dot #ident(value) },
             Some("concat_ident") => quote! { val #dot #ident() },
             Some("concat_string") => quote! { val #dot #ident() },
+            Some("unique") => quote! { val #dot #ident() },
 
             // Conversion
             Some("to_float") => quote! { val #dot #ident() },
@@ -263,6 +266,7 @@ pub fn paste_method_doc(idents: &[(Token![.], Option<Ident>)]) -> TokenStream {
     let contains_doc = fn_doc("contains", CONTAINS_DOC, &idents);
     let concat_ident_doc = fn_doc("concat_ident", CONCAT_IDENT_DOC, &idents);
     let concat_string_doc = fn_doc("concat_string", CONCAT_STRING_DOC, &idents);
+    let unique_doc = fn_doc("unique", UNIQUE_DOC, &idents);
 
     let to_float_doc = fn_doc("to_float", TO_FLOAT_DOC, &idents);
 
@@ -403,6 +407,10 @@ pub fn paste_method_doc(idents: &[(Token![.], Option<Ident>)]) -> TokenStream {
                 #[allow(dead_code)]
                 #[doc = #concat_string_doc]
                 const fn concat_string(self) -> Self { Self }
+
+                #[allow(dead_code)]
+                #[doc = #unique_doc]
+                const fn unique(self) -> Self { Self }
 
                 #[allow(dead_code)]
                 #[doc = #to_float_doc]
@@ -580,6 +588,8 @@ const CONCAT_IDENT_DOC: &str =
 
 const CONCAT_STRING_DOC: &str =
     "Concatenates the items of a list into a `str`, this works exactly like `@[...]`.";
+
+const UNIQUE_DOC: &str = "Returns a list of unique elements from the input list in order.";
 
 const TO_FLOAT_DOC: &str = "Converts a fragment to a `float`. This works for `int` fragments.";
 

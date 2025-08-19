@@ -55,6 +55,7 @@ pub enum Op {
     Contains(Span),
     ConcatIdent(Span),
     ConcatString(Span),
+    Unique(Span),
 
     // Conversion
     ToFloat(Span),
@@ -115,6 +116,7 @@ impl Op {
             Self::Contains(span) => *span,
             Self::ConcatIdent(span) => *span,
             Self::ConcatString(span) => *span,
+            Self::Unique(span) => *span,
             Self::ToFloat(span) => *span,
             Self::Round(span) => *span,
             Self::Floor(span) => *span,
@@ -222,6 +224,7 @@ impl Op {
             Method::Contains(span) => Op::Contains(span),
             Method::ConcatIdent(span) => Op::ConcatIdent(span),
             Method::ConcatString(span) => Op::ConcatString(span),
+            Method::Unique(span) => Op::Unique(span),
             Method::ToFloat(span) => Op::ToFloat(span),
             Method::Round(span) => Op::Round(span),
             Method::Floor(span) => Op::Floor(span),
@@ -1995,6 +1998,58 @@ impl Op {
                 }
 
                 ValueKind::String(output_str)
+            }
+
+            Self::Unique(span) => {
+                let [list] = args else {
+                    return Err(Error::ArgCount {
+                        op: "unique",
+                        span,
+                        expected: 1,
+                        inputs_desc: Some("list"),
+                        found: args.len(),
+                    });
+                };
+
+                let ValueKind::List(list) = &list.kind else {
+                    return Err(Error::ExpectedFound {
+                        span,
+                        expected: "list",
+                        found: list.kind.kind_str(),
+                    });
+                };
+
+                let mut output = Vec::<Value>::new();
+                for item in list {
+                    let contains = 'contains: {
+                        for output_item in &output {
+                            let eq =
+                                Op::Eq(span).compute(&[output_item.clone(), item.clone()], ctx)?;
+
+                            match &eq.kind {
+                                ValueKind::Unknown(guard) => {
+                                    return Ok(Value::unknown(*guard));
+                                }
+
+                                ValueKind::Bool(val) => {
+                                    if *val {
+                                        break 'contains true;
+                                    }
+                                }
+
+                                _ => unreachable!("contains eq must be a bool"),
+                            }
+                        }
+
+                        false
+                    };
+
+                    if !contains {
+                        output.push(item.clone());
+                    }
+                }
+
+                ValueKind::List(output)
             }
 
             Self::ToFloat(span) => {
