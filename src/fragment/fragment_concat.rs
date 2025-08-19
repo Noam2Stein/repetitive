@@ -13,11 +13,7 @@ impl ContextParse for FragmentConcat {
     where
         Self: Sized,
     {
-        let keyword = if Keyword::peek(input) {
-            Some(<Keyword>::ctx_parse(input, ctx)?)
-        } else {
-            None
-        };
+        let keyword = Keyword::ctx_parse_option(input, ctx)?;
 
         let group = Group::ctx_parse(input, ctx)?;
         if group.delimiter() != Delimiter::Bracket {
@@ -44,11 +40,17 @@ impl ContextParse for FragmentConcat {
 
         let parts = parse_fn.ctx_parse2(group.stream(), ctx)?;
 
-        let op = if let Some(Keyword::Str(span)) = keyword {
-            Op::ConcatString(span)
-        } else {
-            Op::ConcatIdent(group.span())
+        let op = match keyword {
+            Some(Keyword::Str(span)) => Op::ConcatString(span),
+            Some(Keyword::Include(span)) => {
+                return Err(Error::ParseError(syn::Error::new(
+                    span,
+                    "`include` is not a valid concat keyword",
+                )));
+            }
+            None => Op::ConcatIdent(group.span()),
         };
+
         let args = vec![Expr {
             span: group.span(),
             kind: ExprKind::List(parts),

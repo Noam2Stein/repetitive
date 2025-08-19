@@ -1,8 +1,8 @@
-use std::mem::replace;
+use std::{fs::File, mem::replace, path::PathBuf, str::FromStr};
 
 use proc_macro2::{Delimiter, Group, Span, TokenStream};
 use syn::{
-    Ident, Token,
+    Ident, LitStr, Token,
     parse::ParseStream,
     token::{Bracket, Paren},
 };
@@ -286,6 +286,46 @@ impl Expr {
                     )));
                 }
             });
+        }
+
+        if let Some(keyword) = Keyword::ctx_parse_option(input, ctx)? {
+            match keyword {
+                Keyword::Str(span) => {
+                    return Err(Error::ParseError(syn::Error::new(
+                        span,
+                        "`str` can only be used in `@str[...]`",
+                    )));
+                }
+                Keyword::Include(span) => {
+                    let group = Group::ctx_parse(input, ctx)?;
+                    if group.delimiter() != Delimiter::Parenthesis {
+                        return Err(Error::ParseError(syn::Error::new(
+                            group.span(),
+                            "expected a parenthesized list",
+                        )));
+                    }
+
+                    let path_lit = LitStr::ctx_parse.ctx_parse2(group.stream(), ctx)?;
+                    let path = PathBuf::from(path_lit.value());
+
+                    let root = env!("CARGO_MANIFEST_DIR");
+                    let path = PathBuf::from(root).join(path);
+
+                    let mut file = File::open(path)
+                        .map_err(|e| Error::ParseError(syn::Error::new(span, e.to_string())))?;
+
+                    let mut file_str = String::new();
+                    std::io::Read::read_to_string(&mut file, &mut file_str)
+                        .map_err(|e| Error::ParseError(syn::Error::new(span, e.to_string())))?;
+
+                    let tokens = TokenStream::from_str(&file_str)
+                        .map_err(|e| Error::ParseError(syn::Error::new(span, e.to_string())))?;
+
+                    let expr = Expr::ctx_parse.ctx_parse2(tokens, ctx)?;
+
+                    return Ok(expr);
+                }
+            }
         }
 
         if input.peek(Token![if]) {
