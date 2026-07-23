@@ -1,0 +1,11 @@
+[book]
+title = "repetitive Documentation"
+description = "A Rust metaprogramming macro with control flow syntax"
+language = "en"
+
+[rust]
+edition = "2024"
+
+[output.html]
+git-repository-url = "https://github.com/Noam2Stein/repetitive"
+edit-url-template = "https://github.com/Noam2Stein/repetitive/edit/main/book/{path}"

@@ -1,0 +1,11 @@
+[package]
+name = "repetitive"
+categories = ["rust-patterns"]
+edition = "2024"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Noam2Stein/repetitive"
+rust-version = "1.97"
+description = "A metaprogramming macro with control flow syntax"
+
+[lib]
+proc-macro = true
