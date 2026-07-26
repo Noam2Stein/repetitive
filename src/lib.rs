@@ -9,7 +9,7 @@
 //! [`$let`] for reusing values, as well as identifier concatenation and other
 //! useful features.
 //!
-//! For a complete list of features, see the [macro documentation].
+//! For a complete list of features, see the [repetitive Documentation].
 //!
 //! # Example
 //!
@@ -113,7 +113,7 @@
 //! [`$for`]: repetitive#for
 //! [`$if`]: repetitive#if
 //! [`$let`]: repetitive#let
-//! [macro documentation]: repetitive
+//! [repetitive Documentation]: file:///home/user/dev/repetitive/docs/book/metaprogramming-keywords.html
 //! [deep nesting]: https://www.youtube.com/watch?v=CFRhGnuXG-4
 //! [`crabtime`]: https://crates.io/crates/crabtime
 //! [`ggmath`]: https://crates.io/crates/ggmath
@@ -122,7 +122,11 @@
 
 use proc_macro::TokenStream;
 
-/// TODO
+/// A metaprogramming macro with control flow syntax.
+///
+/// See the [repetitive Documentation] for more information.
+///
+/// [repetitive Documentation]: file:///home/user/dev/repetitive/docs/book/metaprogramming-keywords.html
 #[proc_macro]
 pub fn repetitive(input: TokenStream) -> TokenStream {
     let _ = input;
