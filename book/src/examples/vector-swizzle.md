@@ -124,8 +124,8 @@ macro_rules! define_set_swizzle_function {
             $other_elements,
             " elements of `other`.",
         )]
-        pub fn $name(&mut self) {
-            $(self.$self_element = $other_element;)*
+        pub fn $name(&mut self, other: $Other) {
+            $(self.$self_element = other.$other_element;)*
         }
     };
 }

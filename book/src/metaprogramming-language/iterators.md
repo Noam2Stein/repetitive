@@ -7,4 +7,7 @@ be used in [`$for`].
 
 - Ranges of integers (`a..b`, `a..=b`, and `a..`)
 
+- The result of [`iproduct`]
+
 [`$for`]: ../metaprogramming-keywords/for.md
+[`iproduct`]: macros/iproduct.md
