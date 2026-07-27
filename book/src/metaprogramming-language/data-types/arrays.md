@@ -3,10 +3,8 @@
 An array is a collection where all elements are of the same type. Arrays can be
 created using standard Rust array syntax `[a, b, ...]` or `[value; N]`.
 
-Like in standard Rust, there are two kinds of arrays:
-
-- Fixed-size array (the result of array constructors)
-- Dynamically-sized slice (the result of indexing by ranges)
+Unlike in actual Rust, where there are separate types for fixed-size and
+dynamically-sized arrays, here all arrays are dynamically sized.
 
 ## Supported Operations
 
@@ -22,17 +20,15 @@ Arrays currently cannot be pasted.
 
 ```rust
 repetitive! {
-    // This is a fixed-size array
+    // Create an array
     $let elements = ["x", "y", "z", "w"];
 
-    $for N in [2, 3, 4] {
-        $let VecN = format!("Vec{N}");
-
-        // This is a dynamically-sized slice
+    $for (VecN, N) in [("Vec2", 2), ("Vec3", 3), ("Vec4", 4)] {
+        // Get a slice of that array
         $let n_elements = elements[..N];
         
         pub struct $VecN {
-            // You can iterate over slices
+            // Iterate over the slice
             $for element in n_elements {
                 pub $element: f32,
             }
