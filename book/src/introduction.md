@@ -11,6 +11,9 @@ constructs, like [`$for`] for repetition, [`$if`] for conditions, and [`$let`]
 for reusing values, as well as identifier concatenation and other useful
 features.
 
+Think of `repetitive` as not trying to *replace* declarative macros, but as a
+complementary tool handling repetition logic.
+
 This book provides complete documentation for every supported feature. Since
 there are a lot of features, having a dedicated book is preferable to cramming
 all features into the documentation of a single macro.
