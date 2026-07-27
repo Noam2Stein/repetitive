@@ -23,6 +23,7 @@
     - [Match](metaprogramming-language/control-flow/match.md)
   - [Macros](metaprogramming-language/macros.md)
     - [`format!`](metaprogramming-language/macros/format.md)
+    - [`iproduct!`](metaprogramming-language/macros/iproduct.md)
   - [Expressions](metaprogramming-language/expressions.md)
   - [Patterns](metaprogramming-language/patterns.md)
   - [Iterators](metaprogramming-language/iterators.md)

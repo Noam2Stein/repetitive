@@ -58,42 +58,40 @@ repetitive! {
         $let elements = ["x", "y", "z", "w"][..N];
 
         impl $VecN {
-            $for x in elements {
-                $for y in elements {
-                    define_swizzle_function!(
-                        $(format!("{x}{y}")),
-                        Vec2,
-                        2,
-                        $str(format!("`{x}` and `{y}`")),
-                        $x -> x,
-                        $y -> y,
-                    );
+            $for (x, y) in iproduct!(elements, elements) {
+                define_swizzle_function!(
+                    $(format!("{x}{y}")),
+                    Vec2,
+                    2,
+                    $str(format!("`{x}` and `{y}`")),
+                    $x -> x,
+                    $y -> y,
+                );
+            }
 
-                    $for z in elements {
-                        define_swizzle_function!(
-                            $(format!("{x}{y}{z}")),
-                            Vec3,
-                            3,
-                            $str(format!("`{x}`, `{y}` and `{z}`")),
-                            $x -> x,
-                            $y -> y,
-                            $z -> z,
-                        );
+            $for (x, y, z) in iproduct!(elements, elements, elements) {
+                define_swizzle_function!(
+                    $(format!("{x}{y}{z}")),
+                    Vec3,
+                    3,
+                    $str(format!("`{x}`, `{y}` and `{z}`")),
+                    $x -> x,
+                    $y -> y,
+                    $z -> z,
+                );
+            }
 
-                        $for w in elements {
-                            define_swizzle_function!(
-                                $(format!("{x}{y}{z}{w}")),
-                                Vec4,
-                                4,
-                                $str(format!("`{x}`, `{y}`, `{z}` and `{w}`")),
-                                $x -> x,
-                                $y -> y,
-                                $z -> z,
-                                $w -> w,
-                            );
-                        }
-                    }
-                }
+            $for (x, y, z, w) in iproduct!(elements, elements, elements, elements) {
+                define_swizzle_function!(
+                    $(format!("{x}{y}{z}{w}")),
+                    Vec4,
+                    4,
+                    $str(format!("`{x}`, `{y}`, `{z}` and `{w}`")),
+                    $x -> x,
+                    $y -> y,
+                    $z -> z,
+                    $w -> w,
+                );
             }
         }
     }
@@ -138,47 +136,45 @@ repetitive! {
         $let elements = ["x", "y", "z", "w"][..N];
 
         impl $VecN {
-            $for x in elements {
-                $for y in elements {
-                    if x != y {
-                        define_set_swizzle_function!(
-                            $(format!("set_{x}{y}")),
-                            Vec2,
-                            "`x` and `y`",
-                            $str(format!("`{x}` and `{y}`")),
-                            x -> $x,
-                            y -> $y,
-                        );
-                    }
+            $for (x, y) in iproduct!(elements, elements) {
+                if x != y {
+                    define_set_swizzle_function!(
+                        $(format!("set_{x}{y}")),
+                        Vec2,
+                        "`x` and `y`",
+                        $str(format!("`{x}` and `{y}`")),
+                        x -> $x,
+                        y -> $y,
+                    );
+                }
+            }
 
-                    $for z in elements {
-                        if x != y && x != z && y != z {
-                            define_set_swizzle_function!(
-                                $(format!("set_{x}{y}{z}")),
-                                Vec3,
-                                "`x`, `y` and `z`",
-                                $str(format!("`{x}`, `{y}` and `{z}`")),
-                                x -> $x,
-                                y -> $y,
-                                z -> $z,
-                            );
-                        }
+            $for (x, y, z) in iproduct!(elements, elements, elements) {
+                if x != y && x != z && y != z {
+                    define_set_swizzle_function!(
+                        $(format!("set_{x}{y}{z}")),
+                        Vec3,
+                        "`x`, `y` and `z`",
+                        $str(format!("`{x}`, `{y}` and `{z}`")),
+                        x -> $x,
+                        y -> $y,
+                        z -> $z,
+                    );
+                }
+            }
 
-                        $for w in elements {
-                            if x != y && x != z && x != w && y != z && y != w && z != w {
-                                define_set_swizzle_function!(
-                                    $(format!("set_{x}{y}{z}{w}")),
-                                    Vec4,
-                                    "`x`, `y`, `z` and `w`",
-                                    $str(format!("`{x}`, `{y}`, `{z}` and `{w}`")),
-                                    x -> $x,
-                                    y -> $y,
-                                    z -> $z,
-                                    w -> $w,
-                                );
-                            }
-                        }
-                    }
+            $for (x, y, z, w) in iproduct!(elements, elements, elements, elements) {
+                if x != y && x != z && x != w && y != z && y != w && z != w {
+                    define_set_swizzle_function!(
+                        $(format!("set_{x}{y}{z}{w}")),
+                        Vec4,
+                        "`x`, `y`, `z` and `w`",
+                        $str(format!("`{x}`, `{y}`, `{z}` and `{w}`")),
+                        x -> $x,
+                        y -> $y,
+                        z -> $z,
+                        w -> $w,
+                    );
                 }
             }
         }
