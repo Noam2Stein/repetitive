@@ -1,4 +1,4 @@
-# $match
+# `$match`
 
 A control flow construct that emits a selected block of tokens from a list of
 predicates.

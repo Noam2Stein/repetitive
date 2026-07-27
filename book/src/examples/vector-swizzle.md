@@ -24,33 +24,32 @@ macro_rules! define_swizzle_function {
         $name:ident,
         $Output:ident,
         $OutputN:literal,
-        $input_element_list:literal,
-        $(
-            $input_element:ident -> $output_element:ident,
-        )*
+        $self_elements:literal,
+        $($self_element:ident -> $output_element:ident),*
+        $(,)?
     ) => {
         #[doc = concat!(
             "Returns a vector",
             $OutputN,
             " with the ",
-            $input_element_list,
+            $self_elements,
             " elements of `self`",
         )]
         pub fn $name(self) -> $Output {
-            $Output { $($output_element: self.$input_element),* }
+            $Output { $($output_element: self.$self_element),* }
         }
     };
 }
 
 repetitive! {
-    $let elements = ["x", "y", "z", "w"];
-
+    
     $for N in [2, 3, 4] {
         $let VecN = format!("Vec{N}");
+        $let elements = ["x", "y", "z", "w"][..N];
 
         impl $VecN {
-            $for x in 0..N {
-                $for y in 0..N {
+            $for x in elements {
+                $for y in elements {
                     define_swizzle_function!(
                         $(format!("{x}{y}")),
                         Vec2,
@@ -60,7 +59,7 @@ repetitive! {
                         $y -> y,
                     );
 
-                    $for z in 0..N {
+                    $for z in elements {
                         define_swizzle_function!(
                             $(format!("{x}{y}{z}")),
                             Vec3,
@@ -71,7 +70,7 @@ repetitive! {
                             $z -> z,
                         );
 
-                        $for w in 0..N {
+                        $for w in elements {
                             define_swizzle_function!(
                                 $(format!("{x}{y}{z}{w}")),
                                 Vec4,

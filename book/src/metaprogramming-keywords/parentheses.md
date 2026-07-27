@@ -1,4 +1,4 @@
-# $(...)
+# `$(...)`
 
 Pastes the given expression. This is like a shortcut for writing
 `$let var = ...;` then pasting with `$var`.

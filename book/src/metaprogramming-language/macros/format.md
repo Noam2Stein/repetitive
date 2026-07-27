@@ -1,8 +1,9 @@
-# format
+# `format!`
 
 Creates a string using interpolation of values.
 
-This currently only supports a small subset of [Rust formatting syntax]:
+This currently only supports a small subset of [Rust formatting syntax]
+(unsupported features raise an error):
 
 - No positional parameters
 - No named parameters (outside the first string literal)

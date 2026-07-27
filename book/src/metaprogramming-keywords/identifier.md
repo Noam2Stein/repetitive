@@ -1,4 +1,4 @@
-# $&lt;identifier&gt;
+# `$<identifier>`
 
 Writing a variable name after `$` "pastes" that variable's value.
 
@@ -6,7 +6,7 @@ Pasting means taking an expression and turning it into Rust tokens. Here is the
 default pasting behavior for common types:
 
 - Integers turn into unsuffixed integer literals
-- Strings turn into identifiers (an error is emitted if a string is an invalid
+- Strings turn into identifiers (an error is emitted if the string is an invalid
   identifier)
 
 To paste values into other kinds of tokens, use these special metaprogramming

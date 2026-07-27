@@ -1,4 +1,4 @@
-# $str
+# `$str`
 
 Pastes a string value as a string literal, instead of as an identifier.
 

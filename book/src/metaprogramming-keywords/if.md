@@ -1,4 +1,4 @@
-# $if
+# `$if`
 
 A control flow construct that emits a block of tokens if a condition is true.
 This also supports if else chains via `$else` and `$else if`.

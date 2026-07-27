@@ -1,7 +1,7 @@
 # Expressions
 
-This section lists all `repetitive` expressions kinds. These follow standard
-Rust [expression precedence].
+This section lists all `repetitive` expressions kinds. These fully follow
+standard Rust [expression precedence].
 
 - Integer literal
 
