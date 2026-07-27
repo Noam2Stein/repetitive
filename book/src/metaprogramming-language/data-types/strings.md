@@ -1,11 +1,12 @@
 # Strings
 
-Strings are used to represent identifiers and string literals. They can be
-created using string literals and the [`format!`] macro.
+Strings are primarily used to represent identifiers. They can be created using
+string literals and the [`format!`] macro.
 
 ## Supported Operations
 
 - Comparison operators: `==`, `!=`, `<`, `>`, `<=`, `>=`
+- Use in the [`format!`] macro
 
 ## Pasting
 

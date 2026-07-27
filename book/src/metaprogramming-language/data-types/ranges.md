@@ -1,6 +1,7 @@
 # Ranges
 
-Ranges can be created using standard Rust range syntax:
+Ranges are used for iteration and indexing. They can be created using standard
+Rust range syntax:
 
 - `start..end`
 - `start..=last`

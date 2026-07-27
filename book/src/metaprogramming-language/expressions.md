@@ -1,55 +1,38 @@
 # Expressions
 
-This section lists all supported expressions in the `repetitive` interpreted
-language.
+This section lists all `repetitive` expressions kinds. These follow standard
+Rust [expression precedence].
 
-## Literals
+- Integer literal
 
-Supported literals are:
+- String literal
 
-- Integer literal (evaluates to [integer])
-- String literal (evaluates to [string])
-- `true` and `false` (evaluates to [bool])
+- `true` or `false`
 
-## Array Constructor
+- Variable name `<identifier>`
 
-This uses standard Rust array syntax `[value_1, value_2, ...]` or `[value; N]`,
-and evaluates to a fixed-lengthed [array].
+- Macro call `some_macro!(...)` (see [supported macros])
 
-## Tuple Constructor
+- Array constructor `[a, b, ...]`
 
-This uses standard Rust tuple syntax `(value_1, value_2, ...)`,
-and evaluates to a [tuple].
+- Array repeat constructor `[value; N]`
 
-## Range Constructor
+- Tuple constructor `(a, b, ...)`
 
-This uses standard Rust range syntax, and evaluates to a [range].
+- Unary operators `-`, `!`
 
-## Unary Operator
+- Binary operators `&&`, `||`, `+`, `-`, `*`, `/`, `%`, `<<` `>>`, `&`, `|`, `^`
 
-Standard Rust operators are supported: `-` and `!`.
+- Range operators `a..b`, `a..=b`, `a..`, `..b`,
+`..=b`, `..`
 
-## Binary Operator
+- Parentheses `(...)` (used to control expression precedence)
 
-Standard Rust operators are supported: `&&`, `||`, `+`, `-`, `*`, `/`, `%`,
-`<<`, `>>`, `&`, `|` and `^`. These use stanard Rust operator precedence.
+- Field access `value.field`
 
-## Parentheses
+- If else chain
 
-The `(...)` expression is used to specify operator precedence.
+- Match
 
-## If else chain
-
-These behave like in standard Rust. The `else` can technically be removed, but
-that forces the type to be `()` (which is useless).
-
-## Match
-
-Tjos ne
-
-[integer]: data-types/integers.md
-[string]: data-types/strings.md
-[bool]: data-types/booleans.md
-[array]: data-types/arrays.md
-[tuple]: data-types/tuples.md
-[range]: data-types/ranges.md
+[expression precedence]: https://doc.rust-lang.org/reference/expressions.html#expression-precedence
+[supported macros]: macros.md

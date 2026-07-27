@@ -1,7 +1,7 @@
 # Metaprogramming Language
 
 When you write `$for <pattern> in <expression> { ... }`, that expression is not
-standard Rust code. It is evaluated by the custom interpreter of the
+standard Rust code. It is evaluated by the custom interpreter in the
 `repetitive` macro.
 
 `repetitive` implements a small, Rust-like language with simplified concepts

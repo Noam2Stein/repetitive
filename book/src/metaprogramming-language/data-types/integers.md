@@ -1,7 +1,7 @@
 # Integers
 
-Integers are useful for ranges, indexing, and performing math. They can be
-created using standard integer literals.
+Integers are used for ranges, indexing, and performing math. They can be created
+using standard integer literals.
 
 ## Representation
 
@@ -13,20 +13,20 @@ All integers are internally represented as [`i32`].
 - Indexing arrays accepts [`i32`] (unlike standard Rust, which requires
   [`usize`]).
 
-These semantics are chosen for simplicity and are intended to be compatible
-with standard Rust behavior, with the exception of array indexing.
+These semantics are chosen for simplicity and are intended to be *mostly*
+compatible with standard Rust behavior.
 
 ## Supported Operations
 
 - Comparison operators: `==`, `!=`, `<`, `>`, `<=`, `>=`
 - Unary operators: `-`
 - Binary operators: `+`, `-`, `*`, `/`, `%`
-- [`Display`] formatting
+- Use in the [`format!`] macro
 
 ## Pasting
 
-By default, integers are pasted as unsuffixed integer literals. Pasting integers
-with explicit type suffixes is currently not supported.
+By default, integers are pasted as unsuffixed integer literals. Integer values
+currently cannot be pasted with explicit type suffixes.
 
 ## Example
 
@@ -40,5 +40,13 @@ repetitive! {
 }
 ```
 
+Expands to:
+
+```rust
+pub const A: i32 = 19;
+pub const B: i64 = 19;
+```
+
 [`i32`]: https://doc.rust-lang.org/std/primitive.i32.html
 [`usize`]: https://doc.rust-lang.org/std/primitive.usize.html
+[`format!`]: ../macros/format.md

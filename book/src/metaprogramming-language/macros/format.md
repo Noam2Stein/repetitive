@@ -10,7 +10,7 @@ This currently only supports a small subset of [Rust formatting syntax]:
 - No escaping `{` and `}`
 - Only [`Display`] formatting
 
-Types that support formatting are strings and integers.
+Types that support formatting are strings, integers and booleans.
 
 ## Example
 
