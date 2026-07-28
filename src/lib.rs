@@ -119,7 +119,10 @@
 
 #![forbid(missing_docs)]
 
-use proc_macro::TokenStream;
+use proc_macro2::TokenStream;
+
+#[cfg(test)]
+mod tests;
 
 /// A metaprogramming macro with control flow syntax.
 ///
@@ -127,7 +130,11 @@ use proc_macro::TokenStream;
 ///
 /// [repetitive Documentation]: TODO
 #[proc_macro]
-pub fn repetitive(input: TokenStream) -> TokenStream {
+pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    repetitive_proc_macro2(input.into()).into()
+}
+
+fn repetitive_proc_macro2(input: TokenStream) -> TokenStream {
     let _ = input;
     todo!()
 }
