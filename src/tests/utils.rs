@@ -5,7 +5,7 @@ use crate::repetitive_proc_macro2;
 
 macro_rules! assert_expansion_eq {
     (repetitive! $input:tt, $expected_output:tt) => {
-        crate::tests::utils::assert_tokenstream_eq_helper(
+        crate::tests::utils::assert_expansion_eq_helper(
             quote::quote!$input,
             quote::quote!$expected_output,
         );
@@ -14,7 +14,7 @@ macro_rules! assert_expansion_eq {
 pub(crate) use assert_expansion_eq;
 
 #[doc(hidden)]
-pub fn assert_tokenstream_eq_helper(input: TokenStream, expected_output: TokenStream) {
+pub fn assert_expansion_eq_helper(input: TokenStream, expected_output: TokenStream) {
     let actual_output = repetitive_proc_macro2(input);
 
     if tokenstream_eq(actual_output.clone(), expected_output.clone()) {
