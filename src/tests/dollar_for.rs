@@ -47,3 +47,55 @@ fn test_non_binding_pattern() {
         }
     );
 }
+
+#[test]
+fn test_scope() {
+    assert_expansion_eq!(
+        repetitive! {
+            $for X in ["Foo", "Bar", "Goo"] {
+                pub struct $X;
+            }
+
+            const _: i32 = $X;
+        },
+        {
+            compile_error!("cannot find value `X` in this scope");
+        }
+    );
+}
+
+#[test]
+fn test_shadowing() {
+    assert_expansion_eq!(
+        repetitive! {
+            $let X = 5;
+
+            $for X in ["Foo", "Bar", "Goo"] {
+                pub struct $X;
+            }
+
+            const _: i32 = $X;
+        },
+        {
+            pub struct Foo;
+            pub struct Bar;
+            pub struct Goo;
+
+            const _: i32 = 5;
+        }
+    );
+}
+
+#[test]
+fn test_not_iterator() {
+    assert_expansion_eq!(
+        repetitive! {
+            $for X in "Foo" {
+                pub struct $X;
+            }
+        },
+        {
+            compile_error!("`str` is not an iterator");
+        }
+    );
+}
