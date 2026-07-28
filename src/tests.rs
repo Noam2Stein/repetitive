@@ -1,4 +1,6 @@
-use crate::test_utils::assert_tokenstream_eq;
+use crate::tests::utils::assert_tokenstream_eq;
+
+mod utils;
 
 #[test]
 fn test_for() {

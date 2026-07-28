@@ -122,8 +122,6 @@
 use proc_macro2::TokenStream;
 
 #[cfg(test)]
-mod test_utils;
-#[cfg(test)]
 mod tests;
 
 /// A metaprogramming macro with control flow syntax.

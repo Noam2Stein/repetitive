@@ -5,7 +5,7 @@ use crate::repetitive2;
 
 macro_rules! assert_tokenstream_eq {
     (repetitive! $input:tt, $expected_output:tt) => {
-        crate::test_utils::assert_tokenstream_eq_helper(
+        crate::tests::utils::assert_tokenstream_eq_helper(
             quote::quote!$input,
             quote::quote!$expected_output,
         );
