@@ -11,28 +11,62 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  Everything:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.97.0"
+          target: x86_64-unknown-linux-gnu
+          components: rustfmt
+      - uses: Swatinem/rust-cache@master
+
+      - name: Fmt Check
+        run: cargo fmt --check --all
+
+  doc:
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: -D warnings
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.97.0"
+          target: x86_64-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@master
+
+      - name: Doc
+        run: cargo doc --no-deps
+
+  clippy:
     runs-on: ubuntu-latest
     env:
       RUSTFLAGS: -D warnings
     steps:
-    - uses: actions/checkout@v4
-    - uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: "1.97.0"
-        target: x86_64-unknown-linux-gnu
-        components: clippy, rustfmt
-    - uses: Swatinem/rust-cache@master
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.97.0"
+          target: x86_64-unknown-linux-gnu
+          components: clippy
+      - uses: Swatinem/rust-cache@master
 
-    - name: Fmt Check
-      run: cargo fmt --check --all
+      - name: Clippy
+        run: cargo clippy --all-targets
 
-    - name: Doc
-      run: cargo doc --no-deps
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: -D warnings
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.97.0"
+          target: x86_64-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@master
 
-    - name: Clippy
-      run: cargo clippy --all-targets
-
-    - name: Test
-      run: cargo test
-
+      - name: Test
+        run: cargo test
