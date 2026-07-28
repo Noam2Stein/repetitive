@@ -21,7 +21,7 @@ jobs:
       with:
         toolchain: "1.97.0"
         target: x86_64-unknown-linux-gnu
-        components: clippy
+        components: clippy, rustfmt
     - uses: Swatinem/rust-cache@master
 
     - name: Fmt Check
