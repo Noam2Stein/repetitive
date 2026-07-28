@@ -1,9 +1,9 @@
 use indoc::formatdoc;
 use proc_macro2::{TokenStream, TokenTree};
 
-use crate::repetitive2;
+use crate::repetitive_proc_macro2;
 
-macro_rules! assert_tokenstream_eq {
+macro_rules! assert_expansion_eq {
     (repetitive! $input:tt, $expected_output:tt) => {
         crate::tests::utils::assert_tokenstream_eq_helper(
             quote::quote!$input,
@@ -11,11 +11,11 @@ macro_rules! assert_tokenstream_eq {
         );
     };
 }
-pub(crate) use assert_tokenstream_eq;
+pub(crate) use assert_expansion_eq;
 
 #[doc(hidden)]
 pub fn assert_tokenstream_eq_helper(input: TokenStream, expected_output: TokenStream) {
-    let actual_output = repetitive2(input);
+    let actual_output = repetitive_proc_macro2(input);
 
     if tokenstream_eq(actual_output.clone(), expected_output.clone()) {
         return;

@@ -131,11 +131,10 @@ mod tests;
 /// [repetitive Documentation]: TODO
 #[proc_macro]
 pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    repetitive2(input.into()).into()
+    repetitive_proc_macro2(input.into()).into()
 }
 
-/// The actual implementation of the macro which uses [`proc_macro2`].
-fn repetitive2(input: TokenStream) -> TokenStream {
+fn repetitive_proc_macro2(input: TokenStream) -> TokenStream {
     let _ = input;
     todo!()
 }
