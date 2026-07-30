@@ -126,6 +126,11 @@ mod proc_macro12 {
     pub use proc_macro2::*;
 }
 
+mod error;
+mod executor;
+mod ident;
+mod instruction;
+
 #[cfg(test)]
 mod tests;
 
