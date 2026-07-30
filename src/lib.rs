@@ -122,6 +122,11 @@
 
 use proc_macro2::TokenStream;
 
+mod error;
+mod executor;
+mod ident;
+mod instruction;
+
 #[cfg(test)]
 mod tests;
 
