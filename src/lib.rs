@@ -121,11 +121,11 @@
 
 use proc_macro2::TokenStream;
 
-mod chunked_vec;
 mod error;
 mod executor;
 mod ident;
 mod instruction;
+mod stack;
 
 #[cfg(test)]
 mod tests;
