@@ -126,11 +126,11 @@ mod proc_macro12 {
     pub use proc_macro2::*;
 }
 
-mod chunked_vec;
 mod error;
 mod executor;
 mod ident;
 mod instruction;
+mod stack;
 
 #[cfg(test)]
 mod tests;
