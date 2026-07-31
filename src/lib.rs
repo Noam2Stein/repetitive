@@ -118,7 +118,6 @@
 //! [`ggmath`]: https://crates.io/crates/ggmath
 
 #![forbid(missing_docs)]
-#![forbid(unsafe_code)]
 
 use proc_macro2::TokenStream;
 
