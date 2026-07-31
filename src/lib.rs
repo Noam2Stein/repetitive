@@ -125,7 +125,7 @@ mod error;
 mod executor;
 mod ident;
 mod instruction;
-mod stack;
+mod reserved_stack;
 
 #[cfg(test)]
 mod tests;
