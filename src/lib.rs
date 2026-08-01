@@ -119,7 +119,13 @@
 
 #![forbid(missing_docs)]
 
-use proc_macro2::TokenStream;
+use proc_macro::TokenStream;
+
+#[cfg(not(test))]
+#[expect(clippy::single_component_path_imports)]
+use proc_macro;
+#[cfg(test)]
+use proc_macro2 as proc_macro;
 
 mod error;
 mod executor;
@@ -137,11 +143,14 @@ mod tests;
 ///
 /// [repetitive Documentation]: TODO
 #[proc_macro]
-pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    repetitive_proc_macro2(input.into()).into()
+pub fn repetitive(input: ::proc_macro::TokenStream) -> ::proc_macro::TokenStream {
+    cfg_select! {
+        test => repetitive_impl(input.into()).into(),
+        not(test) => repetitive_impl(input),
+    }
 }
 
-fn repetitive_proc_macro2(input: TokenStream) -> TokenStream {
+fn repetitive_impl(input: TokenStream) -> TokenStream {
     let _ = input;
     todo!()
 }

@@ -1,6 +1,6 @@
 use std::cell::Cell;
 
-use proc_macro2::{Span, TokenStream};
+use crate::proc_macro::{Span, TokenStream};
 
 pub enum Instruction<'a> {
     BoolAnd {
