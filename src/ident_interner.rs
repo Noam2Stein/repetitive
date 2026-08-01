@@ -55,6 +55,7 @@ impl IdentInterner {
         }
     }
 
+    #[must_use]
     pub fn resolve(&self, id: IdentId) -> &str {
         let metadata = &self.idents[id.index as usize];
         &self.buffer[metadata.buffer_range]
@@ -111,7 +112,7 @@ mod tests {
         let mut ids = Vec::new();
 
         for ident in idents {
-            let id = interner.intern(&ident);
+            let id = interner.intern(ident);
             ids.push(id);
 
             assert_eq!(interner.resolve(id), ident);

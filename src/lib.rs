@@ -129,7 +129,6 @@ use proc_macro2 as proc_macro;
 
 mod error;
 mod executor;
-mod ident;
 mod ident_interner;
 mod instruction;
 mod reserve;

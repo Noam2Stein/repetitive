@@ -2,7 +2,7 @@ use std::{cell::Cell, fmt::Write};
 
 use crate::proc_macro::{Ident, Literal};
 
-use crate::{error::Error, ident::is_valid_ident, instruction::Instruction};
+use crate::{error::Error, instruction::Instruction};
 
 pub fn execute(instructions: &[Instruction]) -> Result<(), Error> {
     let mut next_instruction = 0;
@@ -138,7 +138,13 @@ pub fn execute(instructions: &[Instruction]) -> Result<(), Error> {
             }
             Instruction::StrEmit { val, dst, span } => {
                 update_2_cells(val, dst, |val, dst| {
-                    if is_valid_ident(val) {
+                    let is_valid_ident = val
+                        .chars()
+                        .next()
+                        .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+                        && val.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
+
+                    if is_valid_ident {
                         dst.extend([Ident::new(val, span)]);
                         Ok(())
                     } else {
