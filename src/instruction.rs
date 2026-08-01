@@ -4,8 +4,9 @@ use crate::proc_macro::{Span, TokenStream};
 
 pub enum Instruction<'a> {
     BoolAnd {
-        val: &'a Cell<bool>,
+        lhs: &'a Cell<bool>,
         rhs: &'a Cell<bool>,
+        dst: &'a Cell<bool>,
     },
     BoolCopy {
         val: &'a Cell<bool>,
@@ -22,18 +23,22 @@ pub enum Instruction<'a> {
     },
     BoolNot {
         val: &'a Cell<bool>,
+        dst: &'a Cell<bool>,
     },
     BoolOr {
-        val: &'a Cell<bool>,
+        lhs: &'a Cell<bool>,
         rhs: &'a Cell<bool>,
+        dst: &'a Cell<bool>,
     },
     BoolXor {
-        val: &'a Cell<bool>,
+        lhs: &'a Cell<bool>,
         rhs: &'a Cell<bool>,
+        dst: &'a Cell<bool>,
     },
     IntAdd {
-        val: &'a Cell<i32>,
+        lhs: &'a Cell<i32>,
         rhs: &'a Cell<i32>,
+        dst: &'a Cell<i32>,
         span: Span,
     },
     IntCopy {
@@ -45,8 +50,9 @@ pub enum Instruction<'a> {
         dst: &'a Cell<String>,
     },
     IntDiv {
-        val: &'a Cell<i32>,
+        lhs: &'a Cell<i32>,
         rhs: &'a Cell<i32>,
+        dst: &'a Cell<i32>,
         span: Span,
     },
     IntEmit {
@@ -55,22 +61,26 @@ pub enum Instruction<'a> {
         span: Span,
     },
     IntMul {
-        val: &'a Cell<i32>,
+        lhs: &'a Cell<i32>,
         rhs: &'a Cell<i32>,
+        dst: &'a Cell<i32>,
         span: Span,
     },
     IntNeg {
         val: &'a Cell<i32>,
+        dst: &'a Cell<i32>,
         span: Span,
     },
     IntRem {
-        val: &'a Cell<i32>,
+        lhs: &'a Cell<i32>,
         rhs: &'a Cell<i32>,
+        dst: &'a Cell<i32>,
         span: Span,
     },
     IntSub {
-        val: &'a Cell<i32>,
+        lhs: &'a Cell<i32>,
         rhs: &'a Cell<i32>,
+        dst: &'a Cell<i32>,
         span: Span,
     },
     StrCopy {

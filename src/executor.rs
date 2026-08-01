@@ -11,8 +11,8 @@ pub fn execute(instructions: &[Instruction]) -> Result<(), Error> {
         next_instruction += 1;
 
         match *instruction {
-            Instruction::BoolAnd { val, rhs } => {
-                val.set(val.get() & rhs.get());
+            Instruction::BoolAnd { lhs, rhs, dst } => {
+                dst.set(lhs.get() & rhs.get());
             }
             Instruction::BoolCopy { val, dst } => {
                 dst.set(val.get());
@@ -27,18 +27,23 @@ pub fn execute(instructions: &[Instruction]) -> Result<(), Error> {
                     dst.extend([Ident::new(if val.get() { "true" } else { "false" }, span)])
                 });
             }
-            Instruction::BoolNot { val } => {
-                val.set(!val.get());
+            Instruction::BoolNot { val, dst } => {
+                dst.set(!val.get());
             }
-            Instruction::BoolOr { val, rhs } => {
-                val.set(val.get() | rhs.get());
+            Instruction::BoolOr { lhs, rhs, dst } => {
+                dst.set(lhs.get() | rhs.get());
             }
-            Instruction::BoolXor { val, rhs } => {
-                val.set(val.get() ^ rhs.get());
+            Instruction::BoolXor { lhs, rhs, dst } => {
+                dst.set(lhs.get() ^ rhs.get());
             }
-            Instruction::IntAdd { val, rhs, span } => {
-                if let Some(result) = val.get().checked_add(rhs.get()) {
-                    val.set(result);
+            Instruction::IntAdd {
+                lhs,
+                rhs,
+                dst,
+                span,
+            } => {
+                if let Some(result) = lhs.get().checked_add(rhs.get()) {
+                    dst.set(result);
                 } else {
                     return Err(Error::new(span, "attempt to add with overflow"));
                 }
@@ -51,9 +56,14 @@ pub fn execute(instructions: &[Instruction]) -> Result<(), Error> {
                     write!(dst, "{}", val.get()).expect("displaying `i32` should not fail");
                 });
             }
-            Instruction::IntDiv { val, rhs, span } => {
-                if let Some(result) = val.get().checked_div(rhs.get()) {
-                    val.set(result);
+            Instruction::IntDiv {
+                lhs,
+                rhs,
+                dst,
+                span,
+            } => {
+                if let Some(result) = lhs.get().checked_div(rhs.get()) {
+                    dst.set(result);
                 } else {
                     return Err(Error::new(
                         span,
@@ -70,23 +80,33 @@ pub fn execute(instructions: &[Instruction]) -> Result<(), Error> {
                 literal.set_span(span);
                 update_cell(dst, |dst| dst.extend([literal]));
             }
-            Instruction::IntMul { val, rhs, span } => {
-                if let Some(result) = val.get().checked_mul(rhs.get()) {
-                    val.set(result);
+            Instruction::IntMul {
+                lhs,
+                rhs,
+                dst,
+                span,
+            } => {
+                if let Some(result) = lhs.get().checked_mul(rhs.get()) {
+                    dst.set(result);
                 } else {
                     return Err(Error::new(span, "attempt to multiply with overflow"));
                 }
             }
-            Instruction::IntNeg { val, span } => {
+            Instruction::IntNeg { val, dst, span } => {
                 if let Some(result) = val.get().checked_neg() {
-                    val.set(result);
+                    dst.set(result);
                 } else {
                     return Err(Error::new(span, "attempt to negate with overflow"));
                 }
             }
-            Instruction::IntRem { val, rhs, span } => {
-                if let Some(result) = val.get().checked_rem(rhs.get()) {
-                    val.set(result);
+            Instruction::IntRem {
+                lhs,
+                rhs,
+                dst,
+                span,
+            } => {
+                if let Some(result) = lhs.get().checked_rem(rhs.get()) {
+                    dst.set(result);
                 } else {
                     return Err(Error::new(
                         span,
@@ -98,9 +118,14 @@ pub fn execute(instructions: &[Instruction]) -> Result<(), Error> {
                     ));
                 }
             }
-            Instruction::IntSub { val, rhs, span } => {
-                if let Some(result) = val.get().checked_sub(rhs.get()) {
-                    val.set(result);
+            Instruction::IntSub {
+                lhs,
+                rhs,
+                dst,
+                span,
+            } => {
+                if let Some(result) = lhs.get().checked_sub(rhs.get()) {
+                    dst.set(result);
                 } else {
                     return Err(Error::new(span, "attempt to subtract with overflow"));
                 }
