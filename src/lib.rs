@@ -132,7 +132,7 @@ mod executor;
 mod ident;
 mod ident_interner;
 mod instruction;
-mod reserved_storage;
+mod reserve;
 
 #[cfg(test)]
 mod tests;

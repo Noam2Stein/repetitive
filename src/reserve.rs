@@ -1,6 +1,6 @@
 use std::cell::UnsafeCell;
 
-pub struct ReservedStorage<T>(UnsafeCell<Inner<T>>);
+pub struct Reserve<T>(UnsafeCell<Inner<T>>);
 
 struct Inner<T> {
     chunks: Vec<Chunk<T>>,
@@ -21,7 +21,7 @@ struct Reservation {
     chunk_index: usize,
 }
 
-impl<T> Drop for ReservedStorage<T> {
+impl<T> Drop for Reserve<T> {
     fn drop(&mut self) {
         let inner = self.0.get_mut();
 
@@ -34,7 +34,7 @@ impl<T> Drop for ReservedStorage<T> {
     }
 }
 
-impl<T> ReservedStorage<T> {
+impl<T> Reserve<T> {
     pub fn new() -> Self {
         Self(UnsafeCell::new(Inner {
             chunks: Vec::new(),
@@ -110,11 +110,11 @@ impl<T> ReservedStorage<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::reserved_storage::ReservedStorage;
+    use crate::reserve::Reserve;
 
     #[test]
     fn test_usage() {
-        let vec = ReservedStorage::<i32>::new();
+        let vec = Reserve::<i32>::new();
 
         let e0 = vec.reserve();
         let e1 = vec.reserve();
