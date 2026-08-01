@@ -15,6 +15,7 @@ proc-macro2 = "1.0.107"
 
 [dev-dependencies]
 indoc = "2.0.7"
+itertools = "0.15.0"
 prettyplease = "0.3.0"
 quote = "1.0.47"
 syn = "3.0.3"
