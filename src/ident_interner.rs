@@ -27,7 +27,7 @@ impl IdentInterner {
     }
 
     #[must_use]
-    pub fn intern(&mut self, ident: &impl Display) -> IdentId {
+    pub fn intern(&mut self, ident: impl Display) -> IdentId {
         let buffer_start = self.buffer.len();
         write!(&mut self.buffer, "{ident}").expect("failed to write identifier into string");
         let buffer_range = Range::from(buffer_start..self.buffer.len());
