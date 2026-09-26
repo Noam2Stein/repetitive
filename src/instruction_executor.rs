@@ -1,8 +1,10 @@
 use std::{cell::Cell, fmt::Write};
 
-use crate::proc_macro12::{Ident, Literal};
-
-use crate::{error::Error, instruction::Instruction};
+use crate::{
+    error::Error,
+    instruction::Instruction,
+    proc_macro12::{Ident, Literal},
+};
 
 pub fn execute_instructions(instructions: &[Instruction]) -> Result<(), Error> {
     let mut next_instruction = 0;
