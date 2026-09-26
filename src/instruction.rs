@@ -96,9 +96,4 @@ pub enum Instruction<'a> {
         dst: &'a Cell<TokenStream>,
         span: Span,
     },
-    StrEmitStr {
-        val: &'a Cell<String>,
-        dst: &'a Cell<TokenStream>,
-        span: Span,
-    },
 }

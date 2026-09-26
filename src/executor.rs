@@ -155,13 +155,6 @@ pub fn execute(instructions: &[Instruction]) -> Result<(), Error> {
                     }
                 })?;
             }
-            Instruction::StrEmitStr { val, dst, span } => {
-                update_2_cells(val, dst, |val, dst| {
-                    let mut literal = Literal::string(val);
-                    literal.set_span(span);
-                    dst.extend([literal]);
-                });
-            }
         }
     }
 
