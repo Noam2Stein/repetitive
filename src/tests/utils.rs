@@ -4,7 +4,7 @@ use proc_macro2::{TokenStream, TokenTree};
 use crate::repetitive_impl;
 
 macro_rules! assert_expansion_eq {
-    (repetitive! $input:tt, $expected_output:tt) => {
+    (repetitive!$input:tt, quote!$expected_output:tt $(,)?) => {
         crate::tests::utils::assert_expansion_eq_helper(
             quote::quote!$input,
             quote::quote!$expected_output,
