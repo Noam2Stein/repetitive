@@ -14,7 +14,7 @@ dynamically-sized arrays, here all arrays are dynamically sized.
 
 ## Pasting
 
-Arrays currently cannot be pasted.
+Arrays cannot be pasted.
 
 ## Example
 

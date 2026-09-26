@@ -22,4 +22,4 @@ For ranges of integers:
 
 ## Pasting
 
-Ranges currently cannot be pasted.
+Ranges cannot be pasted.

@@ -9,6 +9,9 @@ default pasting behavior for common types:
 - Strings turn into identifiers (an error is emitted if the string is an invalid
   identifier)
 
+The pasting behavior of remaining types is found in the documentation of each
+type.
+
 To paste values into other kinds of tokens, use these special metaprogramming
 keywords:
 

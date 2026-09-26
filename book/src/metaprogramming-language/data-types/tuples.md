@@ -10,7 +10,7 @@ Tuples can be created using standard Rust tuple syntax `(a, b, ...)`.
 
 ## Pasting
 
-Tuples currently cannot be pasted.
+Tuples cannot be pasted.
 
 ## Example
 

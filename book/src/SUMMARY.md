@@ -8,8 +8,6 @@
   - [`$if`](metaprogramming-keywords/if.md)
   - [`$match`](metaprogramming-keywords/match.md)
   - [`$<identifier>`](metaprogramming-keywords/identifier.md)
-  - [`$(...)`](metaprogramming-keywords/parentheses.md)
-  - [`$str`](metaprogramming-keywords/str.md)
 - [Metaprogramming Language](metaprogramming-language.md)
   - [Data Types](metaprogramming-language/data-types.md)
     - [Integers](metaprogramming-language/data-types/integers.md)
