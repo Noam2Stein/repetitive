@@ -1,7 +1,7 @@
 use indoc::formatdoc;
 use proc_macro2::{TokenStream, TokenTree};
 
-use crate::repetitive_proc_macro2;
+use crate::repetitive_impl;
 
 macro_rules! assert_expansion_eq {
     (repetitive! $input:tt, $expected_output:tt) => {
@@ -15,7 +15,7 @@ pub(crate) use assert_expansion_eq;
 
 #[doc(hidden)]
 pub fn assert_expansion_eq_helper(input: TokenStream, expected_output: TokenStream) {
-    let actual_output = repetitive_proc_macro2(input);
+    let actual_output = repetitive_impl(input);
 
     if tokenstream_eq(actual_output.clone(), expected_output.clone()) {
         return;

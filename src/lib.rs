@@ -111,7 +111,20 @@
 
 #![forbid(missing_docs)]
 
-use proc_macro2::TokenStream;
+use crate::proc_macro12::TokenStream;
+
+/// Reexports the items from `proc_macro2` if `cfg(test)` is active, or from
+/// `proc_macro` if not.
+///
+/// `proc_macro2` must be used when testing, since currently `proc_macro` only
+/// supports invokations from actual proc-macros. When not testing,
+/// `proc_macro2` is not used in order to minimize compile times.
+mod proc_macro12 {
+    #[cfg(not(test))]
+    pub use proc_macro::*;
+    #[cfg(test)]
+    pub use proc_macro2::*;
+}
 
 #[cfg(test)]
 mod tests;
@@ -123,10 +136,13 @@ mod tests;
 /// [repetitive Documentation]: TODO
 #[proc_macro]
 pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    repetitive_proc_macro2(input.into()).into()
+    cfg_select! {
+        test => repetitive_impl(input.into()).into(),
+        not(test) => repetitive_impl(input),
+    }
 }
 
-fn repetitive_proc_macro2(input: TokenStream) -> TokenStream {
+fn repetitive_impl(input: TokenStream) -> TokenStream {
     let _ = input;
     todo!()
 }
