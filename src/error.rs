@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use proc_macro2::Span;
+use crate::proc_macro12::Span;
 
 pub struct Error {
     pub span: Span,

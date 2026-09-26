@@ -1,6 +1,6 @@
 use std::{cell::Cell, fmt::Write};
 
-use proc_macro2::{Ident, Literal};
+use crate::proc_macro12::{Ident, Literal};
 
 use crate::{error::Error, instruction::Instruction};
 
