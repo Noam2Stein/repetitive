@@ -4,7 +4,7 @@ use crate::proc_macro12::{Ident, Literal};
 
 use crate::{error::Error, instruction::Instruction};
 
-pub fn execute(instructions: &[Instruction]) -> Result<(), Error> {
+pub fn execute_instructions(instructions: &[Instruction]) -> Result<(), Error> {
     let mut next_instruction = 0;
 
     while let Some(instruction) = instructions.get(next_instruction) {

@@ -127,9 +127,9 @@ mod proc_macro12 {
 }
 
 mod error;
-mod executor;
 mod ident_interner;
 mod instruction;
+mod instruction_executor;
 mod reserve;
 
 #[cfg(test)]
