@@ -20,13 +20,13 @@ repetitive! {
     $for Name in ["Foo", "Bar", "Goo"] {
         $match Name {
             "Foo" => {
-                /// This word is commonly the first one used in Rust examples.
+                /// `Foo` is the most common type name in Rust examples.
             }
             "Bar" => {
-                /// This word is commonly the second one used in Rust examples.
+                /// `Bar` is the second most common type name in Rust examples.
             }
             "Goo" => {
-                /// This word is rarely used in Rust examples.
+                /// `Goo` is not a common type name in Rust examples.
             }
         }
         pub struct $Name;
@@ -37,13 +37,13 @@ repetitive! {
 Expands to:
 
 ```rust
-/// This word is commonly the first one used in Rust examples.
+/// `Foo` is the most common type name in Rust examples.
 pub struct Foo;
 
-/// This word is commonly the second one used in Rust examples.
+/// `Bar` is the second most common type name in Rust examples.
 pub struct Bar;
 
-/// This word is rarely used in Rust examples.
+/// `Goo` is not a common type name in Rust examples.
 pub struct Goo;
 ```
 

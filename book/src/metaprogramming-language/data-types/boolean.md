@@ -1,4 +1,4 @@
-# Booleans
+# Boolean
 
 Booleans can be created via the `true` and `false` keywords.
 

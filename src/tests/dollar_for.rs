@@ -8,7 +8,7 @@ fn test_basic() {
                 pub struct $Name;
             }
         },
-        {
+        quote! {
             pub struct Foo;
             pub struct Bar;
             pub struct Goo;
@@ -24,7 +24,7 @@ fn test_tuple_pattern() {
                 pub struct $Name([i32; $N]);
             }
         },
-        {
+        quote! {
             pub struct Foo;
             pub struct Bar;
             pub struct Goo;
@@ -40,7 +40,7 @@ fn test_non_binding_pattern() {
                 pub struct $Name([i32; $N]);
             }
         },
-        {
+        quote! {
             pub struct Foo;
             pub struct Bar;
             pub struct Goo;
@@ -58,7 +58,7 @@ fn test_scope() {
 
             const _: i32 = $X;
         },
-        {
+        quote! {
             compile_error!("cannot find value `X` in this scope");
         }
     );
@@ -76,7 +76,7 @@ fn test_shadowing() {
 
             const _: i32 = $X;
         },
-        {
+        quote! {
             pub struct Foo;
             pub struct Bar;
             pub struct Goo;
@@ -94,7 +94,7 @@ fn test_not_iterator() {
                 pub struct $X;
             }
         },
-        {
+        quote! {
             compile_error!("`str` is not an iterator");
         }
     );

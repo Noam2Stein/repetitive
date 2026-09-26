@@ -1,4 +1,4 @@
-# Tuples
+# Tuple
 
 A tuple is a fixed-size collection where each field may have a different type.
 Tuples can be created using standard Rust tuple syntax `(a, b, ...)`.
@@ -10,7 +10,7 @@ Tuples can be created using standard Rust tuple syntax `(a, b, ...)`.
 
 ## Pasting
 
-Tuples currently cannot be pasted.
+Tuples cannot be pasted.
 
 ## Example
 

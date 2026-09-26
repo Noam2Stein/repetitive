@@ -1,7 +1,7 @@
-# Arrays
+# Array
 
 An array is a collection where all elements are of the same type. Arrays can be
-created using standard Rust array syntax `[a, b, ...]` or `[value; N]`.
+created using standard Rust array syntax `[a, b, ...]` and `[value; N]`.
 
 Unlike in actual Rust, where there are separate types for fixed-size and
 dynamically-sized arrays, here all arrays are dynamically sized.
@@ -14,7 +14,7 @@ dynamically-sized arrays, here all arrays are dynamically sized.
 
 ## Pasting
 
-Arrays currently cannot be pasted.
+Arrays cannot be pasted.
 
 ## Example
 

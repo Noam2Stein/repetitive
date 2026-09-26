@@ -1,4 +1,4 @@
-# Strings
+# String
 
 Strings are primarily used to represent identifiers. They can be created using
 string literals and the [`format!`] macro.
@@ -10,25 +10,23 @@ string literals and the [`format!`] macro.
 
 ## Pasting
 
-By default, strings are pasted as identifiers. String values can be pasted as
-string literals via [`$str`].
+By default, strings are pasted as identifiers. String values currently cannot be
+pasted as string literals.
 
 ## Example
 
 ```rust
 repetitive! {
-    $let string_1 = "ABCD";
-    $let string_2 = format!("{string_1}, ABCD");
+    $let foo = "FOO";
     
-    pub const $string_1: &str = $str(string_2);
+    pub const $foo: &str = "value";
 }
 ```
 
 Expands to:
 
 ```rust
-pub const ABCD: &str = "ABCD, ABCD";
+pub const FOO: &str = "value";
 ```
 
 [`format!`]: ../macros/format.md
-[`$str`]: ../../metaprogramming-keywords/str.md
