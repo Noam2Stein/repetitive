@@ -25,6 +25,3 @@
   - [Expressions](metaprogramming-language/expressions.md)
   - [Patterns](metaprogramming-language/patterns.md)
   - [Iterators](metaprogramming-language/iterators.md)
-- [Examples](examples.md)
-  - [Vector Swizzle](examples/vector-swizzle.md)
-- [Compile Times](compile-times.md)
