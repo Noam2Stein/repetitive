@@ -1,4 +1,4 @@
-# Ranges
+# Range
 
 Ranges are used for iteration and indexing. They can be created using standard
 Rust range syntax:

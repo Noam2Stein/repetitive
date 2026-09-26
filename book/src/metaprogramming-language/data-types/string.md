@@ -1,4 +1,4 @@
-# Strings
+# String
 
 Strings are primarily used to represent identifiers. They can be created using
 string literals and the [`format!`] macro.

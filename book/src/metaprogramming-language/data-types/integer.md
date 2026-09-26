@@ -1,17 +1,16 @@
-# Integers
+# Integer
 
 Integers are used for ranges, indexing, and performing math. They can be created
 using standard integer literals.
 
 ## Representation
 
-All integers are internally represented as [`i32`].
+Integers are represented as [`i32`].
 
-- Arithmetic operations panic on overflow.
-- Operations whose behavior depends on specific integer widths are not
-  supported.
+- Arithmetic operations panic on overflow
+- Operations whose behavior depends on integer width are not supported
 - Indexing arrays accepts [`i32`] (unlike standard Rust, which requires
-  [`usize`]).
+  [`usize`])
 
 These semantics are chosen for simplicity and are intended to be *mostly*
 compatible with standard Rust behavior.
@@ -34,7 +33,7 @@ currently cannot be pasted with explicit type suffixes.
 repetitive! {
     $let x = 9 + 10;
     
-    // Pasted integers are unsuffixed, and fit into any integer type
+    // Pasted integers are unsuffixed
     pub const A: i32 = $x;
     pub const B: i64 = $x;
 }

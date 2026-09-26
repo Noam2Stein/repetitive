@@ -12,9 +12,6 @@ default pasting behavior for common types:
 The pasting behavior of remaining types is found in the documentation of each
 type.
 
-To paste values into other kinds of tokens, use these special metaprogramming
-keywords:
-
-- [`$str`]: Paste a string value as a string literal (instead of an identifier)
-
-[`$str`]: str.md
+In future versions, it may be supported to paste values as alternative kinds of
+tokens. For example, pasting a string value as a string literal instead of as an
+identifier, or pasting an integer value as a suffixed integer literal.

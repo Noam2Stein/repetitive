@@ -1,7 +1,7 @@
 # Patterns
 
 This section lists all `repetitive` pattern kinds. These mostly follow standard
-Rust syntax.
+Rust rules.
 
 One major difference from standard Rust is that here, because metaprogramming
 code is immediately evaluated, patterns are not required to be exhaustive (e.g.,

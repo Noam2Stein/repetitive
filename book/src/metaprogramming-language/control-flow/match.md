@@ -10,7 +10,7 @@ matches none of the predicates.
 
 For example, the example below only covers three specific string values. Even
 though a string could theoretically match none of the predicates, the code
-compiles because all encountered values do match.
+compiles because all encountered string values do match.
 
 ## Example
 
