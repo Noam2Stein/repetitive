@@ -83,6 +83,8 @@ repetitive! {
 }
 ```
 
+More examples can be found in the [examples directory](examples/).
+
 ## Compile times and internal architecture
 
 Internally, `repetitive` uses a small interpreter that verifies and expands the
