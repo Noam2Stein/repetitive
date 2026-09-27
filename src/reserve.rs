@@ -1,6 +1,10 @@
-use std::cell::UnsafeCell;
+use std::{cell::UnsafeCell, fmt::Debug};
 
 pub struct Reserve<T>(UnsafeCell<Inner<T>>);
+
+pub enum ReleaseError {
+    NoActiveReservations,
+}
 
 struct Inner<T> {
     chunks: Vec<Chunk<T>>,
@@ -94,17 +98,28 @@ impl<T> Reserve<T> {
         result
     }
 
-    pub fn release(&self) {
+    pub fn release(&self) -> Result<(), ReleaseError> {
         // SAFETY: This reference does not escape the function, and during this
         // function no other references are created.
         let inner = unsafe { self.0.get().as_mut_unchecked() };
 
-        let reservation = inner
-            .reservations
-            .pop()
-            .expect("attempt to call `release` with no active reservations");
+        let Some(reservation) = inner.reservations.pop() else {
+            return Err(ReleaseError::NoActiveReservations);
+        };
 
         inner.chunks[reservation.chunk_index].reservation_count -= 1;
+
+        Ok(())
+    }
+}
+
+impl Debug for ReleaseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ReleaseError::NoActiveReservations => {
+                write!(f, "attempt to call `release` with no active reservations")
+            }
+        }
     }
 }
 
@@ -118,10 +133,10 @@ mod tests {
 
         let e0 = vec.reserve();
         let e1 = vec.reserve();
-        vec.release();
+        vec.release().unwrap();
         let e2 = vec.reserve();
-        vec.release();
-        vec.release();
+        vec.release().unwrap();
+        vec.release().unwrap();
 
         assert_eq!([e0, e1, e2], [&0; 3]);
     }
