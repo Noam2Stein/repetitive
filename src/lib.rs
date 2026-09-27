@@ -129,6 +129,7 @@ mod proc_macro12 {
     pub use proc_macro2::*;
 }
 
+mod ast;
 mod diagnostics;
 mod ident_interner;
 mod instruction;
