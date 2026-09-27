@@ -133,7 +133,7 @@ mod diagnostics;
 mod ident_interner;
 mod instruction;
 mod instruction_executor;
-mod reserve;
+mod reservation_stack;
 
 #[cfg(test)]
 mod tests;
