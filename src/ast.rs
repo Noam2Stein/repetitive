@@ -1,6 +1,8 @@
+use std::iter::Peekable;
+
 use crate::{
     ident_interner::IdentId,
-    proc_macro12::{Group, Span, TokenStream, TokenTree},
+    proc_macro12::{Group, Span, TokenStream, TokenTree, token_stream},
 };
 
 pub struct UnparsedQuote {
@@ -57,7 +59,7 @@ pub enum UnparsedExpr {
 }
 
 pub enum Expr {
-    Array(ExprArray),
+    Array(Box<UnparsedExprArray>),
     Binary(Box<ExprBinary>),
     Bool(ExprBool),
     Ident(ExprIdent),
@@ -65,12 +67,13 @@ pub enum Expr {
     Unary(Box<ExprUnary>),
     Repeat(Box<ExprRepeat>),
     Str(ExprStr),
-    Tuple(ExprTuple),
+    Tuple(Box<UnparsedExprTuple>),
 }
 
-pub struct ExprArray {
+pub struct UnparsedExprArray {
     pub span: Span,
-    pub elements: Vec<UnparsedExpr>,
+    pub first_element: Option<UnparsedExpr>,
+    pub remaining_elements: TokenIter,
 }
 
 pub struct ExprBinary {
@@ -120,9 +123,10 @@ pub struct ExprStr {
     pub value: String,
 }
 
-pub struct ExprTuple {
+pub struct UnparsedExprTuple {
     pub span: Span,
-    pub elements: Vec<UnparsedExpr>,
+    pub first_element: Option<UnparsedExpr>,
+    pub remaining_elements: TokenIter,
 }
 
 pub struct ExprUnary {
@@ -142,3 +146,5 @@ pub enum UnparsedPat {
 }
 
 pub enum Pat {}
+
+pub type TokenIter = Peekable<token_stream::IntoIter>;
