@@ -1,7 +1,7 @@
 use std::{cell::Cell, fmt::Write};
 
 use crate::{
-    error::Error,
+    diagnostics::Error,
     instruction::Instruction,
     proc_macro12::{Ident, Literal},
 };

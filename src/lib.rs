@@ -111,7 +111,10 @@
 
 #![forbid(missing_docs)]
 
-use crate::proc_macro12::TokenStream;
+use crate::{
+    diagnostics::{Error, emit_diagnostics},
+    proc_macro12::TokenStream,
+};
 
 /// Reexports the items from `proc_macro2` if `cfg(test)` is active, or from
 /// `proc_macro` if not.
@@ -126,7 +129,7 @@ mod proc_macro12 {
     pub use proc_macro2::*;
 }
 
-mod error;
+mod diagnostics;
 mod ident_interner;
 mod instruction;
 mod instruction_executor;
@@ -142,13 +145,19 @@ mod tests;
 /// [repetitive Documentation]: TODO
 #[proc_macro]
 pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    cfg_select! {
-        test => repetitive_impl(input.into()).into(),
+    let (stream, errors) = cfg_select! {
+        test => repetitive_impl(input.into()),
         not(test) => repetitive_impl(input),
+    };
+
+    let output = emit_diagnostics(stream, errors);
+    cfg_select! {
+        test => output.into(),
+        not(test) => output,
     }
 }
 
-fn repetitive_impl(input: TokenStream) -> TokenStream {
+fn repetitive_impl(input: TokenStream) -> (TokenStream, Vec<Error>) {
     let _ = input;
     todo!()
 }

@@ -58,9 +58,7 @@ fn test_scope() {
 
             const _: i32 = $X;
         },
-        quote! {
-            compile_error!("cannot find value `X` in this scope");
-        }
+        errors!["cannot find value `X` in this scope"]
     );
 }
 
@@ -94,8 +92,6 @@ fn test_not_iterator() {
                 pub struct $X;
             }
         },
-        quote! {
-            compile_error!("`str` is not an iterator");
-        }
+        errors!["`str` is not an iterator"]
     );
 }
