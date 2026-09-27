@@ -1,15 +1,11 @@
 use crate::{
     ident_interner::IdentId,
-    proc_macro12::{Group, Span, TokenStream, TokenTree, token_stream},
+    proc_macro12::{Group, Span, TokenStream, TokenTree},
 };
 
-pub enum Lazy<T> {
-    Eval(T),
-    Group(Group),
-    TokenStream(TokenStream),
+pub struct UnparsedQuote {
+    pub stream: TokenStream,
 }
-
-pub struct Quote(token_stream::IntoIter);
 
 pub enum QuoteSegment {
     For(QuoteFor),
@@ -21,9 +17,9 @@ pub enum QuoteSegment {
 }
 
 pub struct QuoteFor {
-    pat: Lazy<Pat>,
-    expr: Lazy<Expr>,
-    body: Lazy<Quote>,
+    pat: UnparsedPat,
+    expr: UnparsedExpr,
+    body: UnparsedQuote,
 }
 
 pub struct QuoteIdent {
@@ -36,23 +32,28 @@ pub struct QuoteIf {
 }
 
 pub struct QuoteIfSegment {
-    pub condition: Option<Lazy<Expr>>,
-    pub branch: Lazy<Quote>,
+    pub condition: Option<UnparsedExpr>,
+    pub branch: UnparsedQuote,
 }
 
 pub struct QuoteLet {
-    pub pat: Lazy<Pat>,
-    pub expr: Lazy<Expr>,
+    pub pat: UnparsedPat,
+    pub expr: UnparsedExpr,
 }
 
 pub struct QuoteMatch {
-    pub expr: Lazy<Expr>,
+    pub expr: UnparsedExpr,
     pub arms: Vec<QuoteMatchArm>,
 }
 
 pub struct QuoteMatchArm {
-    pub pat: Lazy<Pat>,
-    pub body: Lazy<Quote>,
+    pub pat: UnparsedPat,
+    pub body: UnparsedQuote,
+}
+
+pub enum UnparsedExpr {
+    Expr(Expr),
+    Group(Group),
 }
 
 pub enum Expr {
@@ -69,14 +70,14 @@ pub enum Expr {
 
 pub struct ExprArray {
     pub span: Span,
-    pub elements: Vec<Lazy<Expr>>,
+    pub elements: Vec<UnparsedExpr>,
 }
 
 pub struct ExprBinary {
     pub span: Span,
-    pub lhs: Lazy<Expr>,
+    pub lhs: UnparsedExpr,
     pub op: ExprBinaryOp,
-    pub rhs: Lazy<Expr>,
+    pub rhs: UnparsedExpr,
 }
 
 pub enum ExprBinaryOp {
@@ -110,8 +111,8 @@ pub struct ExprInt {
 }
 
 pub struct ExprRepeat {
-    pub expr: Lazy<Expr>,
-    pub len: Lazy<Expr>,
+    pub expr: UnparsedExpr,
+    pub len: UnparsedExpr,
 }
 
 pub struct ExprStr {
@@ -121,18 +122,23 @@ pub struct ExprStr {
 
 pub struct ExprTuple {
     pub span: Span,
-    pub elements: Vec<Lazy<Expr>>,
+    pub elements: Vec<UnparsedExpr>,
 }
 
 pub struct ExprUnary {
     pub span: Span,
     pub op: ExprUnaryOp,
-    pub expr: Lazy<Expr>,
+    pub expr: UnparsedExpr,
 }
 
 pub enum ExprUnaryOp {
     Neg,
     Not,
+}
+
+pub enum UnparsedPat {
+    Pat(Pat),
+    Group(Group),
 }
 
 pub enum Pat {}

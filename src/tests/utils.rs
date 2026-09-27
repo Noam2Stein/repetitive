@@ -2,31 +2,30 @@ use indoc::formatdoc;
 use itertools::Itertools;
 use proc_macro2::{TokenStream, TokenTree};
 
-use crate::repetitive_impl;
+use crate::repetitive_impl::repetitive_impl;
 
 macro_rules! assert_expansion_eq {
     (repetitive!$input:tt, quote!$expected_output:tt $(,)?) => {
-        crate::tests::utils::assert_expansion_eq_quote_helper(
+        crate::tests::utils::assert_expansion_eq_ok_helper(
             quote::quote!$input,
             quote::quote!$expected_output,
         );
     };
-    (repetitive!$input:tt, errors![$($error_message:literal),+ $(,)?] $(,)?) => {
-        crate::tests::utils::assert_expansion_eq_errors_helper(
+    (repetitive!$input:tt, errors![$($expected_error:literal),+ $(,)?] $(,)?) => {
+        crate::tests::utils::assert_expansion_eq_err_helper(
             quote::quote!$input,
-            &[$($error_message),*],
+            &[$($expected_error),*],
         );
     };
 }
 pub(crate) use assert_expansion_eq;
 
 #[doc(hidden)]
-pub fn assert_expansion_eq_quote_helper(input: TokenStream, expected_output: TokenStream) {
-    let (actual_output, errors) = repetitive_impl(input);
+pub fn assert_expansion_eq_ok_helper(input: TokenStream, expected_output: TokenStream) {
+    let (actual_output, mut diagnostics) = repetitive_impl(input);
 
+    let errors = diagnostics.errors().join("\n");
     if !errors.is_empty() {
-        let errors = errors.into_iter().map(|error| error.message).join("\n");
-
         panic!(
             "{}",
             formatdoc! {"
@@ -71,26 +70,17 @@ pub fn assert_expansion_eq_quote_helper(input: TokenStream, expected_output: Tok
 }
 
 #[doc(hidden)]
-pub fn assert_expansion_eq_errors_helper(input: TokenStream, expected_error_messages: &[&str]) {
-    let (_, actual_errors) = repetitive_impl(input);
+pub fn assert_expansion_eq_err_helper(input: TokenStream, expected_errors: &[&str]) {
+    let (_, mut diagnostics) = repetitive_impl(input);
+    let actual_errors = diagnostics.errors().collect_vec();
 
     if actual_errors.is_empty() {
         panic!("expected errors, found none");
     }
 
-    let errors_match = actual_errors.len() == expected_error_messages.len()
-        && actual_errors.iter().zip(expected_error_messages).all(
-            |(actual_error, expected_error_message)| {
-                actual_error.message == *expected_error_message
-            },
-        );
-
-    if !errors_match {
-        let expected_errors = expected_error_messages.join("\n");
-        let actual_errors = actual_errors
-            .into_iter()
-            .map(|error| error.message)
-            .join("\n");
+    if actual_errors != expected_errors {
+        let expected_errors = expected_errors.join("\n");
+        let actual_errors = actual_errors.join("\n");
 
         panic!(
             "{}",

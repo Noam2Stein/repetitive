@@ -1,12 +1,12 @@
 use std::{cell::Cell, fmt::Write};
 
 use crate::{
-    diagnostics::Error,
+    diagnostics::Diagnostic,
     instruction::Instruction,
     proc_macro12::{Ident, Literal},
 };
 
-pub fn execute_instructions(instructions: &[Instruction]) -> Result<(), Error> {
+pub fn execute_instructions(instructions: &[Instruction]) -> Result<(), Diagnostic> {
     let mut next_instruction = 0;
 
     while let Some(instruction) = instructions.get(next_instruction) {
@@ -47,7 +47,7 @@ pub fn execute_instructions(instructions: &[Instruction]) -> Result<(), Error> {
                 if let Some(result) = lhs.get().checked_add(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(Error::new(span, "attempt to add with overflow"));
+                    return Err(Diagnostic::new(span, "attempt to add with overflow"));
                 }
             }
             Instruction::IntCopy { val, dst } => {
@@ -67,7 +67,7 @@ pub fn execute_instructions(instructions: &[Instruction]) -> Result<(), Error> {
                 if let Some(result) = lhs.get().checked_div(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(Error::new(
+                    return Err(Diagnostic::new(
                         span,
                         if rhs.get() == 0 {
                             "attempt to divide by zero"
@@ -91,14 +91,14 @@ pub fn execute_instructions(instructions: &[Instruction]) -> Result<(), Error> {
                 if let Some(result) = lhs.get().checked_mul(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(Error::new(span, "attempt to multiply with overflow"));
+                    return Err(Diagnostic::new(span, "attempt to multiply with overflow"));
                 }
             }
             Instruction::IntNeg { val, dst, span } => {
                 if let Some(result) = val.get().checked_neg() {
                     dst.set(result);
                 } else {
-                    return Err(Error::new(span, "attempt to negate with overflow"));
+                    return Err(Diagnostic::new(span, "attempt to negate with overflow"));
                 }
             }
             Instruction::IntRem {
@@ -110,7 +110,7 @@ pub fn execute_instructions(instructions: &[Instruction]) -> Result<(), Error> {
                 if let Some(result) = lhs.get().checked_rem(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(Error::new(
+                    return Err(Diagnostic::new(
                         span,
                         if rhs.get() == 0 {
                             "attempt to calculate the remainder with a divisor of zero"
@@ -129,7 +129,7 @@ pub fn execute_instructions(instructions: &[Instruction]) -> Result<(), Error> {
                 if let Some(result) = lhs.get().checked_sub(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(Error::new(span, "attempt to subtract with overflow"));
+                    return Err(Diagnostic::new(span, "attempt to subtract with overflow"));
                 }
             }
             Instruction::StrCopy { val, dst } => {
@@ -150,7 +150,7 @@ pub fn execute_instructions(instructions: &[Instruction]) -> Result<(), Error> {
                         dst.extend([Ident::new(val, span)]);
                         Ok(())
                     } else {
-                        Err(Error::new(
+                        Err(Diagnostic::new(
                             span,
                             format!("attempt to emit invalid identifier `{val}`"),
                         ))
