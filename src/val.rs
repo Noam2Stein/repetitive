@@ -1,9 +1,12 @@
 use std::cell::Cell;
 
+use crate::proc_macro12::TokenTree;
+
 pub enum Val<'a> {
     Array(ValArray<'a>),
     Bool(&'a Cell<bool>),
     Int(&'a Cell<i32>),
+    Tokens(&'a Cell<Vec<TokenTree>>),
     Range(Box<ValRange<'a>>),
     RangeFrom(Box<ValRangeFrom<'a>>),
     RangeFull,

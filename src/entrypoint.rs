@@ -1,10 +1,8 @@
 use crate::{
-    ast::UnparsedQuote,
-    codegen::{CodegenContext, eval_quote},
+    codegen::{CodegenResult, codegen},
     context::Context,
-    data_structures::{reservation_stack::ReservationStack, stable_storage::StableStorage},
     diagnostics::Diagnostics,
-    instruction_executor::execute_instructions,
+    execute::execute,
     proc_macro12::TokenStream,
 };
 
@@ -14,23 +12,16 @@ use crate::{
 /// public `repetitive` function embeds diagnostics inside the tokenstream. This
 /// approach is currently required for unit tests.
 pub fn repetitive(input: TokenStream) -> (TokenStream, Diagnostics) {
-    let ctx = Context {
-        bool_stack: ReservationStack::new(),
-        diagnostics: Diagnostics::new(),
-        int_stack: ReservationStack::new(),
-        str_constants: StableStorage::new(),
-        str_stack: ReservationStack::new(),
-        tokenstream_stack: ReservationStack::new(),
-    };
-    let mut codegen_context = CodegenContext {
-        ctx: &ctx,
-        instructions: Vec::new(),
-    };
+    let ctx = Context::new();
 
-    let input = UnparsedQuote { stream: input };
-    let output_slot = eval_quote(input, &mut codegen_context);
+    let CodegenResult {
+        instructions,
+        output_slot,
+    } = codegen(input, &ctx);
 
-    let output = match execute_instructions(&codegen_context.instructions) {
+    let execute_result = execute(&instructions);
+
+    let output = match execute_result {
         Ok(()) => TokenStream::from_iter(output_slot.take()),
         Err(error) => {
             ctx.diagnostics.push_error(error);

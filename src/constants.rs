@@ -7,7 +7,7 @@ use std::{
 };
 
 #[expect(private_bounds)]
-pub struct StableStorage<T: ?Sized + Supported>(
+pub struct Constants<T: ?Sized + Supported>(
     /// # Safety
     ///
     /// - Chunks must not be dropped until `self` is dropped, since shared
@@ -47,7 +47,7 @@ trait Supported {
 }
 
 #[expect(private_bounds)]
-impl<T: ?Sized + Supported> StableStorage<T> {
+impl<T: ?Sized + Supported> Constants<T> {
     pub fn new() -> Self {
         Self(UnsafeCell::new(Inner { chunks: Vec::new() }))
     }
@@ -186,11 +186,11 @@ impl Supported for str {
 mod tests {
     use itertools::Itertools;
 
-    use crate::data_structures::stable_storage::StableStorage;
+    use crate::constants::Constants;
 
     #[test]
     fn test_sized() {
-        let storage = StableStorage::<i32>::new();
+        let storage = Constants::<i32>::new();
 
         let values = (0..1000).collect_vec();
 
@@ -204,7 +204,7 @@ mod tests {
 
     #[test]
     fn test_slice() {
-        let storage = StableStorage::<[i32]>::new();
+        let storage = Constants::<[i32]>::new();
 
         let values = (0..100)
             .map(|i| (0..i * 100 + i).collect_vec())
@@ -220,7 +220,7 @@ mod tests {
 
     #[test]
     fn test_str() {
-        let storage = StableStorage::<str>::new();
+        let storage = Constants::<str>::new();
 
         let values = (0..100)
             .map(|i| i.to_string().repeat(i * 63 % 24))

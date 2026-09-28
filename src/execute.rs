@@ -6,7 +6,7 @@ use crate::{
     proc_macro12::{Ident, Literal},
 };
 
-pub fn execute_instructions(instructions: &[Instruction]) -> Result<(), Diagnostic> {
+pub fn execute(instructions: &[Instruction]) -> Result<(), Diagnostic> {
     let mut next_instruction = 0;
 
     while let Some(instruction) = instructions.get(next_instruction) {
@@ -26,7 +26,7 @@ pub fn execute_instructions(instructions: &[Instruction]) -> Result<(), Diagnost
             }
             Instruction::BoolEmit { val, dst, span } => {
                 update_cell(dst, |dst| {
-                    dst.extend([Ident::new(if val.get() { "true" } else { "false" }, span)])
+                    dst.push(Ident::new(if val.get() { "true" } else { "false" }, span).into());
                 });
             }
             Instruction::BoolNot { val, dst } => {
@@ -80,7 +80,7 @@ pub fn execute_instructions(instructions: &[Instruction]) -> Result<(), Diagnost
             Instruction::IntEmit { val, dst, span } => {
                 let mut literal = Literal::i32_unsuffixed(val.get());
                 literal.set_span(span);
-                update_cell(dst, |dst| dst.extend([literal]));
+                update_cell(dst, |dst| dst.push(literal.into()));
             }
             Instruction::IntMul {
                 lhs,
@@ -147,7 +147,7 @@ pub fn execute_instructions(instructions: &[Instruction]) -> Result<(), Diagnost
                         && val.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
 
                     if is_valid_ident {
-                        dst.extend([Ident::new(val, span)]);
+                        dst.push(Ident::new(val, span).into());
                         Ok(())
                     } else {
                         Err(Diagnostic::new(

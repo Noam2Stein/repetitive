@@ -128,14 +128,16 @@ mod proc_macro12 {
 
 mod ast;
 mod codegen;
-mod codegen_val;
+mod constants;
 mod context;
-mod data_structures;
 mod diagnostics;
 mod entrypoint;
+mod execute;
+mod ident_interner;
 mod instruction;
-mod instruction_executor;
-mod parser;
+mod parse;
+mod stack;
+mod val;
 
 #[cfg(test)]
 mod tests;

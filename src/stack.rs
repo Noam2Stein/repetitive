@@ -1,6 +1,6 @@
 use std::{cell::UnsafeCell, fmt::Debug};
 
-pub struct ReservationStack<T>(UnsafeCell<Inner<T>>);
+pub struct Stack<T>(UnsafeCell<Inner<T>>);
 
 pub enum ReleaseError {
     NoActiveReservations,
@@ -25,7 +25,7 @@ struct Reservation {
     chunk_index: usize,
 }
 
-impl<T> Drop for ReservationStack<T> {
+impl<T> Drop for Stack<T> {
     fn drop(&mut self) {
         let inner = self.0.get_mut();
 
@@ -38,7 +38,7 @@ impl<T> Drop for ReservationStack<T> {
     }
 }
 
-impl<T> ReservationStack<T> {
+impl<T> Stack<T> {
     pub fn new() -> Self {
         Self(UnsafeCell::new(Inner {
             chunks: Vec::new(),
@@ -125,18 +125,18 @@ impl Debug for ReleaseError {
 
 #[cfg(test)]
 mod tests {
-    use crate::data_structures::reservation_stack::ReservationStack;
+    use crate::stack::Stack;
 
     #[test]
     fn test_usage() {
-        let vec = ReservationStack::<i32>::new();
+        let stack = Stack::<i32>::new();
 
-        let e0 = vec.reserve();
-        let e1 = vec.reserve();
-        vec.release().unwrap();
-        let e2 = vec.reserve();
-        vec.release().unwrap();
-        vec.release().unwrap();
+        let e0 = stack.reserve();
+        let e1 = stack.reserve();
+        stack.release().unwrap();
+        let e2 = stack.reserve();
+        stack.release().unwrap();
+        stack.release().unwrap();
 
         assert_eq!([e0, e1, e2], [&0; 3]);
     }

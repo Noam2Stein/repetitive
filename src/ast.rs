@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 
 use crate::{
-    data_structures::ident_interner::IdentId,
+    ident_interner::IdentId,
     proc_macro12::{Group, Span, TokenStream, TokenTree, token_stream},
 };
 
