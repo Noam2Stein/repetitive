@@ -18,7 +18,7 @@ struct Chunk<T> {
     /// this pointer to a shared reference. This means that it must point at
     /// valid data, and that no mutable references are created.
     ptr: *mut [T],
-    reservation_count: u8,
+    reservation_count: usize,
 }
 
 struct Reservation {
@@ -57,7 +57,7 @@ impl<T> ReservationStack<T> {
         let chunk_index = if let Some(existing_chunk) = inner
             .chunks
             .iter()
-            .position(|chunk| (chunk.reservation_count as usize) < chunk.ptr.len())
+            .position(|chunk| chunk.reservation_count < chunk.ptr.len())
         {
             existing_chunk
         } else {
@@ -92,7 +92,7 @@ impl<T> ReservationStack<T> {
         // that last until `ReservedStack<T>` is dropped.
         let chunk_slice = unsafe { chunk.ptr.as_ref_unchecked() };
 
-        let result = &chunk_slice[chunk.reservation_count as usize];
+        let result = &chunk_slice[chunk.reservation_count];
         chunk.reservation_count += 1;
 
         result
