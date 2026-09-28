@@ -127,7 +127,6 @@ mod proc_macro12 {
 }
 
 mod ast;
-mod ast_parser;
 mod codegen;
 mod codegen_val;
 mod context;
@@ -136,6 +135,7 @@ mod diagnostics;
 mod entrypoint;
 mod instruction;
 mod instruction_executor;
+mod parser;
 
 #[cfg(test)]
 mod tests;
