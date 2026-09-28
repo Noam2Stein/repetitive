@@ -128,7 +128,6 @@ mod proc_macro12 {
 
 mod ast;
 mod codegen;
-mod constants;
 mod context;
 mod diagnostics;
 mod entrypoint;

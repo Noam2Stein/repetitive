@@ -1,14 +1,11 @@
-use crate::{
-    constants::Constants, diagnostics::Diagnostics, proc_macro12::TokenTree, stack::Stack,
-};
+use crate::{diagnostics::Diagnostics, proc_macro12::TokenStream, stack::Stack};
 
 pub struct Context {
     pub bool_stack: Stack<bool>,
     pub diagnostics: Diagnostics,
     pub int_stack: Stack<i32>,
-    pub str_constants: Constants<str>,
     pub str_stack: Stack<String>,
-    pub tokens_stack: Stack<Vec<TokenTree>>,
+    pub token_stream_stack: Stack<TokenStream>,
 }
 
 impl Context {
@@ -17,9 +14,8 @@ impl Context {
             bool_stack: Stack::new(),
             diagnostics: Diagnostics::new(),
             int_stack: Stack::new(),
-            str_constants: Constants::new(),
             str_stack: Stack::new(),
-            tokens_stack: Stack::new(),
+            token_stream_stack: Stack::new(),
         }
     }
 }

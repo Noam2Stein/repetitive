@@ -14,9 +14,9 @@ struct Inner<T> {
 struct Chunk<T> {
     /// # Safety
     ///
-    /// During the lifetime of `ReservedStack<T>`, it must be sound to convert
-    /// this pointer to a shared reference. This means that it must point at
-    /// valid data, and that no mutable references are created.
+    /// During the lifetime of `Stack<T>`, it must be sound to convert this
+    /// pointer to a shared reference. This means that it must point at valid
+    /// data, and that no mutable references are created.
     ptr: *mut [T],
     reservation_count: usize,
 }
@@ -74,8 +74,8 @@ impl<T> Stack<T> {
 
             let new_chunk = (0..new_chunk_len).map(|_| T::default()).collect();
 
-            // SAFETY: The chunk pointer remains valid until `ReservedStack<T>`
-            // is dropped.
+            // SAFETY: The chunk pointer remains valid until `Stack<T>` is
+            // dropped.
             inner.chunks.push(Chunk {
                 ptr: Box::<[T]>::into_raw(new_chunk),
                 reservation_count: 0,
@@ -89,7 +89,7 @@ impl<T> Stack<T> {
         let chunk = &mut inner.chunks[chunk_index];
 
         // SAFETY: All chunk pointers can be converted to shared references
-        // that last until `ReservedStack<T>` is dropped.
+        // that last until `Stack<T>` is dropped.
         let chunk_slice = unsafe { chunk.ptr.as_ref_unchecked() };
 
         let result = &chunk_slice[chunk.reservation_count];

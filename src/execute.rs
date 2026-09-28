@@ -26,8 +26,11 @@ pub fn execute(instructions: &[Instruction]) -> Result<(), Diagnostic> {
             }
             Instruction::BoolEmit { val, dst, span } => {
                 update_cell(dst, |dst| {
-                    dst.push(Ident::new(if val.get() { "true" } else { "false" }, span).into());
+                    dst.extend([Ident::new(if val.get() { "true" } else { "false" }, span)]);
                 });
+            }
+            Instruction::BoolLoad { val, dst } => {
+                dst.set(val);
             }
             Instruction::BoolNot { val, dst } => {
                 dst.set(!val.get());
@@ -80,7 +83,10 @@ pub fn execute(instructions: &[Instruction]) -> Result<(), Diagnostic> {
             Instruction::IntEmit { val, dst, span } => {
                 let mut literal = Literal::i32_unsuffixed(val.get());
                 literal.set_span(span);
-                update_cell(dst, |dst| dst.push(literal.into()));
+                update_cell(dst, |dst| dst.extend([literal]));
+            }
+            Instruction::IntLoad { val, dst } => {
+                dst.set(val);
             }
             Instruction::IntMul {
                 lhs,
@@ -147,7 +153,7 @@ pub fn execute(instructions: &[Instruction]) -> Result<(), Diagnostic> {
                         && val.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
 
                     if is_valid_ident {
-                        dst.push(Ident::new(val, span).into());
+                        dst.extend([Ident::new(val, span)]);
                         Ok(())
                     } else {
                         Err(Diagnostic::new(
@@ -156,6 +162,9 @@ pub fn execute(instructions: &[Instruction]) -> Result<(), Diagnostic> {
                         ))
                     }
                 })?;
+            }
+            Instruction::TokenStreamEmit { val, dst } => {
+                update_2_cells(val, dst, |val, dst| dst.extend(val.clone()));
             }
         }
     }

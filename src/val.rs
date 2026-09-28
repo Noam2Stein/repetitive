@@ -1,12 +1,11 @@
 use std::cell::Cell;
 
-use crate::proc_macro12::TokenTree;
+use crate::proc_macro12::TokenStream;
 
 pub enum Val<'a> {
     Array(ValArray<'a>),
     Bool(&'a Cell<bool>),
     Int(&'a Cell<i32>),
-    Tokens(&'a Cell<Vec<TokenTree>>),
     Range(Box<ValRange<'a>>),
     RangeFrom(Box<ValRangeFrom<'a>>),
     RangeFull,
@@ -14,6 +13,7 @@ pub enum Val<'a> {
     RangeTo(Box<ValRangeTo<'a>>),
     RangeToInclusive(Box<ValRangeToInclusive<'a>>),
     Str,
+    TokenStream(&'a Cell<TokenStream>),
     Tuple(ValTuple<'a>),
 }
 

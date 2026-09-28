@@ -1,6 +1,6 @@
 use std::cell::Cell;
 
-use crate::proc_macro12::{Span, TokenTree};
+use crate::proc_macro12::{Span, TokenStream};
 
 pub enum Instruction<'ctx> {
     BoolAnd {
@@ -18,8 +18,12 @@ pub enum Instruction<'ctx> {
     },
     BoolEmit {
         val: &'ctx Cell<bool>,
-        dst: &'ctx Cell<Vec<TokenTree>>,
+        dst: &'ctx Cell<TokenStream>,
         span: Span,
+    },
+    BoolLoad {
+        val: bool,
+        dst: &'ctx Cell<bool>,
     },
     BoolNot {
         val: &'ctx Cell<bool>,
@@ -57,8 +61,12 @@ pub enum Instruction<'ctx> {
     },
     IntEmit {
         val: &'ctx Cell<i32>,
-        dst: &'ctx Cell<Vec<TokenTree>>,
+        dst: &'ctx Cell<TokenStream>,
         span: Span,
+    },
+    IntLoad {
+        val: i32,
+        dst: &'ctx Cell<i32>,
     },
     IntMul {
         lhs: &'ctx Cell<i32>,
@@ -93,7 +101,11 @@ pub enum Instruction<'ctx> {
     },
     StrEmit {
         val: &'ctx Cell<String>,
-        dst: &'ctx Cell<Vec<TokenTree>>,
+        dst: &'ctx Cell<TokenStream>,
         span: Span,
+    },
+    TokenStreamEmit {
+        val: &'ctx Cell<TokenStream>,
+        dst: &'ctx Cell<TokenStream>,
     },
 }
