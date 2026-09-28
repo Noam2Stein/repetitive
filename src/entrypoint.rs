@@ -8,7 +8,12 @@ use crate::{
     proc_macro12::TokenStream,
 };
 
-pub fn repetitive_impl(input: TokenStream) -> (TokenStream, Diagnostics) {
+/// The entry point of the macro.
+///
+/// This returns diagnostics separately from the output tokenstream, whereas the
+/// public `repetitive` function embeds diagnostics inside the tokenstream. This
+/// approach is currently required for unit tests.
+pub fn repetitive(input: TokenStream) -> (TokenStream, Diagnostics) {
     let ctx = Context {
         bool_stack: ReservationStack::new(),
         diagnostics: Diagnostics::new(),

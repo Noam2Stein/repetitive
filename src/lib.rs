@@ -133,9 +133,9 @@ mod codegen_val;
 mod context;
 mod data_structures;
 mod diagnostics;
+mod entrypoint;
 mod instruction;
 mod instruction_executor;
-mod repetitive_impl;
 
 #[cfg(test)]
 mod tests;
@@ -147,11 +147,11 @@ mod tests;
 /// [repetitive Documentation]: TODO
 #[proc_macro]
 pub fn repetitive(input: TokenStream) -> TokenStream {
-    use crate::repetitive_impl::repetitive_impl;
+    use crate::entrypoint::repetitive;
 
     let (stream, diagnostics) = cfg_select! {
-        test => repetitive_impl(input.into()),
-        not(test) => repetitive_impl(input),
+        test => repetitive(input.into()),
+        not(test) => repetitive(input),
     };
 
     let output = diagnostics.emit_onto(stream);

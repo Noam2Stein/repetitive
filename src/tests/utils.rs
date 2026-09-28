@@ -2,7 +2,7 @@ use indoc::formatdoc;
 use itertools::Itertools;
 use proc_macro2::{TokenStream, TokenTree};
 
-use crate::repetitive_impl::repetitive_impl;
+use crate::entrypoint::repetitive;
 
 macro_rules! assert_expansion_eq {
     (repetitive!$input:tt, quote!$expected_output:tt $(,)?) => {
@@ -22,7 +22,7 @@ pub(crate) use assert_expansion_eq;
 
 #[doc(hidden)]
 pub fn assert_expansion_eq_ok_helper(input: TokenStream, expected_output: TokenStream) {
-    let (actual_output, mut diagnostics) = repetitive_impl(input);
+    let (actual_output, mut diagnostics) = repetitive(input);
 
     let errors = diagnostics.errors().join("\n");
     if !errors.is_empty() {
@@ -71,7 +71,7 @@ pub fn assert_expansion_eq_ok_helper(input: TokenStream, expected_output: TokenS
 
 #[doc(hidden)]
 pub fn assert_expansion_eq_err_helper(input: TokenStream, expected_errors: &[&str]) {
-    let (_, mut diagnostics) = repetitive_impl(input);
+    let (_, mut diagnostics) = repetitive(input);
     let actual_errors = diagnostics.errors().collect_vec();
 
     if actual_errors.is_empty() {
