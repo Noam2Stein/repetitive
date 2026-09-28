@@ -129,12 +129,11 @@ mod proc_macro12 {
 mod ast;
 mod ast_parser;
 mod context;
+mod data_structures;
 mod diagnostics;
-mod ident_interner;
 mod instruction;
 mod instruction_executor;
 mod repetitive_impl;
-mod reservation_stack;
 
 #[cfg(test)]
 mod tests;

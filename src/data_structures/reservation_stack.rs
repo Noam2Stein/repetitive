@@ -125,7 +125,7 @@ impl Debug for ReleaseError {
 
 #[cfg(test)]
 mod tests {
-    use crate::reservation_stack::ReservationStack;
+    use crate::data_structures::reservation_stack::ReservationStack;
 
     #[test]
     fn test_usage() {

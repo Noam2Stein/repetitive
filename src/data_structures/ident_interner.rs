@@ -81,7 +81,7 @@ fn hash(str: &str) -> u64 {
 mod tests {
     use itertools::Itertools;
 
-    use crate::ident_interner::IdentInterner;
+    use crate::data_structures::ident_interner::IdentInterner;
 
     #[test]
     fn test_correctness() {
