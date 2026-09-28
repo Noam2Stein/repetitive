@@ -128,6 +128,8 @@ mod proc_macro12 {
 
 mod ast;
 mod ast_parser;
+mod codegen;
+mod codegen_val;
 mod context;
 mod data_structures;
 mod diagnostics;

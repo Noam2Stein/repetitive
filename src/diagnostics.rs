@@ -28,6 +28,7 @@ impl Diagnostics {
         self.errors.set(errors);
     }
 
+    #[cfg(test)]
     pub fn errors(&mut self) -> impl Iterator<Item = &str> {
         self.errors
             .get_mut()
