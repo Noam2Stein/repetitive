@@ -118,14 +118,14 @@ mod tests {
             "fooooooo baaaaaar",
         ];
 
-        let interner = StrInterner::new();
+        let str_interner = StrInterner::new();
         let mut ids = Vec::new();
 
         for str in input_strs {
-            let str_id = interner.intern(str);
+            let str_id = str_interner.intern(str);
             ids.push(str_id);
 
-            assert_eq!(interner.restore(str_id), str);
+            assert_eq!(str_interner.restore(str_id), str);
 
             for (other_str_id, other_str) in ids.iter().copied().zip(input_strs) {
                 assert_eq!(str_id == other_str_id, str == other_str);

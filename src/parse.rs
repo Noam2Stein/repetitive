@@ -11,7 +11,7 @@ impl UnparsedQuote {
     pub fn parse(
         self,
         diagnostics: &Diagnostics,
-        interner: &StrInterner,
+        str_interner: &StrInterner,
     ) -> impl Iterator<Item = Result<QuoteSegment, RecordedError>> {
         todo!();
         #[expect(unreachable_code)]
@@ -23,7 +23,7 @@ impl UnparsedExpr {
     pub fn parse(
         self,
         diagnostics: &Diagnostics,
-        interner: &StrInterner,
+        str_interner: &StrInterner,
     ) -> Result<Expr, RecordedError> {
         todo!()
     }
@@ -33,7 +33,7 @@ impl UnparsedExprArray {
     pub fn parse(
         self,
         diagnostics: &Diagnostics,
-        interner: &StrInterner,
+        str_interner: &StrInterner,
     ) -> impl Iterator<Item = Result<Expr, RecordedError>> {
         todo!();
         #[expect(unreachable_code)]
@@ -45,7 +45,7 @@ impl UnparsedExprTuple {
     pub fn parse(
         self,
         diagnostics: &Diagnostics,
-        interner: &StrInterner,
+        str_interner: &StrInterner,
     ) -> impl Iterator<Item = Result<Expr, RecordedError>> {
         todo!();
         #[expect(unreachable_code)]
@@ -57,7 +57,7 @@ impl UnparsedPat {
     pub fn parse(
         self,
         diagnostics: &Diagnostics,
-        interner: &StrInterner,
+        str_interner: &StrInterner,
     ) -> Result<Expr, RecordedError> {
         todo!()
     }
