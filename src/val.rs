@@ -2,47 +2,47 @@ use std::cell::Cell;
 
 use crate::proc_macro12::TokenStream;
 
-pub enum Val<'ctx> {
-    Array(ValArray<'ctx>),
-    Bool(&'ctx Cell<bool>),
-    Int(&'ctx Cell<i32>),
-    Range(Box<ValRange<'ctx>>),
-    RangeFrom(Box<ValRangeFrom<'ctx>>),
+pub enum Val<'storage> {
+    Array(ValArray<'storage>),
+    Bool(&'storage Cell<bool>),
+    Int(&'storage Cell<i32>),
+    Range(Box<ValRange<'storage>>),
+    RangeFrom(Box<ValRangeFrom<'storage>>),
     RangeFull,
-    RangeInclusive(Box<ValRangeInclusive<'ctx>>),
-    RangeTo(Box<ValRangeTo<'ctx>>),
-    RangeToInclusive(Box<ValRangeToInclusive<'ctx>>),
+    RangeInclusive(Box<ValRangeInclusive<'storage>>),
+    RangeTo(Box<ValRangeTo<'storage>>),
+    RangeToInclusive(Box<ValRangeToInclusive<'storage>>),
     Str,
-    TokenStream(&'ctx Cell<TokenStream>),
-    Tuple(ValTuple<'ctx>),
+    TokenStream(&'storage Cell<TokenStream>),
+    Tuple(ValTuple<'storage>),
 }
 
-pub struct ValArray<'ctx> {
-    pub elements: Vec<Val<'ctx>>,
+pub struct ValArray<'storage> {
+    pub elements: Vec<Val<'storage>>,
 }
 
-pub struct ValRange<'ctx> {
-    pub start: Val<'ctx>,
-    pub end: Val<'ctx>,
+pub struct ValRange<'storage> {
+    pub start: Val<'storage>,
+    pub end: Val<'storage>,
 }
 
-pub struct ValRangeFrom<'ctx> {
-    pub start: Val<'ctx>,
+pub struct ValRangeFrom<'storage> {
+    pub start: Val<'storage>,
 }
 
-pub struct ValRangeInclusive<'ctx> {
-    pub start: Val<'ctx>,
-    pub last: Val<'ctx>,
+pub struct ValRangeInclusive<'storage> {
+    pub start: Val<'storage>,
+    pub last: Val<'storage>,
 }
 
-pub struct ValRangeTo<'ctx> {
-    pub end: Val<'ctx>,
+pub struct ValRangeTo<'storage> {
+    pub end: Val<'storage>,
 }
 
-pub struct ValRangeToInclusive<'ctx> {
-    pub last: Val<'ctx>,
+pub struct ValRangeToInclusive<'storage> {
+    pub last: Val<'storage>,
 }
 
-pub struct ValTuple<'ctx> {
-    pub elements: Vec<Val<'ctx>>,
+pub struct ValTuple<'storage> {
+    pub elements: Vec<Val<'storage>>,
 }

@@ -1,29 +1,14 @@
-use std::cell::Cell;
-
 use crate::{
-    codegen::{CodegenResult, codegen},
-    constants::Constants,
-    diagnostics::Diagnostics,
+    compile::{CompileResult, compile},
+    diagnostics::{Diagnostics, RecordedError},
     execute::execute,
-    ident_interner::IdentInterner,
+    instruction::InstructionStorage,
     proc_macro12::TokenStream,
-    stack::Stack,
 };
 
 pub struct RepetitiveResult {
     pub output: TokenStream,
     pub diagnostics: Diagnostics,
-}
-
-pub struct Context {
-    pub bool_stack: Stack<Cell<bool>>,
-    pub diagnostics: Diagnostics,
-    pub ident_interner: IdentInterner,
-    pub int_stack: Stack<Cell<i32>>,
-    pub str_constants: Constants<Cell<String>>,
-    pub str_stack: Stack<Cell<String>>,
-    pub token_stream_constants: Constants<Cell<TokenStream>>,
-    pub token_stream_stack: Stack<Cell<TokenStream>>,
 }
 
 /// The entry point of the macro.
@@ -32,38 +17,25 @@ pub struct Context {
 /// the public `repetitive` function embeds diagnostics inside the token stream.
 /// This approach is required for unit tests.
 pub fn repetitive(input: TokenStream) -> RepetitiveResult {
-    let ctx = Context {
-        bool_stack: Stack::new(),
-        diagnostics: Diagnostics::new(),
-        ident_interner: IdentInterner::new(),
-        int_stack: Stack::new(),
-        str_constants: Constants::new(),
-        str_stack: Stack::new(),
-        token_stream_constants: Constants::new(),
-        token_stream_stack: Stack::new(),
-    };
+    let diagnostics = Diagnostics::new();
+    let instruction_storage = InstructionStorage::new();
 
-    let Ok(CodegenResult {
-        instructions,
-        output_slot,
-    }) = codegen(input, &ctx)
-    else {
-        return RepetitiveResult {
-            output: TokenStream::new(),
-            diagnostics: ctx.diagnostics,
-        };
-    };
+    // This should be replaced with a `try` block once they are stabilized
+    let output = (|| {
+        let CompileResult {
+            instructions,
+            output_slot,
+        } = compile(input, &diagnostics, &instruction_storage)?;
 
-    let output_stream = match execute(&instructions) {
-        Ok(()) => output_slot.take(),
-        Err(error) => {
-            ctx.diagnostics.push_error(error);
-            TokenStream::new()
+        match execute(&instructions) {
+            Ok(()) => Ok(output_slot.take()),
+            Err(error) => Err(diagnostics.record_error(error)),
         }
-    };
+    })()
+    .unwrap_or_else(|_: RecordedError| TokenStream::new());
 
     RepetitiveResult {
-        output: output_stream,
-        diagnostics: ctx.diagnostics,
+        output,
+        diagnostics,
     }
 }

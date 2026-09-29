@@ -1,111 +1,137 @@
 use std::cell::Cell;
 
-use crate::proc_macro12::{Span, TokenStream};
+use crate::{
+    constants::Constants,
+    proc_macro12::{Span, TokenStream},
+    stack::Stack,
+};
 
-pub enum Instruction<'ctx> {
+pub struct InstructionStorage {
+    pub bool_stack: Stack<Cell<bool>>,
+    pub int_stack: Stack<Cell<i32>>,
+    pub str_constants: Constants<Cell<String>>,
+    pub str_stack: Stack<Cell<String>>,
+    pub token_stream_constants: Constants<Cell<TokenStream>>,
+    pub token_stream_stack: Stack<Cell<TokenStream>>,
+}
+
+pub enum Instruction<'storage> {
     BoolAnd {
-        lhs: &'ctx Cell<bool>,
-        rhs: &'ctx Cell<bool>,
-        dst: &'ctx Cell<bool>,
+        lhs: &'storage Cell<bool>,
+        rhs: &'storage Cell<bool>,
+        dst: &'storage Cell<bool>,
     },
     BoolCopy {
-        val: &'ctx Cell<bool>,
-        dst: &'ctx Cell<bool>,
+        val: &'storage Cell<bool>,
+        dst: &'storage Cell<bool>,
     },
     BoolDisplay {
-        val: &'ctx Cell<bool>,
-        dst: &'ctx Cell<String>,
+        val: &'storage Cell<bool>,
+        dst: &'storage Cell<String>,
     },
     BoolEmit {
-        val: &'ctx Cell<bool>,
-        dst: &'ctx Cell<TokenStream>,
+        val: &'storage Cell<bool>,
+        dst: &'storage Cell<TokenStream>,
         span: Span,
     },
     BoolLoad {
         val: bool,
-        dst: &'ctx Cell<bool>,
+        dst: &'storage Cell<bool>,
     },
     BoolNot {
-        val: &'ctx Cell<bool>,
-        dst: &'ctx Cell<bool>,
+        val: &'storage Cell<bool>,
+        dst: &'storage Cell<bool>,
     },
     BoolOr {
-        lhs: &'ctx Cell<bool>,
-        rhs: &'ctx Cell<bool>,
-        dst: &'ctx Cell<bool>,
+        lhs: &'storage Cell<bool>,
+        rhs: &'storage Cell<bool>,
+        dst: &'storage Cell<bool>,
     },
     BoolXor {
-        lhs: &'ctx Cell<bool>,
-        rhs: &'ctx Cell<bool>,
-        dst: &'ctx Cell<bool>,
+        lhs: &'storage Cell<bool>,
+        rhs: &'storage Cell<bool>,
+        dst: &'storage Cell<bool>,
     },
     IntAdd {
-        lhs: &'ctx Cell<i32>,
-        rhs: &'ctx Cell<i32>,
-        dst: &'ctx Cell<i32>,
+        lhs: &'storage Cell<i32>,
+        rhs: &'storage Cell<i32>,
+        dst: &'storage Cell<i32>,
         span: Span,
     },
     IntCopy {
-        val: &'ctx Cell<i32>,
-        dst: &'ctx Cell<i32>,
+        val: &'storage Cell<i32>,
+        dst: &'storage Cell<i32>,
     },
     IntDisplay {
-        val: &'ctx Cell<i32>,
-        dst: &'ctx Cell<String>,
+        val: &'storage Cell<i32>,
+        dst: &'storage Cell<String>,
     },
     IntDiv {
-        lhs: &'ctx Cell<i32>,
-        rhs: &'ctx Cell<i32>,
-        dst: &'ctx Cell<i32>,
+        lhs: &'storage Cell<i32>,
+        rhs: &'storage Cell<i32>,
+        dst: &'storage Cell<i32>,
         span: Span,
     },
     IntEmit {
-        val: &'ctx Cell<i32>,
-        dst: &'ctx Cell<TokenStream>,
+        val: &'storage Cell<i32>,
+        dst: &'storage Cell<TokenStream>,
         span: Span,
     },
     IntLoad {
         val: i32,
-        dst: &'ctx Cell<i32>,
+        dst: &'storage Cell<i32>,
     },
     IntMul {
-        lhs: &'ctx Cell<i32>,
-        rhs: &'ctx Cell<i32>,
-        dst: &'ctx Cell<i32>,
+        lhs: &'storage Cell<i32>,
+        rhs: &'storage Cell<i32>,
+        dst: &'storage Cell<i32>,
         span: Span,
     },
     IntNeg {
-        val: &'ctx Cell<i32>,
-        dst: &'ctx Cell<i32>,
+        val: &'storage Cell<i32>,
+        dst: &'storage Cell<i32>,
         span: Span,
     },
     IntRem {
-        lhs: &'ctx Cell<i32>,
-        rhs: &'ctx Cell<i32>,
-        dst: &'ctx Cell<i32>,
+        lhs: &'storage Cell<i32>,
+        rhs: &'storage Cell<i32>,
+        dst: &'storage Cell<i32>,
         span: Span,
     },
     IntSub {
-        lhs: &'ctx Cell<i32>,
-        rhs: &'ctx Cell<i32>,
-        dst: &'ctx Cell<i32>,
+        lhs: &'storage Cell<i32>,
+        rhs: &'storage Cell<i32>,
+        dst: &'storage Cell<i32>,
         span: Span,
     },
     StrCopy {
-        val: &'ctx Cell<String>,
-        dst: &'ctx Cell<String>,
+        val: &'storage Cell<String>,
+        dst: &'storage Cell<String>,
     },
     StrDisplay {
-        val: &'ctx Cell<String>,
-        dst: &'ctx Cell<String>,
+        val: &'storage Cell<String>,
+        dst: &'storage Cell<String>,
     },
     StrEmit {
-        val: &'ctx Cell<String>,
-        dst: &'ctx Cell<TokenStream>,
+        val: &'storage Cell<String>,
+        dst: &'storage Cell<TokenStream>,
         span: Span,
     },
     TokenStreamEmit {
-        val: &'ctx Cell<TokenStream>,
-        dst: &'ctx Cell<TokenStream>,
+        val: &'storage Cell<TokenStream>,
+        dst: &'storage Cell<TokenStream>,
     },
+}
+
+impl InstructionStorage {
+    pub fn new() -> Self {
+        Self {
+            bool_stack: Stack::new(),
+            int_stack: Stack::new(),
+            str_constants: Constants::new(),
+            str_stack: Stack::new(),
+            token_stream_constants: Constants::new(),
+            token_stream_stack: Stack::new(),
+        }
+    }
 }

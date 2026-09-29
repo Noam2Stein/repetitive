@@ -1,9 +1,6 @@
-use crate::{
-    ast::{
-        Expr, QuoteSegment, UnparsedExpr, UnparsedExprArray, UnparsedExprTuple, UnparsedPat,
-        UnparsedQuote,
-    },
-    entrypoint::Context,
+use crate::ast::{
+    Expr, QuoteSegment, UnparsedExpr, UnparsedExprArray, UnparsedExprTuple, UnparsedPat,
+    UnparsedQuote,
 };
 
 impl UnparsedQuote {

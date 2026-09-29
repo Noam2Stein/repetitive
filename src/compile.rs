@@ -3,18 +3,23 @@ use std::cell::Cell;
 use crate::{
     ast::{Expr, QuoteSegment, UnparsedQuote},
     bindings::Bindings,
+    diagnostics::{Diagnostics, RecordedError},
     entrypoint::Context,
-    instruction::Instruction,
+    instruction::{Instruction, InstructionStorage},
     proc_macro12::TokenStream,
     val::Val,
 };
 
-pub struct CodegenResult<'ctx> {
-    pub instructions: Vec<Instruction<'ctx>>,
-    pub output_slot: &'ctx Cell<TokenStream>,
+pub struct CompileResult<'storage> {
+    pub instructions: Vec<Instruction<'storage>>,
+    pub output_slot: &'storage Cell<TokenStream>,
 }
 
-pub fn codegen(input: TokenStream, ctx: &Context) -> Result<CodegenResult<'_>, ()> {
+pub fn compile<'storage>(
+    input: TokenStream,
+    diagnostics: &Diagnostics,
+    instruction_storage: &'storage InstructionStorage,
+) -> Result<CompileResult<'storage>, RecordedError> {
     let mut ctx = CodegenContext {
         ctx,
         bindings: Bindings::new(),
@@ -26,7 +31,7 @@ pub fn codegen(input: TokenStream, ctx: &Context) -> Result<CodegenResult<'_>, (
         unreachable!("the result of `eval_quote` should be a token stream");
     };
 
-    Ok(CodegenResult {
+    Ok(CompileResult {
         instructions: ctx.instructions,
         output_slot,
     })

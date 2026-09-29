@@ -15,6 +15,8 @@ pub struct Diagnostic {
     pub message: Cow<'static, str>,
 }
 
+pub struct RecordedError(());
+
 impl Diagnostics {
     pub fn new() -> Self {
         Self {
@@ -22,10 +24,12 @@ impl Diagnostics {
         }
     }
 
-    pub fn push_error(&self, error: Diagnostic) {
+    pub fn record_error(&self, error: Diagnostic) -> RecordedError {
         let mut errors = self.errors.take();
         errors.push(error);
         self.errors.set(errors);
+
+        RecordedError(())
     }
 
     #[cfg(test)]
@@ -86,7 +90,7 @@ mod tests {
     #[test]
     fn test_errors() {
         let mut diagnostics = Diagnostics::new();
-        diagnostics.push_error(Diagnostic::new(Span::call_site(), "insert error message"));
+        diagnostics.record_error(Diagnostic::new(Span::call_site(), "insert error message"));
 
         assert_eq!(
             diagnostics.errors().collect_vec(),
