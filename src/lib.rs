@@ -130,7 +130,6 @@ mod ast;
 mod bindings;
 mod codegen;
 mod constants;
-mod context;
 mod diagnostics;
 mod entrypoint;
 mod execute;

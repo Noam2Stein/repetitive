@@ -1,7 +1,7 @@
 use std::cell::Cell;
 
 use crate::{
-    context::Context,
+    entrypoint::Context,
     instruction::Instruction,
     proc_macro12::{TokenStream, TokenTree},
 };

@@ -3,7 +3,7 @@ use crate::{
         Expr, QuoteSegment, UnparsedExpr, UnparsedExprArray, UnparsedExprTuple, UnparsedPat,
         UnparsedQuote,
     },
-    context::Context,
+    entrypoint::Context,
 };
 
 impl UnparsedQuote {
