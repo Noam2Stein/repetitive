@@ -149,9 +149,12 @@ mod tests;
 /// [repetitive Documentation]: TODO
 #[proc_macro]
 pub fn repetitive(input: TokenStream) -> TokenStream {
-    use crate::entrypoint::repetitive;
+    use crate::entrypoint::{RepetitiveResult, repetitive};
 
-    let (stream, diagnostics) = cfg_select! {
+    let RepetitiveResult {
+        stream,
+        diagnostics,
+    } = cfg_select! {
         test => repetitive(input.into()),
         not(test) => repetitive(input),
     };

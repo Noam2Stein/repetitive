@@ -6,12 +6,17 @@ use crate::{
     proc_macro12::TokenStream,
 };
 
+pub struct RepetitiveResult {
+    pub stream: TokenStream,
+    pub diagnostics: Diagnostics,
+}
+
 /// The entry point of the macro.
 ///
 /// This returns diagnostics separately from the output token stream, whereas
 /// the public `repetitive` function embeds diagnostics inside the token stream.
 /// This approach is required for unit tests.
-pub fn repetitive(input: TokenStream) -> (TokenStream, Diagnostics) {
+pub fn repetitive(input: TokenStream) -> RepetitiveResult {
     let ctx = Context::new();
 
     let CodegenResult {
@@ -29,5 +34,8 @@ pub fn repetitive(input: TokenStream) -> (TokenStream, Diagnostics) {
         }
     };
 
-    (output, ctx.diagnostics)
+    RepetitiveResult {
+        stream: output,
+        diagnostics: ctx.diagnostics,
+    }
 }
