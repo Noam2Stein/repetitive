@@ -126,17 +126,17 @@ mod proc_macro12 {
     pub use proc_macro2::*;
 }
 
+mod arena;
 mod ast;
 mod bindings;
 mod compile;
-mod constants;
 mod diagnostics;
 mod entrypoint;
 mod execute;
-mod ident_interner;
 mod instruction;
 mod parse;
 mod stack;
+mod str_interner;
 mod val;
 
 #[cfg(test)]

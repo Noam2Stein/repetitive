@@ -1,9 +1,9 @@
 use std::fmt::Debug;
 
-use crate::{ident_interner::IdentId, val::Val};
+use crate::{str_interner::StrId, val::Val};
 
 pub struct Bindings<'ctx> {
-    binding_idents: Vec<IdentId>,
+    binding_idents: Vec<StrId>,
     binding_values: Vec<Val<'ctx>>,
     scopes: Vec<Scope>,
 }
@@ -31,12 +31,12 @@ impl<'ctx> Bindings<'ctx> {
         });
     }
 
-    pub fn push_binding(&mut self, ident: IdentId, value: Val<'ctx>) {
+    pub fn push_binding(&mut self, ident: StrId, value: Val<'ctx>) {
         self.binding_idents.push(ident);
         self.binding_values.push(value);
     }
 
-    pub fn get_binding(&self, ident: IdentId) -> Option<&Val<'ctx>> {
+    pub fn get_binding(&self, ident: StrId) -> Option<&Val<'ctx>> {
         let index = self.binding_idents.iter().rev().position(|b| ident == *b)?;
 
         Some(&self.binding_values[index])

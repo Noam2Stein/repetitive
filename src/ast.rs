@@ -1,8 +1,8 @@
 use std::iter::Peekable;
 
 use crate::{
-    ident_interner::IdentId,
     proc_macro12::{Group, Span, TokenStream, TokenTree, token_stream},
+    str_interner::StrId,
 };
 
 pub struct UnparsedQuote {
@@ -26,7 +26,7 @@ pub struct QuoteFor {
 
 pub struct QuoteIdent {
     pub span: Span,
-    pub id: IdentId,
+    pub strid: StrId,
 }
 
 pub struct QuoteIf {
@@ -105,7 +105,7 @@ pub struct ExprBool {
 
 pub struct ExprIdent {
     pub span: Span,
-    pub id: IdentId,
+    pub strid: StrId,
 }
 
 pub struct ExprInt {

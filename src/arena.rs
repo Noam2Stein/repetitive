@@ -1,6 +1,8 @@
-use std::{cell::UnsafeCell, mem::MaybeUninit};
+use std::{cell::UnsafeCell, mem::MaybeUninit, ptr::copy_nonoverlapping};
 
-pub struct Constants<T>(UnsafeCell<Inner<T>>);
+pub struct Arena<T>(UnsafeCell<Inner<T>>);
+
+pub struct StrArena(Arena<u8>);
 
 struct Inner<T> {
     chunks: Vec<Chunk<T>>,
@@ -19,12 +21,13 @@ struct Chunk<T> {
     elements: usize,
 }
 
-impl<T> Constants<T> {
+impl<T> Arena<T> {
     pub fn new() -> Self {
         Self(UnsafeCell::new(Inner { chunks: Vec::new() }))
     }
 
-    pub fn insert(&self, value: T) -> &T {
+    #[expect(clippy::mut_from_ref)]
+    pub fn insert(&self, value: T) -> &mut T {
         // SAFETY: This reference does not escape the function, and during this
         // function no other references are created.
         let inner = unsafe { self.0.get().as_mut_unchecked() };
@@ -37,6 +40,42 @@ impl<T> Constants<T> {
 
         dst.write(value)
     }
+
+    #[expect(clippy::mut_from_ref)]
+    pub fn insert_slice(&self, slice: &[T]) -> &mut [T]
+    where
+        T: Copy,
+    {
+        // SAFETY: This reference does not escape the function, and during this
+        // function no other references are created.
+        let inner = unsafe { self.0.get().as_mut_unchecked() };
+
+        let dst = inner.reserve_dst(slice.len());
+
+        // SAFETY: `src` and `count` come from a valid slice. `dst` is
+        // guaranteed to be valid as a mutable reference to `slice.len()`
+        // elements. Since `dst` is valid as a mutable reference, it cannot
+        // overlap with `slice`.
+        unsafe { copy_nonoverlapping(slice.as_ptr(), dst, slice.len()) };
+
+        // SAFETY: `dst` is guaranteed to be valid as a mutable reference to
+        // `slice.len()`. It remains valid and untouched until `self` is
+        // dropped.
+        unsafe { std::slice::from_raw_parts_mut(dst, slice.len()) }
+    }
+}
+
+impl StrArena {
+    pub fn new() -> Self {
+        Self(Arena::new())
+    }
+
+    #[expect(clippy::mut_from_ref)]
+    pub fn insert(&self, str: &str) -> &mut str {
+        // SAFETY: The output of `insert_slice` is the same as the input, which
+        // is valid utf-8.
+        unsafe { str::from_utf8_unchecked_mut(self.0.insert_slice(str.as_bytes())) }
+    }
 }
 
 impl<T> Inner<T> {
@@ -46,7 +85,7 @@ impl<T> Inner<T> {
         // SAFETY: `chunk.elements` cannot overflow `isize` because it cannot go
         // outside of `chunk.ptr`.
         let result = unsafe { chunk.ptr.cast::<T>().add(chunk.elements) };
-        chunk.elements += elements;
+        chunk.elements = chunk.elements.strict_add(elements);
         result
     }
 
@@ -108,17 +147,17 @@ impl<T> Drop for Chunk<T> {
 mod tests {
     use itertools::Itertools;
 
-    use crate::constants::Constants;
+    use crate::arena::Arena;
 
     #[test]
     fn test_usage() {
-        let constants = Constants::new();
+        let arena = Arena::new();
 
         let values = (0..100).collect_vec();
 
         let results = values
             .iter()
-            .map(|value| *constants.insert(*value))
+            .map(|value| *arena.insert(*value))
             .collect_vec();
 
         assert_eq!(results, values);

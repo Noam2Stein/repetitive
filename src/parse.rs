@@ -4,14 +4,14 @@ use crate::{
         UnparsedQuote,
     },
     diagnostics::{Diagnostics, RecordedError},
-    ident_interner::IdentInterner,
+    str_interner::StrInterner,
 };
 
 impl UnparsedQuote {
     pub fn parse(
         self,
         diagnostics: &Diagnostics,
-        ident_interner: &IdentInterner,
+        interner: &StrInterner,
     ) -> impl Iterator<Item = Result<QuoteSegment, RecordedError>> {
         todo!();
         #[expect(unreachable_code)]
@@ -23,7 +23,7 @@ impl UnparsedExpr {
     pub fn parse(
         self,
         diagnostics: &Diagnostics,
-        ident_interner: &IdentInterner,
+        interner: &StrInterner,
     ) -> Result<Expr, RecordedError> {
         todo!()
     }
@@ -33,7 +33,7 @@ impl UnparsedExprArray {
     pub fn parse(
         self,
         diagnostics: &Diagnostics,
-        ident_interner: &IdentInterner,
+        interner: &StrInterner,
     ) -> impl Iterator<Item = Result<Expr, RecordedError>> {
         todo!();
         #[expect(unreachable_code)]
@@ -45,7 +45,7 @@ impl UnparsedExprTuple {
     pub fn parse(
         self,
         diagnostics: &Diagnostics,
-        ident_interner: &IdentInterner,
+        interner: &StrInterner,
     ) -> impl Iterator<Item = Result<Expr, RecordedError>> {
         todo!();
         #[expect(unreachable_code)]
@@ -57,7 +57,7 @@ impl UnparsedPat {
     pub fn parse(
         self,
         diagnostics: &Diagnostics,
-        ident_interner: &IdentInterner,
+        interner: &StrInterner,
     ) -> Result<Expr, RecordedError> {
         todo!()
     }
