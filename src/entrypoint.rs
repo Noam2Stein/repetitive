@@ -27,10 +27,9 @@ pub fn repetitive(input: TokenStream) -> RepetitiveResult {
             output_slot,
         } = compile(input, &diagnostics, &instruction_storage)?;
 
-        match execute(&instructions) {
-            Ok(()) => Ok(output_slot.take()),
-            Err(error) => Err(diagnostics.record_error(error)),
-        }
+        execute(&instructions, &diagnostics)?;
+
+        Ok(output_slot.take())
     })()
     .unwrap_or_else(|_: RecordedError| TokenStream::new());
 
