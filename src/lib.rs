@@ -127,6 +127,7 @@ mod proc_macro12 {
 }
 
 mod ast;
+mod bindings;
 mod codegen;
 mod constants;
 mod context;
