@@ -8,9 +8,9 @@ use crate::{
 
 /// The entry point of the macro.
 ///
-/// This returns diagnostics separately from the output tokenstream, whereas the
-/// public `repetitive` function embeds diagnostics inside the tokenstream. This
-/// approach is currently required for unit tests.
+/// This returns diagnostics separately from the output token stream, whereas
+/// the public `repetitive` function embeds diagnostics inside the token stream.
+/// This approach is required for unit tests.
 pub fn repetitive(input: TokenStream) -> (TokenStream, Diagnostics) {
     let ctx = Context::new();
 
