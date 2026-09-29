@@ -36,12 +36,12 @@ impl Diagnostics {
             .map(|diagnostic| diagnostic.message.as_ref())
     }
 
-    pub fn emit_onto(self, stream: TokenStream) -> TokenStream {
+    pub fn emit_onto(self, output: TokenStream) -> TokenStream {
         let Self { errors } = self;
         let errors = errors.into_inner();
 
         if errors.is_empty() {
-            stream
+            output
         } else {
             errors
                 .into_iter()

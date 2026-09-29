@@ -152,14 +152,14 @@ pub fn repetitive(input: TokenStream) -> TokenStream {
     use crate::entrypoint::{RepetitiveResult, repetitive};
 
     let RepetitiveResult {
-        stream,
+        output,
         diagnostics,
     } = cfg_select! {
         test => repetitive(input.into()),
         not(test) => repetitive(input),
     };
 
-    let output = diagnostics.emit_onto(stream);
+    let output = diagnostics.emit_onto(output);
     cfg_select! {
         test => output.into(),
         not(test) => output,

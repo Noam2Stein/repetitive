@@ -11,7 +11,7 @@ use crate::{
 };
 
 pub struct RepetitiveResult {
-    pub stream: TokenStream,
+    pub output: TokenStream,
     pub diagnostics: Diagnostics,
 }
 
@@ -49,7 +49,7 @@ pub fn repetitive(input: TokenStream) -> RepetitiveResult {
     }) = codegen(input, &ctx)
     else {
         return RepetitiveResult {
-            stream: TokenStream::new(),
+            output: TokenStream::new(),
             diagnostics: ctx.diagnostics,
         };
     };
@@ -63,7 +63,7 @@ pub fn repetitive(input: TokenStream) -> RepetitiveResult {
     };
 
     RepetitiveResult {
-        stream: output_stream,
+        output: output_stream,
         diagnostics: ctx.diagnostics,
     }
 }

@@ -23,7 +23,7 @@ pub(crate) use assert_expansion_eq;
 #[doc(hidden)]
 pub fn assert_expansion_eq_ok_helper(input: TokenStream, expected_output: TokenStream) {
     let RepetitiveResult {
-        stream: actual_output,
+        output: actual_output,
         mut diagnostics,
     } = repetitive(input);
 
@@ -75,7 +75,7 @@ pub fn assert_expansion_eq_ok_helper(input: TokenStream, expected_output: TokenS
 #[doc(hidden)]
 pub fn assert_expansion_eq_err_helper(input: TokenStream, expected_errors: &[&str]) {
     let RepetitiveResult {
-        stream: _,
+        output: _,
         mut diagnostics,
     } = repetitive(input);
 
