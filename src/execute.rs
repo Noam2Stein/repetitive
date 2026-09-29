@@ -1,7 +1,7 @@
 use std::{cell::Cell, fmt::Write};
 
 use crate::{
-    diagnostics::{Diagnostic, Diagnostics, RecordedError},
+    diagnostics::{Diagnostics, RecordedError},
     instruction::Instruction,
     proc_macro12::{Ident, Literal},
 };
@@ -53,8 +53,7 @@ pub fn execute(
                 if let Some(result) = lhs.get().checked_add(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(diagnostics
-                        .record_error(Diagnostic::new(span, "attempt to add with overflow")));
+                    return Err(diagnostics.record_error(span, "attempt to add with overflow"));
                 }
             }
             Instruction::IntCopy { val, dst } => {
@@ -74,14 +73,14 @@ pub fn execute(
                 if let Some(result) = lhs.get().checked_div(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(diagnostics.record_error(Diagnostic::new(
+                    return Err(diagnostics.record_error(
                         span,
                         if rhs.get() == 0 {
                             "attempt to divide by zero"
                         } else {
                             "attempt to divide with overflow"
                         },
-                    )));
+                    ));
                 }
             }
             Instruction::IntEmit { val, dst, span } => {
@@ -101,16 +100,14 @@ pub fn execute(
                 if let Some(result) = lhs.get().checked_mul(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(diagnostics
-                        .record_error(Diagnostic::new(span, "attempt to multiply with overflow")));
+                    return Err(diagnostics.record_error(span, "attempt to multiply with overflow"));
                 }
             }
             Instruction::IntNeg { val, dst, span } => {
                 if let Some(result) = val.get().checked_neg() {
                     dst.set(result);
                 } else {
-                    return Err(diagnostics
-                        .record_error(Diagnostic::new(span, "attempt to negate with overflow")));
+                    return Err(diagnostics.record_error(span, "attempt to negate with overflow"));
                 }
             }
             Instruction::IntRem {
@@ -122,14 +119,14 @@ pub fn execute(
                 if let Some(result) = lhs.get().checked_rem(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(diagnostics.record_error(Diagnostic::new(
+                    return Err(diagnostics.record_error(
                         span,
                         if rhs.get() == 0 {
                             "attempt to calculate the remainder with a divisor of zero"
                         } else {
                             "attempt to calculate the remainder with overflow"
                         },
-                    )));
+                    ));
                 }
             }
             Instruction::IntSub {
@@ -141,8 +138,7 @@ pub fn execute(
                 if let Some(result) = lhs.get().checked_sub(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(diagnostics
-                        .record_error(Diagnostic::new(span, "attempt to subtract with overflow")));
+                    return Err(diagnostics.record_error(span, "attempt to subtract with overflow"));
                 }
             }
             Instruction::StrCopy { val, dst } => {
@@ -163,10 +159,10 @@ pub fn execute(
                         dst.extend([Ident::new(val, span)]);
                         Ok(())
                     } else {
-                        Err(diagnostics.record_error(Diagnostic::new(
+                        Err(diagnostics.record_error(
                             span,
                             format!("attempt to emit invalid identifier `{val}`"),
-                        )))
+                        ))
                     }
                 })?;
             }

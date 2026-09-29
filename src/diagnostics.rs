@@ -10,9 +10,9 @@ pub struct Diagnostics {
     errors: Cell<Vec<Diagnostic>>,
 }
 
-pub struct Diagnostic {
-    pub span: Span,
-    pub message: Cow<'static, str>,
+struct Diagnostic {
+    span: Span,
+    message: Cow<'static, str>,
 }
 
 pub struct RecordedError(());
@@ -24,9 +24,12 @@ impl Diagnostics {
         }
     }
 
-    pub fn record_error(&self, error: Diagnostic) -> RecordedError {
+    pub fn record_error(&self, span: Span, message: impl Into<Cow<'static, str>>) -> RecordedError {
         let mut errors = self.errors.take();
-        errors.push(error);
+        errors.push(Diagnostic {
+            span,
+            message: message.into(),
+        });
         self.errors.set(errors);
 
         RecordedError(())
@@ -64,21 +67,12 @@ impl Diagnostics {
     }
 }
 
-impl Diagnostic {
-    pub fn new(span: Span, message: impl Into<Cow<'static, str>>) -> Self {
-        Self {
-            span,
-            message: message.into(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
     use proc_macro2::Span;
 
-    use crate::diagnostics::{Diagnostic, Diagnostics};
+    use crate::diagnostics::Diagnostics;
 
     #[test]
     fn test_success() {
@@ -90,7 +84,7 @@ mod tests {
     #[test]
     fn test_errors() {
         let mut diagnostics = Diagnostics::new();
-        diagnostics.record_error(Diagnostic::new(Span::call_site(), "insert error message"));
+        diagnostics.record_error(Span::call_site(), "insert error message");
 
         assert_eq!(
             diagnostics.errors().collect_vec(),
