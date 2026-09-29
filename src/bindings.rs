@@ -17,6 +17,14 @@ pub enum CloseScopeError {
 }
 
 impl<'ctx> Bindings<'ctx> {
+    pub fn new() -> Self {
+        Self {
+            binding_idents: Vec::new(),
+            binding_values: Vec::new(),
+            scopes: Vec::new(),
+        }
+    }
+
     pub fn open_scope(&mut self) {
         self.scopes.push(Scope {
             binding_count_when_opened: self.binding_idents.len(),

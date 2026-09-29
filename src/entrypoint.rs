@@ -43,15 +43,19 @@ pub fn repetitive(input: TokenStream) -> RepetitiveResult {
         token_stream_stack: Stack::new(),
     };
 
-    let CodegenResult {
+    let Ok(CodegenResult {
         instructions,
         output_slot,
-    } = codegen(input, &ctx);
+    }) = codegen(input, &ctx)
+    else {
+        return RepetitiveResult {
+            stream: TokenStream::new(),
+            diagnostics: ctx.diagnostics,
+        };
+    };
 
-    let execute_result = execute(&instructions);
-
-    let output = match execute_result {
-        Ok(()) => TokenStream::from_iter(output_slot.take()),
+    let output_stream = match execute(&instructions) {
+        Ok(()) => output_slot.take(),
         Err(error) => {
             ctx.diagnostics.push_error(error);
             TokenStream::new()
@@ -59,7 +63,7 @@ pub fn repetitive(input: TokenStream) -> RepetitiveResult {
     };
 
     RepetitiveResult {
-        stream: output,
+        stream: output_stream,
         diagnostics: ctx.diagnostics,
     }
 }
