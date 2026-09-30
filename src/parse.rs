@@ -149,7 +149,12 @@ fn parse_quote_let(
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
 ) -> Result<QuoteLet, RecordedError> {
-    todo!()
+    let pat = partially_parse_pat(iter, diagnostics, str_interner)?;
+    parse_char('=', iter, diagnostics)?;
+    let expr = partially_parse_expr(iter, diagnostics, str_interner)?;
+    parse_char(';', iter, diagnostics)?;
+
+    Ok(QuoteLet { pat, expr })
 }
 
 fn parse_quote_match(
@@ -270,6 +275,39 @@ fn parse_delimiter(
             iter.last_span(),
             format!("expected {} after this", delimiter_text(delimiter)),
         )),
+    }
+}
+
+fn parse_char(
+    char: char,
+    iter: &mut TokenIter,
+    diagnostics: &Diagnostics,
+) -> Result<(), RecordedError> {
+    match iter.next() {
+        Some(TokenTree::Group(token)) => {
+            Err(diagnostics
+                .record_error(token.span(), format!("expected `{char}`, found delimiters")))
+        }
+        Some(TokenTree::Ident(token)) => {
+            Err(diagnostics
+                .record_error(token.span(), format!("expected `{char}`, found identifier")))
+        }
+        Some(TokenTree::Literal(token)) => {
+            Err(diagnostics.record_error(token.span(), format!("expected `{char}`, found literal")))
+        }
+        Some(TokenTree::Punct(token)) => {
+            if token.as_char() == char {
+                Ok(())
+            } else {
+                Err(diagnostics.record_error(
+                    token.span(),
+                    format!("expected `{char}`, found `{}`", token.as_char()),
+                ))
+            }
+        }
+        None => {
+            Err(diagnostics.record_error(iter.last_span(), format!("expected `{char}` after this")))
+        }
     }
 }
 
