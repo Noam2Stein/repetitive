@@ -129,3 +129,21 @@ pub enum Pat {
 }
 
 pub enum PatKind {}
+
+impl Expr {
+    pub fn span(&self) -> Span {
+        match self {
+            Expr::Kind { span, .. } => *span,
+            Expr::Group(variant) => variant.span(),
+        }
+    }
+}
+
+impl Pat {
+    pub fn span(&self) -> Span {
+        match self {
+            Pat::Kind { span, .. } => *span,
+            Pat::Group(variant) => variant.span(),
+        }
+    }
+}
