@@ -4,7 +4,8 @@ use crate::{
         QuoteIdent, QuoteIf, QuoteLet, QuoteMatch, QuoteSegment,
     },
     diagnostics::{Diagnostics, RecordedError},
-    proc_macro12::{Delimiter, Group, Ident, Punct, Span, TokenStream, TokenTree},
+    error::Error,
+    proc_macro12::{Delimiter, Group, Punct, Span, TokenStream, TokenTree},
     str_interner::{StrId, StrInterner},
     token_iter::TokenIter,
 };
@@ -95,7 +96,7 @@ fn parse_quote_segment(
             },
         })),
         TokenTree::Punct(first_token) if first_token.as_char() == '$' => {
-            parse_quote_dollar(first_token, iter, diagnostics, str_interner)
+            parse_quote_dollar(iter, diagnostics, str_interner)
         }
         TokenTree::Ident(_) | TokenTree::Literal(_) | TokenTree::Punct(_) => {
             let mut result = TokenStream::from_iter([first_token]);
@@ -117,34 +118,22 @@ fn token_cannot_contain_dollar(token: &TokenTree) -> bool {
 }
 
 fn parse_quote_dollar(
-    dollar: Punct,
     iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
 ) -> Result<QuoteSegment, RecordedError> {
     let Some(first_token) = iter.next() else {
-        return Err(
-            diagnostics.record_error(dollar.span(), "expected metaprogramming keyword after `$`")
-        );
+        return Err(diagnostics.record_error(Error::meta_cutoff(iter.last_span())));
     };
 
     Ok(match first_token {
         TokenTree::Group(first_token) => {
-            return Err(diagnostics.record_error(
-                first_token.span(),
-                match first_token.delimiter() {
-                    Delimiter::Brace => {
-                        "`${ ... }` syntax is not supported (consider writing a `$let` statement)"
-                    }
-                    Delimiter::Bracket => "invalid syntax `$[...]`",
-                    Delimiter::None => {
-                        "metaprogramming segments pasted from macros are not supported"
-                    }
-                    Delimiter::Parenthesis => {
-                        "`$(...)` syntax is not supported (consider writing a `$let` statement)"
-                    }
-                },
-            ));
+            return Err(diagnostics.record_error(match first_token.delimiter() {
+                Delimiter::Brace => Error::meta_braces(first_token.span()),
+                Delimiter::Bracket => Error::meta_brackets(first_token.span()),
+                Delimiter::None => Error::meta_invisible_group(first_token.span()),
+                Delimiter::Parenthesis => Error::meta_parentheses(first_token.span()),
+            }));
         }
         TokenTree::Ident(first_token) => match first_token.to_string().as_str() {
             "for" => QuoteSegment::For(parse_quote_for(iter, diagnostics, str_interner)?),
@@ -156,15 +145,12 @@ fn parse_quote_dollar(
                 strid: validate_ident(first_token.span(), ident_str, diagnostics, str_interner)?,
             }),
         },
-        TokenTree::Literal(_) => {
-            return Err(diagnostics
-                .record_error(first_token.span(), "invalid syntax `$` followed by literal"));
+        TokenTree::Literal(first_token) => {
+            return Err(diagnostics.record_error(Error::meta_literal(first_token.span())));
         }
         TokenTree::Punct(first_token) => {
-            return Err(diagnostics.record_error(
-                first_token.span(),
-                format!("invalid syntax `$` followed by `{}`", first_token.as_char()),
-            ));
+            return Err(diagnostics
+                .record_error(Error::meta_punct(first_token.span(), first_token.as_char())));
         }
     })
 }
@@ -226,7 +212,7 @@ fn validate_ident(
     if is_valid_ident {
         Ok(str_interner.intern(str))
     } else {
-        Err(diagnostics.record_error(span, format!("unsupported identifier `{str}`")))
+        Err(diagnostics.record_error(Error::unsupported_ident(span, str)))
     }
 }
 
@@ -245,32 +231,36 @@ fn parse_keyword(
 ) -> Result<(), RecordedError> {
     match iter.next() {
         Some(TokenTree::Group(token)) => Err(diagnostics.record_error(
-            token.span_open(),
-            format!("expected keyword `{keyword}`, found delimiters"),
+            Error::expected_keyword_found_delimiters(token.span_open(), keyword),
         )),
         Some(TokenTree::Ident(token)) => {
-            let str = token.to_string();
-            if str == keyword {
+            let ident = token.to_string();
+            if ident == keyword {
                 Ok(())
             } else {
-                Err(diagnostics.record_error(
-                    token.span(),
-                    format!("expected keyword {keyword}, found {str}"),
-                ))
+                Err(
+                    diagnostics.record_error(Error::expected_keyword_found_ident(
+                        token.span(),
+                        keyword,
+                        &ident,
+                    )),
+                )
             }
         }
-        Some(TokenTree::Literal(token)) => Err(diagnostics.record_error(
-            token.span(),
-            format!("expected keyword `{keyword}`, found literal"),
-        )),
-        Some(TokenTree::Punct(token)) => Err(diagnostics.record_error(
-            token.span(),
-            format!("expected keyword `{keyword}`, found punctuation"),
-        )),
-        None => Err(diagnostics.record_error(
-            iter.last_span(),
-            format!("expected keyword `{keyword}` after this"),
-        )),
+        Some(TokenTree::Literal(token)) => {
+            Err(diagnostics
+                .record_error(Error::expected_keyword_found_literal(token.span(), keyword)))
+        }
+        Some(TokenTree::Punct(token)) => {
+            Err(diagnostics
+                .record_error(Error::expected_keyword_found_punct(token.span(), keyword)))
+        }
+        None => Err(
+            diagnostics.record_error(Error::expected_keyword_found_cutoff(
+                iter.last_span(),
+                keyword,
+            )),
+        ),
     }
 }
 
@@ -292,35 +282,34 @@ fn parse_delimiter(
 ) -> Result<Group, RecordedError> {
     match iter.next() {
         Some(TokenTree::Group(token)) => {
-            if token.delimiter() == delimiter {
+            let found_delimiter = token.delimiter();
+            if found_delimiter == delimiter {
                 Ok(token)
             } else {
-                Err(diagnostics.record_error(
-                    token.span_open(),
-                    format!(
-                        "expected {}, found {}",
-                        delimiter_text(delimiter),
-                        delimiter_text(token.delimiter())
-                    ),
-                ))
+                Err(
+                    diagnostics.record_error(Error::expected_delimiters_found_delimiters(
+                        token.span_open(),
+                        delimiter,
+                        found_delimiter,
+                    )),
+                )
             }
         }
         Some(TokenTree::Ident(token)) => Err(diagnostics.record_error(
-            token.span(),
-            format!("expected {}, found identifier", delimiter_text(delimiter)),
+            Error::expected_delimiters_found_ident(token.span(), delimiter),
         )),
         Some(TokenTree::Literal(token)) => Err(diagnostics.record_error(
-            token.span(),
-            format!("expected {}, found literal", delimiter_text(delimiter)),
+            Error::expected_delimiters_found_literal(token.span(), delimiter),
         )),
         Some(TokenTree::Punct(token)) => Err(diagnostics.record_error(
-            token.span(),
-            format!("expected {}, found punctuation", delimiter_text(delimiter)),
+            Error::expected_delimiters_found_punct(token.span(), delimiter),
         )),
-        None => Err(diagnostics.record_error(
-            iter.last_span(),
-            format!("expected {} after this", delimiter_text(delimiter)),
-        )),
+        None => Err(
+            diagnostics.record_error(Error::expected_delimiters_found_cutoff(
+                iter.last_span(),
+                delimiter,
+            )),
+        ),
     }
 }
 
@@ -363,13 +352,4 @@ fn parse_expr(
     str_interner: &StrInterner,
 ) -> Result<Expr, RecordedError> {
     todo!()
-}
-
-fn delimiter_text(delimiter: Delimiter) -> &'static str {
-    match delimiter {
-        Delimiter::Brace => "`{ ... }`",
-        Delimiter::Bracket => "`[...]`",
-        Delimiter::None => "tokens pasted from macro",
-        Delimiter::Parenthesis => "`(...)`",
-    }
 }

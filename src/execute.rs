@@ -2,6 +2,7 @@ use std::{cell::Cell, fmt::Write};
 
 use crate::{
     diagnostics::{Diagnostics, RecordedError},
+    error::Error,
     instruction::Instruction,
     proc_macro12::{Ident, Literal},
 };
@@ -53,7 +54,7 @@ pub fn execute(
                 if let Some(result) = lhs.get().checked_add(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(diagnostics.record_error(span, "attempt to add with overflow"));
+                    return Err(diagnostics.record_error(Error::int_add_overflow(span)));
                 }
             }
             Instruction::IntCopy { val, dst } => {
@@ -73,14 +74,11 @@ pub fn execute(
                 if let Some(result) = lhs.get().checked_div(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(diagnostics.record_error(
-                        span,
-                        if rhs.get() == 0 {
-                            "attempt to divide by zero"
-                        } else {
-                            "attempt to divide with overflow"
-                        },
-                    ));
+                    return Err(diagnostics.record_error(if rhs.get() == 0 {
+                        Error::int_div_zero(span)
+                    } else {
+                        Error::int_div_overflow(span)
+                    }));
                 }
             }
             Instruction::IntEmit { val, dst, span } => {
@@ -100,14 +98,14 @@ pub fn execute(
                 if let Some(result) = lhs.get().checked_mul(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(diagnostics.record_error(span, "attempt to multiply with overflow"));
+                    return Err(diagnostics.record_error(Error::int_mul_overflow(span)));
                 }
             }
             Instruction::IntNeg { val, dst, span } => {
                 if let Some(result) = val.get().checked_neg() {
                     dst.set(result);
                 } else {
-                    return Err(diagnostics.record_error(span, "attempt to negate with overflow"));
+                    return Err(diagnostics.record_error(Error::int_neg_overflow(span)));
                 }
             }
             Instruction::IntRem {
@@ -119,14 +117,11 @@ pub fn execute(
                 if let Some(result) = lhs.get().checked_rem(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(diagnostics.record_error(
-                        span,
-                        if rhs.get() == 0 {
-                            "attempt to calculate the remainder with a divisor of zero"
-                        } else {
-                            "attempt to calculate the remainder with overflow"
-                        },
-                    ));
+                    return Err(diagnostics.record_error(if rhs.get() == 0 {
+                        Error::int_rem_zero(span)
+                    } else {
+                        Error::int_rem_overflow(span)
+                    }));
                 }
             }
             Instruction::IntSub {
@@ -138,7 +133,7 @@ pub fn execute(
                 if let Some(result) = lhs.get().checked_sub(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(diagnostics.record_error(span, "attempt to subtract with overflow"));
+                    return Err(diagnostics.record_error(Error::int_sub_overflow(span)));
                 }
             }
             Instruction::StrCopy { val, dst } => {
@@ -159,10 +154,7 @@ pub fn execute(
                         dst.extend([Ident::new(val, span)]);
                         Ok(())
                     } else {
-                        Err(diagnostics.record_error(
-                            span,
-                            format!("attempt to emit invalid identifier `{val}`"),
-                        ))
+                        Err(diagnostics.record_error(Error::str_emit_invalid(span, val)))
                     }
                 })?;
             }

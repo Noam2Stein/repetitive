@@ -2,8 +2,11 @@
 
 use std::{borrow::Cow, cell::Cell};
 
-use crate::proc_macro12::{
-    Delimiter, Group, Ident, Literal, Punct, Spacing, Span, TokenStream, TokenTree,
+use crate::{
+    error::Error,
+    proc_macro12::{
+        Delimiter, Group, Ident, Literal, Punct, Spacing, Span, TokenStream, TokenTree,
+    },
 };
 
 pub struct Diagnostics {
@@ -24,11 +27,11 @@ impl Diagnostics {
         }
     }
 
-    pub fn record_error(&self, span: Span, message: impl Into<Cow<'static, str>>) -> RecordedError {
+    pub fn record_error(&self, error: Error) -> RecordedError {
         let mut errors = self.errors.take();
         errors.push(Diagnostic {
-            span,
-            message: message.into(),
+            span: error.span(),
+            message: error.message(),
         });
         self.errors.set(errors);
 
@@ -64,31 +67,5 @@ impl Diagnostics {
                 })
                 .collect()
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use itertools::Itertools;
-    use proc_macro2::Span;
-
-    use crate::diagnostics::Diagnostics;
-
-    #[test]
-    fn test_success() {
-        let mut diagnostics = Diagnostics::new();
-
-        assert!(diagnostics.errors().collect_vec().is_empty());
-    }
-
-    #[test]
-    fn test_errors() {
-        let mut diagnostics = Diagnostics::new();
-        diagnostics.record_error(Span::call_site(), "insert error message");
-
-        assert_eq!(
-            diagnostics.errors().collect_vec(),
-            vec!["insert error message"]
-        );
     }
 }

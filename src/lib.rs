@@ -132,6 +132,7 @@ mod bindings;
 mod compile;
 mod diagnostics;
 mod entrypoint;
+mod error;
 mod execute;
 mod instruction;
 mod parse;
