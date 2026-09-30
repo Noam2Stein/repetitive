@@ -1,7 +1,7 @@
 use std::cell::Cell;
 
 use crate::{
-    ast::UnparsedQuote,
+    ast::Quote,
     diagnostics::{Diagnostics, RecordedError},
     instruction::{Instruction, InstructionStorage},
     proc_macro12::{Span, TokenStream},
@@ -19,10 +19,10 @@ pub fn compile<'storage>(
     instruction_storage: &'storage InstructionStorage,
 ) -> Result<CompileResult<'storage>, RecordedError> {
     let str_interner = StrInterner::new();
-    let _ = UnparsedQuote {
-        stream: input,
+    let _ = Quote {
         last_span: Span::call_site(),
+        stream: input,
     }
-    .parse(diagnostics, &str_interner);
+    .segments(diagnostics, &str_interner);
     todo!()
 }

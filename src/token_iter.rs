@@ -8,7 +8,7 @@ pub struct TokenIter {
 }
 
 impl TokenIter {
-    pub fn new(stream: TokenStream, last_span: Span) -> Self {
+    pub fn new(last_span: Span, stream: TokenStream) -> Self {
         Self {
             base: stream.into_iter().peekable(),
             last_span,

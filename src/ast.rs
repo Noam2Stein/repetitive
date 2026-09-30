@@ -4,9 +4,9 @@ use crate::{
     token_iter::TokenIter,
 };
 
-pub struct UnparsedQuote {
-    pub stream: TokenStream,
+pub struct Quote {
     pub last_span: Span,
+    pub stream: TokenStream,
 }
 
 pub enum QuoteSegment {
@@ -20,15 +20,15 @@ pub enum QuoteSegment {
 }
 
 pub struct QuoteFor {
-    pub pat: UnparsedPat,
-    pub expr: UnparsedExpr,
-    pub body: UnparsedQuote,
+    pub pat: Pat,
+    pub expr: Expr,
+    pub body: Quote,
 }
 
 pub struct QuoteGroup {
     pub delimiter: Delimiter,
     pub span: Span,
-    pub stream: UnparsedQuote,
+    pub stream: Quote,
 }
 
 pub struct QuoteIdent {
@@ -41,37 +41,32 @@ pub struct QuoteIf {
 }
 
 pub struct QuoteIfSegment {
-    pub condition: Option<UnparsedExpr>,
-    pub branch: UnparsedQuote,
+    pub condition: Option<Expr>,
+    pub branch: Quote,
 }
 
 pub struct QuoteLet {
-    pub pat: UnparsedPat,
-    pub expr: UnparsedExpr,
+    pub pat: Pat,
+    pub expr: Expr,
 }
 
 pub struct QuoteMatch {
-    pub expr: UnparsedExpr,
+    pub expr: Expr,
     pub arms: Vec<QuoteMatchArm>,
 }
 
 pub struct QuoteMatchArm {
-    pub pat: UnparsedPat,
-    pub body: UnparsedQuote,
+    pub pat: Pat,
+    pub body: Quote,
 }
 
-pub enum UnparsedExpr {
-    Expr(Expr),
+pub enum Expr {
+    Kind { span: Span, kind: ExprKind },
     Group(Group),
 }
 
-pub struct Expr {
-    pub span: Span,
-    pub kind: ExprKind,
-}
-
 pub enum ExprKind {
-    Array(Box<UnparsedExprArray>),
+    Array(Box<ExprArray>),
     Binary(Box<ExprBinary>),
     Bool(bool),
     Ident(StrId),
@@ -79,18 +74,18 @@ pub enum ExprKind {
     Unary(Box<ExprUnary>),
     Repeat(Box<ExprRepeat>),
     Str(String),
-    Tuple(Box<UnparsedExprTuple>),
+    Tuple(Box<ExprTuple>),
 }
 
-pub struct UnparsedExprArray {
-    pub first_element: Option<UnparsedExpr>,
+pub struct ExprArray {
+    pub first_element: Option<Expr>,
     pub remaining_elements: TokenIter,
 }
 
 pub struct ExprBinary {
-    pub lhs: UnparsedExpr,
+    pub lhs: Expr,
     pub op: ExprBinaryOp,
-    pub rhs: UnparsedExpr,
+    pub rhs: Expr,
 }
 
 pub enum ExprBinaryOp {
@@ -109,18 +104,18 @@ pub enum ExprBinaryOp {
 }
 
 pub struct ExprRepeat {
-    pub expr: UnparsedExpr,
-    pub len: UnparsedExpr,
+    pub expr: Expr,
+    pub len: Expr,
 }
 
-pub struct UnparsedExprTuple {
-    pub first_element: Option<UnparsedExpr>,
+pub struct ExprTuple {
+    pub first_element: Option<Expr>,
     pub remaining_elements: TokenIter,
 }
 
 pub struct ExprUnary {
     pub op: ExprUnaryOp,
-    pub expr: UnparsedExpr,
+    pub expr: Expr,
 }
 
 pub enum ExprUnaryOp {
@@ -128,32 +123,9 @@ pub enum ExprUnaryOp {
     Not,
 }
 
-pub enum UnparsedPat {
-    Pat(Pat),
+pub enum Pat {
+    Kind { span: Span, kind: PatKind },
     Group(Group),
 }
 
-pub struct Pat {
-    pub span: Span,
-    pub kind: PatKind,
-}
-
 pub enum PatKind {}
-
-impl UnparsedExpr {
-    pub fn span(&self) -> Span {
-        match self {
-            Self::Expr(variant) => variant.span,
-            Self::Group(variant) => variant.span(),
-        }
-    }
-}
-
-impl UnparsedPat {
-    pub fn span(&self) -> Span {
-        match self {
-            Self::Group(variant) => variant.span(),
-            Self::Pat(variant) => variant.span,
-        }
-    }
-}

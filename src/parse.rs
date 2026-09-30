@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Expr, QuoteFor, QuoteGroup, QuoteIdent, QuoteIf, QuoteLet, QuoteMatch, QuoteSegment,
-        UnparsedExpr, UnparsedExprArray, UnparsedExprTuple, UnparsedPat, UnparsedQuote,
+        Expr, ExprArray, ExprKind, ExprTuple, Pat, PatKind, Quote, QuoteFor, QuoteGroup,
+        QuoteIdent, QuoteIf, QuoteLet, QuoteMatch, QuoteSegment,
     },
     diagnostics::{Diagnostics, RecordedError},
     proc_macro12::{Delimiter, Group, Ident, Punct, Span, TokenStream, TokenTree},
@@ -9,17 +9,61 @@ use crate::{
     token_iter::TokenIter,
 };
 
-impl UnparsedQuote {
-    pub fn parse(
+impl Quote {
+    pub fn segments(
         self,
         diagnostics: &Diagnostics,
         str_interner: &StrInterner,
     ) -> impl Iterator<Item = Result<QuoteSegment, RecordedError>> {
-        let mut iter = TokenIter::new(self.stream, self.last_span);
+        let mut iter = TokenIter::new(self.last_span, self.stream);
 
         std::iter::from_fn(move || {
             parse_optional_quote_segment(&mut iter, diagnostics, str_interner)
         })
+    }
+}
+
+impl Expr {
+    pub fn kind(
+        self,
+        diagnostics: &Diagnostics,
+        str_interner: &StrInterner,
+    ) -> Result<ExprKind, RecordedError> {
+        todo!()
+    }
+}
+
+impl ExprArray {
+    pub fn elements(
+        self,
+        diagnostics: &Diagnostics,
+        str_interner: &StrInterner,
+    ) -> impl Iterator<Item = Result<Expr, RecordedError>> {
+        todo!();
+        #[expect(unreachable_code)]
+        [].into_iter()
+    }
+}
+
+impl ExprTuple {
+    pub fn elements(
+        self,
+        diagnostics: &Diagnostics,
+        str_interner: &StrInterner,
+    ) -> impl Iterator<Item = Result<Expr, RecordedError>> {
+        todo!();
+        #[expect(unreachable_code)]
+        [].into_iter()
+    }
+}
+
+impl Pat {
+    pub fn kind(
+        self,
+        diagnostics: &Diagnostics,
+        str_interner: &StrInterner,
+    ) -> Result<PatKind, RecordedError> {
+        todo!()
     }
 }
 
@@ -34,9 +78,9 @@ fn parse_optional_quote_segment(
         TokenTree::Group(first_token) => Ok(QuoteSegment::Group(QuoteGroup {
             delimiter: first_token.delimiter(),
             span: first_token.span(),
-            stream: UnparsedQuote {
-                stream: first_token.stream(),
+            stream: Quote {
                 last_span: first_token.span_open(),
+                stream: first_token.stream(),
             },
         })),
         TokenTree::Punct(first_token) if first_token.as_char() == '$' => {
@@ -188,7 +232,7 @@ fn partially_parse_pat(
     iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
-) -> Result<UnparsedPat, RecordedError> {
+) -> Result<Pat, RecordedError> {
     todo!()
 }
 
@@ -231,11 +275,11 @@ fn parse_keyword(
 fn parse_quote_braces(
     iter: &mut TokenIter,
     diagnostics: &Diagnostics,
-) -> Result<UnparsedQuote, RecordedError> {
+) -> Result<Quote, RecordedError> {
     let braces = parse_delimiter(Delimiter::Brace, iter, diagnostics)?;
-    Ok(UnparsedQuote {
-        stream: braces.stream(),
+    Ok(Quote {
         last_span: braces.span_open(),
+        stream: braces.stream(),
     })
 }
 
@@ -315,7 +359,7 @@ fn partially_parse_expr(
     iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
-) -> Result<UnparsedExpr, RecordedError> {
+) -> Result<Expr, RecordedError> {
     todo!()
 }
 
@@ -325,49 +369,5 @@ fn delimiter_text(delimiter: Delimiter) -> &'static str {
         Delimiter::Bracket => "`[...]`",
         Delimiter::None => "tokens pasted from macro",
         Delimiter::Parenthesis => "`(...)`",
-    }
-}
-
-impl UnparsedExpr {
-    pub fn parse(
-        self,
-        diagnostics: &Diagnostics,
-        str_interner: &StrInterner,
-    ) -> Result<Expr, RecordedError> {
-        todo!()
-    }
-}
-
-impl UnparsedExprArray {
-    pub fn parse(
-        self,
-        diagnostics: &Diagnostics,
-        str_interner: &StrInterner,
-    ) -> impl Iterator<Item = Result<Expr, RecordedError>> {
-        todo!();
-        #[expect(unreachable_code)]
-        [].into_iter()
-    }
-}
-
-impl UnparsedExprTuple {
-    pub fn parse(
-        self,
-        diagnostics: &Diagnostics,
-        str_interner: &StrInterner,
-    ) -> impl Iterator<Item = Result<Expr, RecordedError>> {
-        todo!();
-        #[expect(unreachable_code)]
-        [].into_iter()
-    }
-}
-
-impl UnparsedPat {
-    pub fn parse(
-        self,
-        diagnostics: &Diagnostics,
-        str_interner: &StrInterner,
-    ) -> Result<Expr, RecordedError> {
-        todo!()
     }
 }
