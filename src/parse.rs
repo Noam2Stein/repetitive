@@ -1,11 +1,11 @@
 use crate::{
     ast::{
-        Expr, ExprArray, ExprKind, ExprTuple, Pat, PatKind, Quote, QuoteFor, QuoteGroup,
-        QuoteIdent, QuoteIf, QuoteLet, QuoteMatch, QuoteSegment,
+        Expr, ExprArray, ExprKind, ExprTuple, Meta, MetaFor, MetaIdent, MetaIf, MetaLet, MetaMatch,
+        Pat, PatKind, Quote, QuoteGroup, QuoteSegment,
     },
     diagnostics::{Diagnostics, RecordedError},
     error::Error,
-    proc_macro12::{Delimiter, Group, Punct, Span, TokenStream, TokenTree},
+    proc_macro12::{Delimiter, Group, Span, TokenStream, TokenTree},
     str_interner::{StrId, StrInterner},
     token_iter::TokenIter,
 };
@@ -86,30 +86,30 @@ fn parse_quote_segment(
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
 ) -> Result<QuoteSegment, RecordedError> {
-    match first_token {
-        TokenTree::Group(first_token) => Ok(QuoteSegment::Group(QuoteGroup {
+    Ok(match first_token {
+        TokenTree::Group(first_token) => QuoteSegment::Group(QuoteGroup {
             delimiter: first_token.delimiter(),
             span: first_token.span(),
             stream: Quote {
                 last_span: first_token.span_open(),
                 stream: first_token.stream(),
             },
-        })),
+        }),
         TokenTree::Punct(first_token) if first_token.as_char() == '$' => {
-            parse_quote_dollar(iter, diagnostics, str_interner)
+            QuoteSegment::Meta(parse_meta(iter, diagnostics, str_interner)?)
         }
         TokenTree::Ident(_) | TokenTree::Literal(_) | TokenTree::Punct(_) => {
             let mut result = TokenStream::from_iter([first_token]);
-            while let Some(token) = iter.next_if(token_cannot_contain_dollar) {
+            while let Some(token) = iter.next_if(token_cannot_contain_meta) {
                 result.extend([token]);
             }
 
-            Ok(QuoteSegment::TokenStream(result))
+            QuoteSegment::TokenStream(result)
         }
-    }
+    })
 }
 
-fn token_cannot_contain_dollar(token: &TokenTree) -> bool {
+fn token_cannot_contain_meta(token: &TokenTree) -> bool {
     match token {
         TokenTree::Group(_) => false,
         TokenTree::Punct(token) if token.as_char() == '$' => false,
@@ -117,11 +117,11 @@ fn token_cannot_contain_dollar(token: &TokenTree) -> bool {
     }
 }
 
-fn parse_quote_dollar(
+fn parse_meta(
     iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
-) -> Result<QuoteSegment, RecordedError> {
+) -> Result<Meta, RecordedError> {
     let Some(first_token) = iter.next() else {
         return Err(diagnostics.record_error(Error::meta_cutoff(iter.last_span())));
     };
@@ -136,11 +136,11 @@ fn parse_quote_dollar(
             }));
         }
         TokenTree::Ident(first_token) => match first_token.to_string().as_str() {
-            "for" => QuoteSegment::For(parse_quote_for(iter, diagnostics, str_interner)?),
-            "if" => QuoteSegment::If(parse_quote_if(iter, diagnostics, str_interner)?),
-            "let" => QuoteSegment::Let(parse_quote_let(iter, diagnostics, str_interner)?),
-            "match" => QuoteSegment::Match(parse_quote_match(iter, diagnostics, str_interner)?),
-            ident_str => QuoteSegment::Ident(QuoteIdent {
+            "for" => Meta::For(parse_meta_for(iter, diagnostics, str_interner)?),
+            "if" => Meta::If(parse_meta_if(iter, diagnostics, str_interner)?),
+            "let" => Meta::Let(parse_meta_let(iter, diagnostics, str_interner)?),
+            "match" => Meta::Match(parse_meta_match(iter, diagnostics, str_interner)?),
+            ident_str => Meta::Ident(MetaIdent {
                 span: first_token.span(),
                 strid: validate_ident(first_token.span(), ident_str, diagnostics, str_interner)?,
             }),
@@ -155,45 +155,45 @@ fn parse_quote_dollar(
     })
 }
 
-fn parse_quote_for(
+fn parse_meta_for(
     iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
-) -> Result<QuoteFor, RecordedError> {
+) -> Result<MetaFor, RecordedError> {
     let pat = parse_pat(iter, diagnostics, str_interner)?;
     parse_keyword("in", iter, diagnostics)?;
     let expr = parse_expr(iter, diagnostics, str_interner)?;
     let body = parse_quote_braces(iter, diagnostics)?;
 
-    Ok(QuoteFor { pat, expr, body })
+    Ok(MetaFor { pat, expr, body })
 }
 
-fn parse_quote_if(
+fn parse_meta_if(
     iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
-) -> Result<QuoteIf, RecordedError> {
+) -> Result<MetaIf, RecordedError> {
     todo!()
 }
 
-fn parse_quote_let(
+fn parse_meta_let(
     iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
-) -> Result<QuoteLet, RecordedError> {
+) -> Result<MetaLet, RecordedError> {
     let pat = parse_pat(iter, diagnostics, str_interner)?;
-    parse_char('=', iter, diagnostics)?;
+    parse_punct('=', iter, diagnostics)?;
     let expr = parse_expr(iter, diagnostics, str_interner)?;
-    parse_char(';', iter, diagnostics)?;
+    parse_punct(';', iter, diagnostics)?;
 
-    Ok(QuoteLet { pat, expr })
+    Ok(MetaLet { pat, expr })
 }
 
-fn parse_quote_match(
+fn parse_meta_match(
     iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
-) -> Result<QuoteMatch, RecordedError> {
+) -> Result<MetaMatch, RecordedError> {
     todo!()
 }
 
@@ -313,35 +313,37 @@ fn parse_delimiter(
     }
 }
 
-fn parse_char(
-    char: char,
+fn parse_punct(
+    punct: char,
     iter: &mut TokenIter,
     diagnostics: &Diagnostics,
 ) -> Result<(), RecordedError> {
     match iter.next() {
-        Some(TokenTree::Group(token)) => {
-            Err(diagnostics
-                .record_error(token.span(), format!("expected `{char}`, found delimiters")))
-        }
-        Some(TokenTree::Ident(token)) => {
-            Err(diagnostics
-                .record_error(token.span(), format!("expected `{char}`, found identifier")))
-        }
+        Some(TokenTree::Group(token)) => Err(diagnostics.record_error(
+            token.span(),
+            format!("expected `{punct}`, found delimiters"),
+        )),
+        Some(TokenTree::Ident(token)) => Err(diagnostics.record_error(
+            token.span(),
+            format!("expected `{punct}`, found identifier"),
+        )),
         Some(TokenTree::Literal(token)) => {
-            Err(diagnostics.record_error(token.span(), format!("expected `{char}`, found literal")))
+            Err(diagnostics
+                .record_error(token.span(), format!("expected `{punct}`, found literal")))
         }
         Some(TokenTree::Punct(token)) => {
-            if token.as_char() == char {
+            if token.as_char() == punct {
                 Ok(())
             } else {
                 Err(diagnostics.record_error(
                     token.span(),
-                    format!("expected `{char}`, found `{}`", token.as_char()),
+                    format!("expected `{punct}`, found `{}`", token.as_char()),
                 ))
             }
         }
         None => {
-            Err(diagnostics.record_error(iter.last_span(), format!("expected `{char}` after this")))
+            Err(diagnostics
+                .record_error(iter.last_span(), format!("expected `{punct}` after this")))
         }
     }
 }

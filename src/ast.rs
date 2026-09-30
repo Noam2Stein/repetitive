@@ -10,19 +10,9 @@ pub struct Quote {
 }
 
 pub enum QuoteSegment {
-    For(QuoteFor),
     Group(QuoteGroup),
-    Ident(QuoteIdent),
-    If(QuoteIf),
-    Let(QuoteLet),
-    Match(QuoteMatch),
+    Meta(Meta),
     TokenStream(TokenStream),
-}
-
-pub struct QuoteFor {
-    pub pat: Pat,
-    pub expr: Expr,
-    pub body: Quote,
 }
 
 pub struct QuoteGroup {
@@ -31,31 +21,45 @@ pub struct QuoteGroup {
     pub stream: Quote,
 }
 
-pub struct QuoteIdent {
+pub enum Meta {
+    For(MetaFor),
+    Ident(MetaIdent),
+    If(MetaIf),
+    Let(MetaLet),
+    Match(MetaMatch),
+}
+
+pub struct MetaFor {
+    pub pat: Pat,
+    pub expr: Expr,
+    pub body: Quote,
+}
+
+pub struct MetaIdent {
     pub span: Span,
     pub strid: StrId,
 }
 
-pub struct QuoteIf {
-    pub segments: Vec<QuoteIfSegment>,
+pub struct MetaIf {
+    pub segments: Vec<MetaIfSegment>,
 }
 
-pub struct QuoteIfSegment {
+pub struct MetaIfSegment {
     pub condition: Option<Expr>,
     pub branch: Quote,
 }
 
-pub struct QuoteLet {
+pub struct MetaLet {
     pub pat: Pat,
     pub expr: Expr,
 }
 
-pub struct QuoteMatch {
+pub struct MetaMatch {
     pub expr: Expr,
-    pub arms: Vec<QuoteMatchArm>,
+    pub arms: Vec<MetaMatchArm>,
 }
 
-pub struct QuoteMatchArm {
+pub struct MetaMatchArm {
     pub pat: Pat,
     pub body: Quote,
 }
