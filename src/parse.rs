@@ -128,53 +128,44 @@ fn parse_quote_dollar(
         );
     };
 
-    match first_token {
-        TokenTree::Group(first_token) => Err(diagnostics.record_error(
-            first_token.span(),
-            quote_dollar_delimiter_error(first_token.delimiter()),
-        )),
-        TokenTree::Ident(first_token) => {
-            parse_quote_dollar_ident(first_token, iter, diagnostics, str_interner)
+    Ok(match first_token {
+        TokenTree::Group(first_token) => {
+            return Err(diagnostics.record_error(
+                first_token.span(),
+                match first_token.delimiter() {
+                    Delimiter::Brace => {
+                        "`${ ... }` syntax is not supported (consider writing a `$let` statement)"
+                    }
+                    Delimiter::Bracket => "invalid syntax `$[...]`",
+                    Delimiter::None => {
+                        "metaprogramming segments pasted from macros are not supported"
+                    }
+                    Delimiter::Parenthesis => {
+                        "`$(...)` syntax is not supported (consider writing a `$let` statement)"
+                    }
+                },
+            ));
         }
+        TokenTree::Ident(first_token) => match first_token.to_string().as_str() {
+            "for" => QuoteSegment::For(parse_quote_for(iter, diagnostics, str_interner)?),
+            "if" => QuoteSegment::If(parse_quote_if(iter, diagnostics, str_interner)?),
+            "let" => QuoteSegment::Let(parse_quote_let(iter, diagnostics, str_interner)?),
+            "match" => QuoteSegment::Match(parse_quote_match(iter, diagnostics, str_interner)?),
+            ident_str => QuoteSegment::Ident(QuoteIdent {
+                span: first_token.span(),
+                strid: validate_ident(first_token.span(), ident_str, diagnostics, str_interner)?,
+            }),
+        },
         TokenTree::Literal(_) => {
-            Err(diagnostics
-                .record_error(first_token.span(), "invalid syntax `$` followed by literal"))
+            return Err(diagnostics
+                .record_error(first_token.span(), "invalid syntax `$` followed by literal"));
         }
-        TokenTree::Punct(first_token) => Err(diagnostics.record_error(
-            first_token.span(),
-            format!("invalid syntax `$` followed by `{}`", first_token.as_char()),
-        )),
-    }
-}
-
-fn quote_dollar_delimiter_error(delimiter: Delimiter) -> &'static str {
-    match delimiter {
-        Delimiter::Brace => {
-            "`${ ... }` syntax is not supported (consider writing a `$let` statement)"
+        TokenTree::Punct(first_token) => {
+            return Err(diagnostics.record_error(
+                first_token.span(),
+                format!("invalid syntax `$` followed by `{}`", first_token.as_char()),
+            ));
         }
-        Delimiter::Bracket => "invalid syntax `$[...]`",
-        Delimiter::None => "metaprogramming segments pasted from macros are not supported",
-        Delimiter::Parenthesis => {
-            "`$(...)` syntax is not supported (consider writing a `$let` statement)"
-        }
-    }
-}
-
-fn parse_quote_dollar_ident(
-    ident: Ident,
-    iter: &mut TokenIter,
-    diagnostics: &Diagnostics,
-    str_interner: &StrInterner,
-) -> Result<QuoteSegment, RecordedError> {
-    Ok(match ident.to_string().as_str() {
-        "for" => QuoteSegment::For(parse_quote_for(iter, diagnostics, str_interner)?),
-        "if" => QuoteSegment::If(parse_quote_if(iter, diagnostics, str_interner)?),
-        "let" => QuoteSegment::Let(parse_quote_let(iter, diagnostics, str_interner)?),
-        "match" => QuoteSegment::Match(parse_quote_match(iter, diagnostics, str_interner)?),
-        ident_str => QuoteSegment::Ident(QuoteIdent {
-            span: ident.span(),
-            strid: validate_ident(ident.span(), ident_str, diagnostics, str_interner)?,
-        }),
     })
 }
 
@@ -183,9 +174,9 @@ fn parse_quote_for(
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
 ) -> Result<QuoteFor, RecordedError> {
-    let pat = partially_parse_pat(iter, diagnostics, str_interner)?;
+    let pat = parse_pat(iter, diagnostics, str_interner)?;
     parse_keyword("in", iter, diagnostics)?;
-    let expr = partially_parse_expr(iter, diagnostics, str_interner)?;
+    let expr = parse_expr(iter, diagnostics, str_interner)?;
     let body = parse_quote_braces(iter, diagnostics)?;
 
     Ok(QuoteFor { pat, expr, body })
@@ -204,9 +195,9 @@ fn parse_quote_let(
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
 ) -> Result<QuoteLet, RecordedError> {
-    let pat = partially_parse_pat(iter, diagnostics, str_interner)?;
+    let pat = parse_pat(iter, diagnostics, str_interner)?;
     parse_char('=', iter, diagnostics)?;
-    let expr = partially_parse_expr(iter, diagnostics, str_interner)?;
+    let expr = parse_expr(iter, diagnostics, str_interner)?;
     parse_char(';', iter, diagnostics)?;
 
     Ok(QuoteLet { pat, expr })
@@ -239,7 +230,7 @@ fn validate_ident(
     }
 }
 
-fn partially_parse_pat(
+fn parse_pat(
     iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
@@ -366,7 +357,7 @@ fn parse_char(
     }
 }
 
-fn partially_parse_expr(
+fn parse_expr(
     iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
