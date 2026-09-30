@@ -109,8 +109,8 @@ pub struct ExprRepeat {
 }
 
 pub struct ExprTuple {
-    pub first_element: Option<Expr>,
-    pub remaining_elements: TokenIter,
+    pub first_field: Option<Expr>,
+    pub remaining_fields: TokenIter,
 }
 
 pub struct ExprUnary {

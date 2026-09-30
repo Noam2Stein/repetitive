@@ -4,6 +4,7 @@ use crate::{
     ast::Quote,
     diagnostics::{Diagnostics, RecordedError},
     instruction::{Instruction, InstructionStorage},
+    parse::parse_ast,
     proc_macro12::{Span, TokenStream},
     str_interner::StrInterner,
 };
@@ -19,10 +20,6 @@ pub fn compile<'storage>(
     instruction_storage: &'storage InstructionStorage,
 ) -> Result<CompileResult<'storage>, RecordedError> {
     let str_interner = StrInterner::new();
-    let _ = Quote {
-        last_span: Span::call_site(),
-        stream: input,
-    }
-    .segments(diagnostics, &str_interner);
+    let _ = parse_ast(input).segments(diagnostics, &str_interner);
     todo!()
 }

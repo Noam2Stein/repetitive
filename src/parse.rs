@@ -9,6 +9,13 @@ use crate::{
     token_iter::TokenIter,
 };
 
+pub fn parse_ast(input: TokenStream) -> Quote {
+    Quote {
+        last_span: Span::call_site(),
+        stream: input,
+    }
+}
+
 impl Quote {
     pub fn segments(
         self,
@@ -18,7 +25,12 @@ impl Quote {
         let mut iter = TokenIter::new(self.last_span, self.stream);
 
         std::iter::from_fn(move || {
-            parse_optional_quote_segment(&mut iter, diagnostics, str_interner)
+            Some(parse_quote_segment(
+                iter.next()?,
+                &mut iter,
+                diagnostics,
+                str_interner,
+            ))
         })
     }
 }
@@ -46,7 +58,7 @@ impl ExprArray {
 }
 
 impl ExprTuple {
-    pub fn elements(
+    pub fn fields(
         self,
         diagnostics: &Diagnostics,
         str_interner: &StrInterner,
@@ -67,14 +79,13 @@ impl Pat {
     }
 }
 
-fn parse_optional_quote_segment(
+fn parse_quote_segment(
+    first_token: TokenTree,
     iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
-) -> Option<Result<QuoteSegment, RecordedError>> {
-    let first_token = iter.next()?;
-
-    Some(match first_token {
+) -> Result<QuoteSegment, RecordedError> {
+    match first_token {
         TokenTree::Group(first_token) => Ok(QuoteSegment::Group(QuoteGroup {
             delimiter: first_token.delimiter(),
             span: first_token.span(),
@@ -94,7 +105,7 @@ fn parse_optional_quote_segment(
 
             Ok(QuoteSegment::TokenStream(result))
         }
-    })
+    }
 }
 
 fn token_cannot_contain_dollar(token: &TokenTree) -> bool {
