@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 
 use crate::{
-    proc_macro12::{Group, Span, TokenStream, TokenTree, token_stream},
+    proc_macro12::{Delimiter, Group, Span, TokenStream, token_stream},
     str_interner::StrId,
 };
 
@@ -11,17 +11,24 @@ pub struct UnparsedQuote {
 
 pub enum QuoteSegment {
     For(QuoteFor),
+    Group(QuoteGroup),
     Ident(QuoteIdent),
     If(QuoteIf),
     Let(QuoteLet),
     Match(QuoteMatch),
-    Tokens(Vec<TokenTree>),
+    TokenStream(TokenStream),
 }
 
 pub struct QuoteFor {
-    pat: UnparsedPat,
-    expr: UnparsedExpr,
-    body: UnparsedQuote,
+    pub pat: UnparsedPat,
+    pub expr: UnparsedExpr,
+    pub body: UnparsedQuote,
+}
+
+pub struct QuoteGroup {
+    pub delimiter: Delimiter,
+    pub span: Span,
+    pub stream: UnparsedQuote,
 }
 
 pub struct QuoteIdent {
