@@ -1,12 +1,12 @@
-use std::iter::Peekable;
-
 use crate::{
-    proc_macro12::{Delimiter, Group, Span, TokenStream, token_stream},
+    proc_macro12::{Delimiter, Group, Span, TokenStream},
     str_interner::StrId,
+    token_iter::TokenIter,
 };
 
 pub struct UnparsedQuote {
     pub stream: TokenStream,
+    pub last_span: Span,
 }
 
 pub enum QuoteSegment {
@@ -139,8 +139,6 @@ pub struct Pat {
 }
 
 pub enum PatKind {}
-
-pub type TokenIter = Peekable<token_stream::IntoIter>;
 
 impl UnparsedExpr {
     pub fn span(&self) -> Span {

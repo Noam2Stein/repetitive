@@ -1,13 +1,12 @@
-use std::iter::Peekable;
-
 use crate::{
     ast::{
         Expr, QuoteFor, QuoteGroup, QuoteIdent, QuoteIf, QuoteLet, QuoteMatch, QuoteSegment,
         UnparsedExpr, UnparsedExprArray, UnparsedExprTuple, UnparsedPat, UnparsedQuote,
     },
     diagnostics::{Diagnostics, RecordedError},
-    proc_macro12::{Delimiter, Group, Ident, Punct, Span, TokenStream, TokenTree, token_stream},
+    proc_macro12::{Delimiter, Group, Ident, Punct, Span, TokenStream, TokenTree},
     str_interner::{StrId, StrInterner},
+    token_iter::TokenIter,
 };
 
 impl UnparsedQuote {
@@ -16,20 +15,20 @@ impl UnparsedQuote {
         diagnostics: &Diagnostics,
         str_interner: &StrInterner,
     ) -> impl Iterator<Item = Result<QuoteSegment, RecordedError>> {
-        let mut stream = self.stream.into_iter().peekable();
+        let mut iter = TokenIter::new(self.stream, self.last_span);
 
         std::iter::from_fn(move || {
-            parse_optional_quote_segment(&mut stream, diagnostics, str_interner)
+            parse_optional_quote_segment(&mut iter, diagnostics, str_interner)
         })
     }
 }
 
 fn parse_optional_quote_segment(
-    stream: &mut Peekable<token_stream::IntoIter>,
+    iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
 ) -> Option<Result<QuoteSegment, RecordedError>> {
-    let first_token = stream.next()?;
+    let first_token = iter.next()?;
 
     Some(match first_token {
         TokenTree::Group(first_token) => Ok(QuoteSegment::Group(QuoteGroup {
@@ -37,14 +36,15 @@ fn parse_optional_quote_segment(
             span: first_token.span(),
             stream: UnparsedQuote {
                 stream: first_token.stream(),
+                last_span: first_token.span_open(),
             },
         })),
         TokenTree::Punct(first_token) if first_token.as_char() == '$' => {
-            parse_quote_dollar(first_token, stream, diagnostics, str_interner)
+            parse_quote_dollar(first_token, iter, diagnostics, str_interner)
         }
         TokenTree::Ident(_) | TokenTree::Literal(_) | TokenTree::Punct(_) => {
             let mut result = TokenStream::from_iter([first_token]);
-            while let Some(token) = stream.next_if(token_cannot_contain_dollar) {
+            while let Some(token) = iter.next_if(token_cannot_contain_dollar) {
                 result.extend([token]);
             }
 
@@ -63,11 +63,11 @@ fn token_cannot_contain_dollar(token: &TokenTree) -> bool {
 
 fn parse_quote_dollar(
     dollar: Punct,
-    stream: &mut Peekable<token_stream::IntoIter>,
+    iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
 ) -> Result<QuoteSegment, RecordedError> {
-    let Some(first_token) = stream.next() else {
+    let Some(first_token) = iter.next() else {
         return Err(
             diagnostics.record_error(dollar.span(), "expected metaprogramming keyword after `$`")
         );
@@ -79,7 +79,7 @@ fn parse_quote_dollar(
             quote_dollar_delimiter_error(first_token.delimiter()),
         )),
         TokenTree::Ident(first_token) => {
-            parse_quote_dollar_ident(first_token, stream, diagnostics, str_interner)
+            parse_quote_dollar_ident(first_token, iter, diagnostics, str_interner)
         }
         TokenTree::Literal(_) => {
             Err(diagnostics
@@ -107,17 +107,15 @@ fn quote_dollar_delimiter_error(delimiter: Delimiter) -> &'static str {
 
 fn parse_quote_dollar_ident(
     ident: Ident,
-    stream: &mut Peekable<token_stream::IntoIter>,
+    iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
 ) -> Result<QuoteSegment, RecordedError> {
     Ok(match ident.to_string().as_str() {
-        "for" => QuoteSegment::For(parse_quote_for(ident, stream, diagnostics, str_interner)?),
-        "if" => QuoteSegment::If(parse_quote_if(ident, stream, diagnostics, str_interner)?),
-        "let" => QuoteSegment::Let(parse_quote_let(ident, stream, diagnostics, str_interner)?),
-        "match" => {
-            QuoteSegment::Match(parse_quote_match(ident, stream, diagnostics, str_interner)?)
-        }
+        "for" => QuoteSegment::For(parse_quote_for(iter, diagnostics, str_interner)?),
+        "if" => QuoteSegment::If(parse_quote_if(iter, diagnostics, str_interner)?),
+        "let" => QuoteSegment::Let(parse_quote_let(iter, diagnostics, str_interner)?),
+        "match" => QuoteSegment::Match(parse_quote_match(iter, diagnostics, str_interner)?),
         ident_str => QuoteSegment::Ident(QuoteIdent {
             span: ident.span(),
             strid: validate_ident(ident.span(), ident_str, diagnostics, str_interner)?,
@@ -126,26 +124,20 @@ fn parse_quote_dollar_ident(
 }
 
 fn parse_quote_for(
-    for_keyword: Ident,
-    stream: &mut Peekable<token_stream::IntoIter>,
+    iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
 ) -> Result<QuoteFor, RecordedError> {
-    let pat = partially_parse_pat(for_keyword.span(), stream, diagnostics, str_interner)?;
-    let in_span = parse_keyword("in", pat.span(), stream, diagnostics)?;
-    let expr = partially_parse_expr(in_span, stream, diagnostics, str_interner)?;
-
-    let braces = parse_delimiter(Delimiter::Brace, expr.span(), stream, diagnostics)?;
-    let body = UnparsedQuote {
-        stream: braces.stream(),
-    };
+    let pat = partially_parse_pat(iter, diagnostics, str_interner)?;
+    parse_keyword("in", iter, diagnostics)?;
+    let expr = partially_parse_expr(iter, diagnostics, str_interner)?;
+    let body = parse_quote_braces(iter, diagnostics)?;
 
     Ok(QuoteFor { pat, expr, body })
 }
 
 fn parse_quote_if(
-    if_keyword: Ident,
-    stream: &mut Peekable<token_stream::IntoIter>,
+    iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
 ) -> Result<QuoteIf, RecordedError> {
@@ -153,8 +145,7 @@ fn parse_quote_if(
 }
 
 fn parse_quote_let(
-    let_keyword: Ident,
-    stream: &mut Peekable<token_stream::IntoIter>,
+    iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
 ) -> Result<QuoteLet, RecordedError> {
@@ -162,8 +153,7 @@ fn parse_quote_let(
 }
 
 fn parse_quote_match(
-    match_keyword: Ident,
-    stream: &mut Peekable<token_stream::IntoIter>,
+    iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
 ) -> Result<QuoteMatch, RecordedError> {
@@ -190,8 +180,7 @@ fn validate_ident(
 }
 
 fn partially_parse_pat(
-    last_span: Span,
-    stream: &mut Peekable<token_stream::IntoIter>,
+    iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
 ) -> Result<UnparsedPat, RecordedError> {
@@ -200,11 +189,10 @@ fn partially_parse_pat(
 
 fn parse_keyword(
     keyword: &str,
-    last_span: Span,
-    stream: &mut Peekable<token_stream::IntoIter>,
+    iter: &mut TokenIter,
     diagnostics: &Diagnostics,
-) -> Result<Span, RecordedError> {
-    match stream.next() {
+) -> Result<(), RecordedError> {
+    match iter.next() {
         Some(TokenTree::Group(token)) => Err(diagnostics.record_error(
             token.span_open(),
             format!("expected keyword `{keyword}`, found delimiters"),
@@ -212,7 +200,7 @@ fn parse_keyword(
         Some(TokenTree::Ident(token)) => {
             let str = token.to_string();
             if str == keyword {
-                Ok(token.span())
+                Ok(())
             } else {
                 Err(diagnostics.record_error(
                     token.span(),
@@ -229,19 +217,29 @@ fn parse_keyword(
             format!("expected keyword `{keyword}`, found punctuation"),
         )),
         None => Err(diagnostics.record_error(
-            last_span,
+            iter.last_span(),
             format!("expected keyword `{keyword}` after this"),
         )),
     }
 }
 
+fn parse_quote_braces(
+    iter: &mut TokenIter,
+    diagnostics: &Diagnostics,
+) -> Result<UnparsedQuote, RecordedError> {
+    let braces = parse_delimiter(Delimiter::Brace, iter, diagnostics)?;
+    Ok(UnparsedQuote {
+        stream: braces.stream(),
+        last_span: braces.span_open(),
+    })
+}
+
 fn parse_delimiter(
     delimiter: Delimiter,
-    last_span: Span,
-    stream: &mut Peekable<token_stream::IntoIter>,
+    iter: &mut TokenIter,
     diagnostics: &Diagnostics,
 ) -> Result<Group, RecordedError> {
-    match stream.next() {
+    match iter.next() {
         Some(TokenTree::Group(token)) => {
             if token.delimiter() == delimiter {
                 Ok(token)
@@ -269,15 +267,14 @@ fn parse_delimiter(
             format!("expected {}, found punctuation", delimiter_text(delimiter)),
         )),
         None => Err(diagnostics.record_error(
-            last_span,
+            iter.last_span(),
             format!("expected {} after this", delimiter_text(delimiter)),
         )),
     }
 }
 
 fn partially_parse_expr(
-    last_span: Span,
-    stream: &mut Peekable<token_stream::IntoIter>,
+    iter: &mut TokenIter,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
 ) -> Result<UnparsedExpr, RecordedError> {

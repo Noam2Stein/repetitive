@@ -4,7 +4,7 @@ use crate::{
     ast::UnparsedQuote,
     diagnostics::{Diagnostics, RecordedError},
     instruction::{Instruction, InstructionStorage},
-    proc_macro12::TokenStream,
+    proc_macro12::{Span, TokenStream},
     str_interner::StrInterner,
 };
 
@@ -19,6 +19,10 @@ pub fn compile<'storage>(
     instruction_storage: &'storage InstructionStorage,
 ) -> Result<CompileResult<'storage>, RecordedError> {
     let str_interner = StrInterner::new();
-    let _ = UnparsedQuote { stream: input }.parse(diagnostics, &str_interner);
+    let _ = UnparsedQuote {
+        stream: input,
+        last_span: Span::call_site(),
+    }
+    .parse(diagnostics, &str_interner);
     todo!()
 }

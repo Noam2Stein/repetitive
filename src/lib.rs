@@ -137,6 +137,7 @@ mod instruction;
 mod parse;
 mod stack;
 mod str_interner;
+mod token_iter;
 mod val;
 
 #[cfg(test)]
