@@ -131,7 +131,8 @@ fn parse_quote_for(
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
 ) -> Result<QuoteFor, RecordedError> {
-    todo!()
+    let pat = partially_parse_pat(stream, diagnostics, str_interner)?;
+    let in_keyword = parse_keyword("in", todo!(), stream, diagnostics)?;
 }
 
 fn parse_quote_if(
@@ -178,6 +179,59 @@ fn validate_ident(
     } else {
         Err(diagnostics.record_error(span, format!("unsupported identifier `{str}`")))
     }
+}
+
+fn partially_parse_pat(
+    stream: &mut Peekable<token_stream::IntoIter>,
+    diagnostics: &Diagnostics,
+    str_interner: &StrInterner,
+) -> Result<UnparsedExpr, RecordedError> {
+    todo!()
+}
+
+fn parse_keyword(
+    keyword: &str,
+    last_span: Span,
+    stream: &mut Peekable<token_stream::IntoIter>,
+    diagnostics: &Diagnostics,
+) -> Result<Span, RecordedError> {
+    match stream.next() {
+        Some(TokenTree::Group(token)) => Err(diagnostics.record_error(
+            token.span_open(),
+            format!("expected keyword `{keyword}`, found delimiters"),
+        )),
+        Some(TokenTree::Ident(token)) => {
+            let str = token.to_string();
+            if str == keyword {
+                Ok(token.span())
+            } else {
+                Err(diagnostics.record_error(
+                    token.span(),
+                    format!("expected keyword {keyword}, found {str}"),
+                ))
+            }
+        }
+        Some(TokenTree::Literal(token)) => Err(diagnostics.record_error(
+            token.span(),
+            format!("expected keyword `{keyword}`, found literal"),
+        )),
+        Some(TokenTree::Punct(token)) => Err(diagnostics.record_error(
+            token.span(),
+            format!("expected keyword `{keyword}`, found punctuation"),
+        )),
+        None => Err(diagnostics.record_error(
+            last_span,
+            format!("expected keyword `{keyword}` after this token"),
+        )),
+    }
+}
+
+fn partially_parse_expr(
+    stream: &mut Peekable<token_stream::IntoIter>,
+    diagnostics: &Diagnostics,
+    str_interner: &StrInterner,
+) -> Result<UnparsedExpr, RecordedError> {
+    todo!()
 }
 
 impl UnparsedExpr {
