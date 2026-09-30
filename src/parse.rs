@@ -6,7 +6,7 @@ use crate::{
         UnparsedExpr, UnparsedExprArray, UnparsedExprTuple, UnparsedPat, UnparsedQuote,
     },
     diagnostics::{Diagnostics, RecordedError},
-    proc_macro12::{Delimiter, Ident, Punct, Span, TokenStream, TokenTree, token_stream},
+    proc_macro12::{Delimiter, Group, Ident, Punct, Span, TokenStream, TokenTree, token_stream},
     str_interner::{StrId, StrInterner},
 };
 
@@ -131,8 +131,16 @@ fn parse_quote_for(
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
 ) -> Result<QuoteFor, RecordedError> {
-    let pat = partially_parse_pat(stream, diagnostics, str_interner)?;
-    let in_keyword = parse_keyword("in", todo!(), stream, diagnostics)?;
+    let pat = partially_parse_pat(for_keyword.span(), stream, diagnostics, str_interner)?;
+    let in_span = parse_keyword("in", pat.span(), stream, diagnostics)?;
+    let expr = partially_parse_expr(in_span, stream, diagnostics, str_interner)?;
+
+    let braces = parse_delimiter(Delimiter::Brace, expr.span(), stream, diagnostics)?;
+    let body = UnparsedQuote {
+        stream: braces.stream(),
+    };
+
+    Ok(QuoteFor { pat, expr, body })
 }
 
 fn parse_quote_if(
@@ -182,10 +190,11 @@ fn validate_ident(
 }
 
 fn partially_parse_pat(
+    last_span: Span,
     stream: &mut Peekable<token_stream::IntoIter>,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
-) -> Result<UnparsedExpr, RecordedError> {
+) -> Result<UnparsedPat, RecordedError> {
     todo!()
 }
 
@@ -221,17 +230,67 @@ fn parse_keyword(
         )),
         None => Err(diagnostics.record_error(
             last_span,
-            format!("expected keyword `{keyword}` after this token"),
+            format!("expected keyword `{keyword}` after this"),
+        )),
+    }
+}
+
+fn parse_delimiter(
+    delimiter: Delimiter,
+    last_span: Span,
+    stream: &mut Peekable<token_stream::IntoIter>,
+    diagnostics: &Diagnostics,
+) -> Result<Group, RecordedError> {
+    match stream.next() {
+        Some(TokenTree::Group(token)) => {
+            if token.delimiter() == delimiter {
+                Ok(token)
+            } else {
+                Err(diagnostics.record_error(
+                    token.span_open(),
+                    format!(
+                        "expected {}, found {}",
+                        delimiter_text(delimiter),
+                        delimiter_text(token.delimiter())
+                    ),
+                ))
+            }
+        }
+        Some(TokenTree::Ident(token)) => Err(diagnostics.record_error(
+            token.span(),
+            format!("expected {}, found identifier", delimiter_text(delimiter)),
+        )),
+        Some(TokenTree::Literal(token)) => Err(diagnostics.record_error(
+            token.span(),
+            format!("expected {}, found literal", delimiter_text(delimiter)),
+        )),
+        Some(TokenTree::Punct(token)) => Err(diagnostics.record_error(
+            token.span(),
+            format!("expected {}, found punctuation", delimiter_text(delimiter)),
+        )),
+        None => Err(diagnostics.record_error(
+            last_span,
+            format!("expected {} after this", delimiter_text(delimiter)),
         )),
     }
 }
 
 fn partially_parse_expr(
+    last_span: Span,
     stream: &mut Peekable<token_stream::IntoIter>,
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
 ) -> Result<UnparsedExpr, RecordedError> {
     todo!()
+}
+
+fn delimiter_text(delimiter: Delimiter) -> &'static str {
+    match delimiter {
+        Delimiter::Brace => "`{ ... }`",
+        Delimiter::Bracket => "`[...]`",
+        Delimiter::None => "tokens pasted from macro",
+        Delimiter::Parenthesis => "`(...)`",
+    }
 }
 
 impl UnparsedExpr {

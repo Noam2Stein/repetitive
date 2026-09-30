@@ -65,26 +65,29 @@ pub enum UnparsedExpr {
     Group(Group),
 }
 
-pub enum Expr {
+pub struct Expr {
+    pub span: Span,
+    pub kind: ExprKind,
+}
+
+pub enum ExprKind {
     Array(Box<UnparsedExprArray>),
     Binary(Box<ExprBinary>),
-    Bool(ExprBool),
-    Ident(ExprIdent),
-    Int(ExprInt),
+    Bool(bool),
+    Ident(StrId),
+    Int(u16),
     Unary(Box<ExprUnary>),
     Repeat(Box<ExprRepeat>),
-    Str(ExprStr),
+    Str(String),
     Tuple(Box<UnparsedExprTuple>),
 }
 
 pub struct UnparsedExprArray {
-    pub span: Span,
     pub first_element: Option<UnparsedExpr>,
     pub remaining_elements: TokenIter,
 }
 
 pub struct ExprBinary {
-    pub span: Span,
     pub lhs: UnparsedExpr,
     pub op: ExprBinaryOp,
     pub rhs: UnparsedExpr,
@@ -105,39 +108,17 @@ pub enum ExprBinaryOp {
     Sub,
 }
 
-pub struct ExprBool {
-    pub span: Span,
-    pub value: bool,
-}
-
-pub struct ExprIdent {
-    pub span: Span,
-    pub strid: StrId,
-}
-
-pub struct ExprInt {
-    pub span: Span,
-    pub value: u16,
-}
-
 pub struct ExprRepeat {
     pub expr: UnparsedExpr,
     pub len: UnparsedExpr,
 }
 
-pub struct ExprStr {
-    pub span: Span,
-    pub value: String,
-}
-
 pub struct UnparsedExprTuple {
-    pub span: Span,
     pub first_element: Option<UnparsedExpr>,
     pub remaining_elements: TokenIter,
 }
 
 pub struct ExprUnary {
-    pub span: Span,
     pub op: ExprUnaryOp,
     pub expr: UnparsedExpr,
 }
@@ -152,6 +133,29 @@ pub enum UnparsedPat {
     Group(Group),
 }
 
-pub enum Pat {}
+pub struct Pat {
+    pub span: Span,
+    pub kind: PatKind,
+}
+
+pub enum PatKind {}
 
 pub type TokenIter = Peekable<token_stream::IntoIter>;
+
+impl UnparsedExpr {
+    pub fn span(&self) -> Span {
+        match self {
+            Self::Expr(variant) => variant.span,
+            Self::Group(variant) => variant.span(),
+        }
+    }
+}
+
+impl UnparsedPat {
+    pub fn span(&self) -> Span {
+        match self {
+            Self::Group(variant) => variant.span(),
+            Self::Pat(variant) => variant.span,
+        }
+    }
+}
