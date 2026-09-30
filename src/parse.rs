@@ -40,7 +40,7 @@ fn parse_optional_quote_segment(
             },
         })),
         TokenTree::Punct(first_token) if first_token.as_char() == '$' => {
-            parse_metaprogramming_segment(first_token, stream, diagnostics, str_interner)
+            parse_quote_dollar(first_token, stream, diagnostics, str_interner)
         }
         TokenTree::Ident(_) | TokenTree::Literal(_) | TokenTree::Punct(_) => {
             let mut result = TokenStream::from_iter([first_token]);
@@ -61,7 +61,7 @@ fn token_cannot_contain_dollar(token: &TokenTree) -> bool {
     }
 }
 
-fn parse_metaprogramming_segment(
+fn parse_quote_dollar(
     dollar: Punct,
     stream: &mut Peekable<token_stream::IntoIter>,
     diagnostics: &Diagnostics,
@@ -76,10 +76,10 @@ fn parse_metaprogramming_segment(
     match first_token {
         TokenTree::Group(first_token) => Err(diagnostics.record_error(
             first_token.span(),
-            metaprogramming_segment_delimiter_error(first_token.delimiter()),
+            quote_dollar_delimiter_error(first_token.delimiter()),
         )),
         TokenTree::Ident(first_token) => {
-            parse_metaprogramming_segment_ident(first_token, stream, diagnostics, str_interner)
+            parse_quote_dollar_ident(first_token, stream, diagnostics, str_interner)
         }
         TokenTree::Literal(_) => {
             Err(diagnostics
@@ -92,7 +92,7 @@ fn parse_metaprogramming_segment(
     }
 }
 
-fn metaprogramming_segment_delimiter_error(delimiter: Delimiter) -> &'static str {
+fn quote_dollar_delimiter_error(delimiter: Delimiter) -> &'static str {
     match delimiter {
         Delimiter::Brace => {
             "`${ ... }` syntax is not supported (consider writing a `$let` statement)"
@@ -105,7 +105,7 @@ fn metaprogramming_segment_delimiter_error(delimiter: Delimiter) -> &'static str
     }
 }
 
-fn parse_metaprogramming_segment_ident(
+fn parse_quote_dollar_ident(
     ident: Ident,
     stream: &mut Peekable<token_stream::IntoIter>,
     diagnostics: &Diagnostics,
