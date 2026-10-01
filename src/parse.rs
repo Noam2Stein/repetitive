@@ -1,11 +1,12 @@
 use crate::{
     ast::{
         Expr, ExprArray, ExprKind, ExprTuple, Meta, MetaFor, MetaIdent, MetaIf, MetaIfSegment,
-        MetaLet, MetaMatch, MetaMatchArm, Pat, PatKind, Quote, QuoteGroup, QuoteSegment,
+        MetaLet, MetaMatch, MetaMatchArm, MetaMatchBody, Pat, PatKind, Quote, QuoteGroup,
+        QuoteSegment,
     },
     diagnostics::{Diagnostics, RecordedError},
     errors::Error,
-    proc_macro12::{Delimiter, Group, Punct, Spacing, Span, TokenStream, TokenTree},
+    proc_macro12::{Delimiter, Punct, Spacing, Span, TokenStream, TokenTree},
     str_interner::{StrId, StrInterner},
     token_iter::TokenIter,
 };
@@ -35,7 +36,7 @@ impl Quote {
     }
 }
 
-impl MetaMatch {
+impl MetaMatchBody {
     pub fn arms(
         self,
         diagnostics: &Diagnostics,
@@ -93,24 +94,6 @@ impl Pat {
     ) -> Result<PatKind, RecordedError> {
         todo!()
     }
-}
-
-fn parse_brace_with_quote(
-    iter: &mut TokenIter,
-    diagnostics: &Diagnostics,
-) -> Result<Quote, RecordedError> {
-    let brace = parse_delimiter(Delimiter::Brace, iter, diagnostics)?;
-    Ok(Quote {
-        unparsed_segments: TokenIter::new(brace.span_open(), brace.stream()),
-    })
-}
-
-fn parse_brace_with_token_iter(
-    iter: &mut TokenIter,
-    diagnostics: &Diagnostics,
-) -> Result<TokenIter, RecordedError> {
-    let brace = parse_delimiter(Delimiter::Brace, iter, diagnostics)?;
-    Ok(TokenIter::new(brace.span_open(), brace.stream()))
 }
 
 fn parse_char(
@@ -172,12 +155,12 @@ fn parse_delimiter(
     delimiter: Delimiter,
     iter: &mut TokenIter,
     diagnostics: &Diagnostics,
-) -> Result<Group, RecordedError> {
+) -> Result<TokenIter, RecordedError> {
     match iter.next() {
         Some(TokenTree::Group(token)) => {
             let found_delimiter = token.delimiter();
             if found_delimiter == delimiter {
-                Ok(token)
+                Ok(TokenIter::new(token.span_open(), token.stream()))
             } else {
                 Err(
                     diagnostics.record_error(Error::parse_delimiter_wrong_delimiter(
@@ -293,7 +276,9 @@ fn parse_meta_for(
     let pat = parse_pat(iter, diagnostics, str_interner)?;
     parse_keyword("in", iter, diagnostics)?;
     let expr = parse_expr(iter, diagnostics, str_interner)?;
-    let body = parse_brace_with_quote(iter, diagnostics)?;
+    let body = Quote {
+        unparsed_segments: parse_delimiter(Delimiter::Brace, iter, diagnostics)?,
+    };
 
     Ok(MetaFor { pat, expr, body })
 }
@@ -306,10 +291,12 @@ fn parse_meta_if(
     let mut segments = Vec::new();
 
     let first_condition = parse_expr(iter, diagnostics, str_interner)?;
-    let first_branch = parse_brace_with_quote(iter, diagnostics)?;
+    let first_body = Quote {
+        unparsed_segments: parse_delimiter(Delimiter::Brace, iter, diagnostics)?,
+    };
     segments.push(MetaIfSegment {
         condition: Some(first_condition),
-        branch: first_branch,
+        body: first_body,
     });
 
     let parse_else = |iter: &mut TokenIter| {
@@ -326,9 +313,11 @@ fn parse_meta_if(
             .then(|| parse_expr(iter, diagnostics, str_interner))
             .transpose()?;
 
-        let branch = parse_brace_with_quote(iter, diagnostics)?;
+        let body = Quote {
+            unparsed_segments: parse_delimiter(Delimiter::Brace, iter, diagnostics)?,
+        };
 
-        segments.push(MetaIfSegment { condition, branch });
+        segments.push(MetaIfSegment { condition, body });
     }
 
     Ok(MetaIf { segments })
@@ -353,12 +342,11 @@ fn parse_meta_match(
     str_interner: &StrInterner,
 ) -> Result<MetaMatch, RecordedError> {
     let expr = parse_expr(iter, diagnostics, str_interner)?;
-    let unparsed_arms = parse_brace_with_token_iter(iter, diagnostics)?;
+    let body = MetaMatchBody {
+        unparsed_arms: parse_delimiter(Delimiter::Brace, iter, diagnostics)?,
+    };
 
-    Ok(MetaMatch {
-        expr,
-        unparsed_arms,
-    })
+    Ok(MetaMatch { expr, body })
 }
 
 fn parse_meta_match_arm(
@@ -368,7 +356,9 @@ fn parse_meta_match_arm(
 ) -> Result<MetaMatchArm, RecordedError> {
     let pat = parse_pat(iter, diagnostics, str_interner)?;
     parse_chars(['=', '>'], iter, diagnostics)?;
-    let body = parse_brace_with_quote(iter, diagnostics)?;
+    let body = Quote {
+        unparsed_segments: parse_delimiter(Delimiter::Brace, iter, diagnostics)?,
+    };
     iter.next_if(|token| token_is_char(token, ','));
 
     Ok(MetaMatchArm { pat, body })

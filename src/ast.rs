@@ -45,7 +45,7 @@ pub struct MetaIf {
 
 pub struct MetaIfSegment {
     pub condition: Option<Expr>,
-    pub branch: Quote,
+    pub body: Quote,
 }
 
 pub struct MetaLet {
@@ -55,6 +55,10 @@ pub struct MetaLet {
 
 pub struct MetaMatch {
     pub expr: Expr,
+    pub body: MetaMatchBody,
+}
+
+pub struct MetaMatchBody {
     pub unparsed_arms: TokenIter,
 }
 
