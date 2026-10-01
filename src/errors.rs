@@ -19,6 +19,41 @@ impl Error {
 
 /// Syntax errors.
 impl Error {
+    pub fn parse_char_cutoff(last_span: Span, char: char) -> Self {
+        Self {
+            span: last_span,
+            message: Cow::Owned(format!("expected `{char}` after this")),
+        }
+    }
+
+    pub fn parse_char_group(span_open: Span, char: char) -> Self {
+        Self {
+            span: span_open,
+            message: Cow::Owned(format!("expected `{char}`, found delimiter")),
+        }
+    }
+
+    pub fn parse_char_ident(span: Span, char: char) -> Self {
+        Self {
+            span,
+            message: Cow::Owned(format!("expected `{char}`, found identifier")),
+        }
+    }
+
+    pub fn parse_char_literal(span: Span, char: char) -> Self {
+        Self {
+            span,
+            message: Cow::Owned(format!("expected `{char}`, found literal")),
+        }
+    }
+
+    pub fn parse_char_wrong_char(span: Span, char: char, found_char: char) -> Self {
+        Self {
+            span,
+            message: Cow::Owned(format!("expected `{char}`, found `{found_char}`")),
+        }
+    }
+
     pub fn parse_delimiter_cutoff(last_span: Span, delimiter: Delimiter) -> Self {
         Self {
             span: last_span,
@@ -156,41 +191,6 @@ impl Error {
         Self {
             span,
             message: Cow::Owned(format!("invalid syntax `$` followed by `{char}`")),
-        }
-    }
-
-    pub fn parse_punct_cutoff(last_span: Span, punct: char) -> Self {
-        Self {
-            span: last_span,
-            message: Cow::Owned(format!("expected `{punct}` after this")),
-        }
-    }
-
-    pub fn parse_punct_group(span_open: Span, punct: char) -> Self {
-        Self {
-            span: span_open,
-            message: Cow::Owned(format!("expected `{punct}`, found delimiter")),
-        }
-    }
-
-    pub fn parse_punct_ident(span: Span, punct: char) -> Self {
-        Self {
-            span,
-            message: Cow::Owned(format!("expected `{punct}`, found identifier")),
-        }
-    }
-
-    pub fn parse_punct_literal(span: Span, punct: char) -> Self {
-        Self {
-            span,
-            message: Cow::Owned(format!("expected `{punct}`, found literal")),
-        }
-    }
-
-    pub fn parse_punct_wrong_punct(span: Span, punct: char, found_punct: char) -> Self {
-        Self {
-            span,
-            message: Cow::Owned(format!("expected `{punct}`, found `{found_punct}`")),
         }
     }
 

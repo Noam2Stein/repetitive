@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Expr, ExprArray, ExprKind, ExprTuple, Meta, MetaFor, MetaIdent, MetaIf, MetaLet, MetaMatch,
-        MetaMatchArm, Pat, PatKind, Quote, QuoteGroup, QuoteSegment,
+        Expr, ExprArray, ExprKind, ExprTuple, Meta, MetaFor, MetaIdent, MetaIf, MetaIfSegment,
+        MetaLet, MetaMatch, MetaMatchArm, Pat, PatKind, Quote, QuoteGroup, QuoteSegment,
     },
     diagnostics::{Diagnostics, RecordedError},
     errors::Error,
@@ -99,6 +99,45 @@ fn parse_brace_with_quote(
     Ok(Quote {
         unparsed_segments: TokenIter::new(brace.span_open(), brace.stream()),
     })
+}
+
+fn parse_brace_with_token_iter(
+    iter: &mut TokenIter,
+    diagnostics: &Diagnostics,
+) -> Result<TokenIter, RecordedError> {
+    let brace = parse_delimiter(Delimiter::Brace, iter, diagnostics)?;
+    Ok(TokenIter::new(brace.span_open(), brace.stream()))
+}
+
+fn parse_char(
+    char: char,
+    iter: &mut TokenIter,
+    diagnostics: &Diagnostics,
+) -> Result<(), RecordedError> {
+    match iter.next() {
+        Some(TokenTree::Group(token)) => {
+            Err(diagnostics.record_error(Error::parse_char_group(token.span_open(), char)))
+        }
+        Some(TokenTree::Ident(token)) => {
+            Err(diagnostics.record_error(Error::parse_char_ident(token.span(), char)))
+        }
+        Some(TokenTree::Literal(token)) => {
+            Err(diagnostics.record_error(Error::parse_char_literal(token.span(), char)))
+        }
+        Some(TokenTree::Punct(token)) => {
+            let found_char = token.as_char();
+            if found_char == char {
+                Ok(())
+            } else {
+                Err(diagnostics.record_error(Error::parse_char_wrong_char(
+                    token.span(),
+                    char,
+                    found_char,
+                )))
+            }
+        }
+        None => Err(diagnostics.record_error(Error::parse_char_cutoff(iter.last_span(), char))),
+    }
 }
 
 fn parse_delimiter(
@@ -236,7 +275,35 @@ fn parse_meta_if(
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
 ) -> Result<MetaIf, RecordedError> {
-    todo!()
+    let mut segments = Vec::new();
+
+    let first_condition = parse_expr(iter, diagnostics, str_interner)?;
+    let first_branch = parse_brace_with_quote(iter, diagnostics)?;
+    segments.push(MetaIfSegment {
+        condition: Some(first_condition),
+        branch: first_branch,
+    });
+
+    let parse_else = |iter: &mut TokenIter| {
+        iter.next_n_if(|[token_0, token_1]| {
+            token_is_char(token_0, '$') && token_is_keyword(token_1, "else")
+        })
+    };
+    while parse_else(iter).is_some() {
+        let is_else_if = iter
+            .next_if(|token| token_is_keyword(token, "if"))
+            .is_some();
+
+        let condition = is_else_if
+            .then(|| parse_expr(iter, diagnostics, str_interner))
+            .transpose()?;
+
+        let branch = parse_brace_with_quote(iter, diagnostics)?;
+
+        segments.push(MetaIfSegment { condition, branch });
+    }
+
+    Ok(MetaIf { segments })
 }
 
 fn parse_meta_let(
@@ -245,9 +312,9 @@ fn parse_meta_let(
     str_interner: &StrInterner,
 ) -> Result<MetaLet, RecordedError> {
     let pat = parse_pat(iter, diagnostics, str_interner)?;
-    parse_punct('=', iter, diagnostics)?;
+    parse_char('=', iter, diagnostics)?;
     let expr = parse_expr(iter, diagnostics, str_interner)?;
-    parse_punct(';', iter, diagnostics)?;
+    parse_char(';', iter, diagnostics)?;
 
     Ok(MetaLet { pat, expr })
 }
@@ -257,7 +324,13 @@ fn parse_meta_match(
     diagnostics: &Diagnostics,
     str_interner: &StrInterner,
 ) -> Result<MetaMatch, RecordedError> {
-    todo!()
+    let expr = parse_expr(iter, diagnostics, str_interner)?;
+    let unparsed_arms = parse_brace_with_token_iter(iter, diagnostics)?;
+
+    Ok(MetaMatch {
+        expr,
+        unparsed_arms,
+    })
 }
 
 fn parse_pat(
@@ -266,37 +339,6 @@ fn parse_pat(
     str_interner: &StrInterner,
 ) -> Result<Pat, RecordedError> {
     todo!()
-}
-
-fn parse_punct(
-    punct: char,
-    iter: &mut TokenIter,
-    diagnostics: &Diagnostics,
-) -> Result<(), RecordedError> {
-    match iter.next() {
-        Some(TokenTree::Group(token)) => {
-            Err(diagnostics.record_error(Error::parse_punct_group(token.span_open(), punct)))
-        }
-        Some(TokenTree::Ident(token)) => {
-            Err(diagnostics.record_error(Error::parse_punct_ident(token.span(), punct)))
-        }
-        Some(TokenTree::Literal(token)) => {
-            Err(diagnostics.record_error(Error::parse_punct_literal(token.span(), punct)))
-        }
-        Some(TokenTree::Punct(token)) => {
-            let found_punct = token.as_char();
-            if found_punct == punct {
-                Ok(())
-            } else {
-                Err(diagnostics.record_error(Error::parse_punct_wrong_punct(
-                    token.span(),
-                    punct,
-                    found_punct,
-                )))
-            }
-        }
-        None => Err(diagnostics.record_error(Error::parse_punct_cutoff(iter.last_span(), punct))),
-    }
 }
 
 fn parse_quote_segment(
@@ -332,6 +374,27 @@ fn token_cannot_contain_meta(token: &TokenTree) -> bool {
         TokenTree::Group(_) => false,
         TokenTree::Punct(token) if token.as_char() == '$' => false,
         TokenTree::Ident(_) | TokenTree::Literal(_) | TokenTree::Punct(_) => true,
+    }
+}
+
+fn token_is_char(token: &TokenTree, char: char) -> bool {
+    if let TokenTree::Punct(token) = token
+        && token.as_char() == char
+    {
+        true
+    } else {
+        false
+    }
+}
+
+fn token_is_keyword(token: &TokenTree, keyword: &str) -> bool {
+    #[allow(clippy::cmp_owned)]
+    if let TokenTree::Ident(token) = token
+        && token.to_string() == keyword
+    {
+        true
+    } else {
+        false
     }
 }
 
