@@ -5,7 +5,7 @@ use crate::{
     },
     diagnostics::{Diagnostics, RecordedError},
     errors::Error,
-    proc_macro12::{Delimiter, Group, Span, TokenStream, TokenTree},
+    proc_macro12::{Delimiter, Group, Punct, Spacing, Span, TokenStream, TokenTree},
     str_interner::{StrId, StrInterner},
     token_iter::TokenIter,
 };
@@ -41,9 +41,13 @@ impl MetaMatch {
         diagnostics: &Diagnostics,
         str_interner: &StrInterner,
     ) -> impl Iterator<Item = Result<MetaMatchArm, RecordedError>> {
-        todo!();
-        #[expect(unreachable_code)]
-        [].into_iter()
+        let mut iter = self.unparsed_arms;
+
+        std::iter::from_fn(move || {
+            iter.peek()
+                .is_some()
+                .then(|| parse_meta_match_arm(&mut iter, diagnostics, str_interner))
+        })
     }
 }
 
@@ -113,7 +117,7 @@ fn parse_char(
     char: char,
     iter: &mut TokenIter,
     diagnostics: &Diagnostics,
-) -> Result<(), RecordedError> {
+) -> Result<Punct, RecordedError> {
     match iter.next() {
         Some(TokenTree::Group(token)) => {
             Err(diagnostics.record_error(Error::parse_char_group(token.span_open(), char)))
@@ -127,7 +131,7 @@ fn parse_char(
         Some(TokenTree::Punct(token)) => {
             let found_char = token.as_char();
             if found_char == char {
-                Ok(())
+                Ok(token)
             } else {
                 Err(diagnostics.record_error(Error::parse_char_wrong_char(
                     token.span(),
@@ -138,6 +142,30 @@ fn parse_char(
         }
         None => Err(diagnostics.record_error(Error::parse_char_cutoff(iter.last_span(), char))),
     }
+}
+
+fn parse_chars<const N: usize>(
+    chars: [char; N],
+    iter: &mut TokenIter,
+    diagnostics: &Diagnostics,
+) -> Result<(), RecordedError> {
+    for i in 0..N {
+        let char = chars[i];
+        let punct = parse_char(char, iter, diagnostics)?;
+
+        let is_not_last = i + 1 != N;
+        if is_not_last && punct.spacing() == Spacing::Alone {
+            let next_char = chars[i + 1];
+
+            return Err(diagnostics.record_error(Error::parse_chars_alone_spacing(
+                punct.span(),
+                char,
+                next_char,
+            )));
+        }
+    }
+
+    Ok(())
 }
 
 fn parse_delimiter(
@@ -331,6 +359,19 @@ fn parse_meta_match(
         expr,
         unparsed_arms,
     })
+}
+
+fn parse_meta_match_arm(
+    iter: &mut TokenIter,
+    diagnostics: &Diagnostics,
+    str_interner: &StrInterner,
+) -> Result<MetaMatchArm, RecordedError> {
+    let pat = parse_pat(iter, diagnostics, str_interner)?;
+    parse_chars(['=', '>'], iter, diagnostics)?;
+    let body = parse_brace_with_quote(iter, diagnostics)?;
+    iter.next_if(|token| token_is_char(token, ','));
+
+    Ok(MetaMatchArm { pat, body })
 }
 
 fn parse_pat(

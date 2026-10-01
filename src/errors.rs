@@ -54,6 +54,15 @@ impl Error {
         }
     }
 
+    pub fn parse_chars_alone_spacing(span: Span, char: char, next_char: char) -> Self {
+        Self {
+            span,
+            message: Cow::Owned(format!(
+                "expected `{next_char}` immediately after this `{char}`"
+            )),
+        }
+    }
+
     pub fn parse_delimiter_cutoff(last_span: Span, delimiter: Delimiter) -> Self {
         Self {
             span: last_span,
