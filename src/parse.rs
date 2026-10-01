@@ -4,7 +4,7 @@ use crate::{
         Pat, PatKind, Quote, QuoteGroup, QuoteSegment,
     },
     diagnostics::{Diagnostics, RecordedError},
-    error::Error,
+    errors::Error,
     proc_macro12::{Delimiter, Group, Span, TokenStream, TokenTree},
     str_interner::{StrId, StrInterner},
     token_iter::TokenIter,
@@ -123,16 +123,16 @@ fn parse_meta(
     str_interner: &StrInterner,
 ) -> Result<Meta, RecordedError> {
     let Some(first_token) = iter.next() else {
-        return Err(diagnostics.record_error(Error::meta_cutoff(iter.last_span())));
+        return Err(diagnostics.record_error(Error::parse_meta_cutoff(iter.last_span())));
     };
 
     Ok(match first_token {
         TokenTree::Group(first_token) => {
             return Err(diagnostics.record_error(match first_token.delimiter() {
-                Delimiter::Brace => Error::meta_braces(first_token.span()),
-                Delimiter::Bracket => Error::meta_brackets(first_token.span()),
-                Delimiter::None => Error::meta_invisible_group(first_token.span()),
-                Delimiter::Parenthesis => Error::meta_parentheses(first_token.span()),
+                Delimiter::Brace => Error::parse_meta_brace(first_token.span()),
+                Delimiter::Bracket => Error::parse_meta_bracket(first_token.span()),
+                Delimiter::None => Error::parse_meta_none_delimiter(first_token.span()),
+                Delimiter::Parenthesis => Error::parse_meta_parenthesis(first_token.span()),
             }));
         }
         TokenTree::Ident(first_token) => match first_token.to_string().as_str() {
@@ -146,11 +146,13 @@ fn parse_meta(
             }),
         },
         TokenTree::Literal(first_token) => {
-            return Err(diagnostics.record_error(Error::meta_literal(first_token.span())));
+            return Err(diagnostics.record_error(Error::parse_meta_literal(first_token.span())));
         }
         TokenTree::Punct(first_token) => {
-            return Err(diagnostics
-                .record_error(Error::meta_punct(first_token.span(), first_token.as_char())));
+            return Err(diagnostics.record_error(Error::parse_meta_punct(
+                first_token.span(),
+                first_token.as_char(),
+            )));
         }
     })
 }
@@ -230,37 +232,30 @@ fn parse_keyword(
     diagnostics: &Diagnostics,
 ) -> Result<(), RecordedError> {
     match iter.next() {
-        Some(TokenTree::Group(token)) => Err(diagnostics.record_error(
-            Error::expected_keyword_found_delimiters(token.span_open(), keyword),
-        )),
+        Some(TokenTree::Group(token)) => {
+            Err(diagnostics.record_error(Error::parse_keyword_group(token.span_open(), keyword)))
+        }
         Some(TokenTree::Ident(token)) => {
             let ident = token.to_string();
             if ident == keyword {
                 Ok(())
             } else {
-                Err(
-                    diagnostics.record_error(Error::expected_keyword_found_ident(
-                        token.span(),
-                        keyword,
-                        &ident,
-                    )),
-                )
+                Err(diagnostics.record_error(Error::parse_keyword_ident(
+                    token.span(),
+                    keyword,
+                    &ident,
+                )))
             }
         }
         Some(TokenTree::Literal(token)) => {
-            Err(diagnostics
-                .record_error(Error::expected_keyword_found_literal(token.span(), keyword)))
+            Err(diagnostics.record_error(Error::parse_keyword_literal(token.span(), keyword)))
         }
         Some(TokenTree::Punct(token)) => {
-            Err(diagnostics
-                .record_error(Error::expected_keyword_found_punct(token.span(), keyword)))
+            Err(diagnostics.record_error(Error::parse_keyword_punct(token.span(), keyword)))
         }
-        None => Err(
-            diagnostics.record_error(Error::expected_keyword_found_cutoff(
-                iter.last_span(),
-                keyword,
-            )),
-        ),
+        None => {
+            Err(diagnostics.record_error(Error::parse_keyword_cutoff(iter.last_span(), keyword)))
+        }
     }
 }
 
@@ -287,7 +282,7 @@ fn parse_delimiter(
                 Ok(token)
             } else {
                 Err(
-                    diagnostics.record_error(Error::expected_delimiters_found_delimiters(
+                    diagnostics.record_error(Error::parse_delimiter_wrong_delimiter(
                         token.span_open(),
                         delimiter,
                         found_delimiter,
@@ -295,21 +290,19 @@ fn parse_delimiter(
                 )
             }
         }
-        Some(TokenTree::Ident(token)) => Err(diagnostics.record_error(
-            Error::expected_delimiters_found_ident(token.span(), delimiter),
-        )),
-        Some(TokenTree::Literal(token)) => Err(diagnostics.record_error(
-            Error::expected_delimiters_found_literal(token.span(), delimiter),
-        )),
-        Some(TokenTree::Punct(token)) => Err(diagnostics.record_error(
-            Error::expected_delimiters_found_punct(token.span(), delimiter),
-        )),
-        None => Err(
-            diagnostics.record_error(Error::expected_delimiters_found_cutoff(
-                iter.last_span(),
-                delimiter,
-            )),
-        ),
+        Some(TokenTree::Ident(token)) => {
+            Err(diagnostics.record_error(Error::parse_delimiter_ident(token.span(), delimiter)))
+        }
+        Some(TokenTree::Literal(token)) => {
+            Err(diagnostics.record_error(Error::parse_delimiter_literal(token.span(), delimiter)))
+        }
+        Some(TokenTree::Punct(token)) => {
+            Err(diagnostics.record_error(Error::parse_delimiter_punct(token.span(), delimiter)))
+        }
+        None => {
+            Err(diagnostics
+                .record_error(Error::parse_delimiter_cutoff(iter.last_span(), delimiter)))
+        }
     }
 }
 
@@ -319,32 +312,28 @@ fn parse_punct(
     diagnostics: &Diagnostics,
 ) -> Result<(), RecordedError> {
     match iter.next() {
-        Some(TokenTree::Group(token)) => Err(diagnostics.record_error(
-            token.span(),
-            format!("expected `{punct}`, found delimiters"),
-        )),
-        Some(TokenTree::Ident(token)) => Err(diagnostics.record_error(
-            token.span(),
-            format!("expected `{punct}`, found identifier"),
-        )),
+        Some(TokenTree::Group(token)) => {
+            Err(diagnostics.record_error(Error::parse_punct_group(token.span_open(), punct)))
+        }
+        Some(TokenTree::Ident(token)) => {
+            Err(diagnostics.record_error(Error::parse_punct_ident(token.span(), punct)))
+        }
         Some(TokenTree::Literal(token)) => {
-            Err(diagnostics
-                .record_error(token.span(), format!("expected `{punct}`, found literal")))
+            Err(diagnostics.record_error(Error::parse_punct_literal(token.span(), punct)))
         }
         Some(TokenTree::Punct(token)) => {
-            if token.as_char() == punct {
+            let found_punct = token.as_char();
+            if found_punct == punct {
                 Ok(())
             } else {
-                Err(diagnostics.record_error(
+                Err(diagnostics.record_error(Error::parse_punct_wrong_punct(
                     token.span(),
-                    format!("expected `{punct}`, found `{}`", token.as_char()),
-                ))
+                    punct,
+                    found_punct,
+                )))
             }
         }
-        None => {
-            Err(diagnostics
-                .record_error(iter.last_span(), format!("expected `{punct}` after this")))
-        }
+        None => Err(diagnostics.record_error(Error::parse_punct_cutoff(iter.last_span(), punct))),
     }
 }
 

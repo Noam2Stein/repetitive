@@ -19,7 +19,44 @@ impl Error {
 
 /// Syntax errors.
 impl Error {
-    pub fn expected_delimiters_found_delimiters(
+    pub fn parse_delimiter_cutoff(last_span: Span, delimiter: Delimiter) -> Self {
+        Self {
+            span: last_span,
+            message: Cow::Owned(format!("expected {} after this", delimiter_noun(delimiter))),
+        }
+    }
+
+    pub fn parse_delimiter_ident(span: Span, delimiter: Delimiter) -> Self {
+        Self {
+            span,
+            message: Cow::Owned(format!(
+                "expected {}, found an identifier",
+                delimiter_noun(delimiter)
+            )),
+        }
+    }
+
+    pub fn parse_delimiter_literal(span: Span, delimiter: Delimiter) -> Self {
+        Self {
+            span,
+            message: Cow::Owned(format!(
+                "expected {}, found a literal",
+                delimiter_noun(delimiter)
+            )),
+        }
+    }
+
+    pub fn parse_delimiter_punct(span: Span, delimiter: Delimiter) -> Self {
+        Self {
+            span,
+            message: Cow::Owned(format!(
+                "expected {}, found a punctuation",
+                delimiter_noun(delimiter)
+            )),
+        }
+    }
+
+    pub fn parse_delimiter_wrong_delimiter(
         span_open: Span,
         delimiter: Delimiter,
         found_delimiter: Delimiter,
@@ -34,116 +71,79 @@ impl Error {
         }
     }
 
-    pub fn expected_delimiters_found_ident(span: Span, delimiter: Delimiter) -> Self {
-        Self {
-            span,
-            message: Cow::Owned(format!(
-                "expected {}, found an identifier",
-                delimiter_noun(delimiter)
-            )),
-        }
-    }
-
-    pub fn expected_delimiters_found_literal(span: Span, delimiter: Delimiter) -> Self {
-        Self {
-            span,
-            message: Cow::Owned(format!(
-                "expected {}, found a literal",
-                delimiter_noun(delimiter)
-            )),
-        }
-    }
-
-    pub fn expected_delimiters_found_punct(span: Span, delimiter: Delimiter) -> Self {
-        Self {
-            span,
-            message: Cow::Owned(format!(
-                "expected {}, found a punctuation",
-                delimiter_noun(delimiter)
-            )),
-        }
-    }
-
-    pub fn expected_delimiters_found_cutoff(last_span: Span, delimiter: Delimiter) -> Self {
-        Self {
-            span: last_span,
-            message: Cow::Owned(format!("expected {} after this", delimiter_noun(delimiter))),
-        }
-    }
-
-    pub fn expected_keyword_found_delimiters(span_open: Span, keyword: &str) -> Self {
-        Self {
-            span: span_open,
-            message: Cow::Owned(format!("expected keyword `{keyword}`, found delimiters")),
-        }
-    }
-
-    pub fn expected_keyword_found_ident(span: Span, keyword: &str, ident: &str) -> Self {
-        Self {
-            span,
-            message: Cow::Owned(format!("expected keyword `{keyword}`, found `{ident}`")),
-        }
-    }
-
-    pub fn expected_keyword_found_literal(span: Span, keyword: &str) -> Self {
-        Self {
-            span,
-            message: Cow::Owned(format!("expected keyword `{keyword}`, found literal")),
-        }
-    }
-
-    pub fn expected_keyword_found_punct(span: Span, keyword: &str) -> Self {
-        Self {
-            span,
-            message: Cow::Owned(format!("expected keyword `{keyword}`, found punctuation")),
-        }
-    }
-
-    pub fn expected_keyword_found_cutoff(last_span: Span, keyword: &str) -> Self {
+    pub fn parse_keyword_cutoff(last_span: Span, keyword: &str) -> Self {
         Self {
             span: last_span,
             message: Cow::Owned(format!("expected keyword `{keyword}` after this")),
         }
     }
 
-    pub fn meta_braces(span: Span) -> Self {
+    pub fn parse_keyword_group(span_open: Span, keyword: &str) -> Self {
+        Self {
+            span: span_open,
+            message: Cow::Owned(format!("expected keyword `{keyword}`, found delimiter")),
+        }
+    }
+
+    pub fn parse_keyword_ident(span: Span, keyword: &str, ident: &str) -> Self {
         Self {
             span,
+            message: Cow::Owned(format!("expected keyword `{keyword}`, found `{ident}`")),
+        }
+    }
+
+    pub fn parse_keyword_literal(span: Span, keyword: &str) -> Self {
+        Self {
+            span,
+            message: Cow::Owned(format!("expected keyword `{keyword}`, found literal")),
+        }
+    }
+
+    pub fn parse_keyword_punct(span: Span, keyword: &str) -> Self {
+        Self {
+            span,
+            message: Cow::Owned(format!("expected keyword `{keyword}`, found punctuation")),
+        }
+    }
+
+    pub fn parse_meta_brace(span_open: Span) -> Self {
+        Self {
+            span: span_open,
             message: Cow::Borrowed(
                 "`${ ... }` syntax is not supported (to compute a value, use a `$let` statement)",
             ),
         }
     }
 
-    pub fn meta_brackets(span: Span) -> Self {
+    pub fn parse_meta_bracket(span_open: Span) -> Self {
         Self {
-            span,
+            span: span_open,
             message: Cow::Borrowed("invalid syntax `$[...]`"),
         }
     }
 
-    pub fn meta_cutoff(span: Span) -> Self {
+    pub fn parse_meta_cutoff(last_span: Span) -> Self {
         Self {
-            span,
-            message: Cow::Borrowed("expected metaprogramming keyword after `$`"),
+            span: last_span,
+            message: Cow::Borrowed("expected meta-construct after `$`"),
         }
     }
 
-    pub fn meta_invisible_group(span: Span) -> Self {
-        Self {
-            span,
-            message: Cow::Borrowed("metaprogramming segments pasted from macros are not supported"),
-        }
-    }
-
-    pub fn meta_literal(span: Span) -> Self {
+    pub fn parse_meta_literal(span: Span) -> Self {
         Self {
             span,
             message: Cow::Borrowed("invalid syntax `$` followed by literal"),
         }
     }
 
-    pub fn meta_parentheses(span: Span) -> Self {
+    pub fn parse_meta_none_delimiter(span: Span) -> Self {
+        Self {
+            span,
+            message: Cow::Borrowed("meta-constructs pasted from macros are not supported"),
+        }
+    }
+
+    pub fn parse_meta_parenthesis(span: Span) -> Self {
         Self {
             span,
             message: Cow::Borrowed(
@@ -152,10 +152,45 @@ impl Error {
         }
     }
 
-    pub fn meta_punct(span: Span, char: char) -> Self {
+    pub fn parse_meta_punct(span: Span, char: char) -> Self {
         Self {
             span,
             message: Cow::Owned(format!("invalid syntax `$` followed by `{char}`")),
+        }
+    }
+
+    pub fn parse_punct_cutoff(last_span: Span, punct: char) -> Self {
+        Self {
+            span: last_span,
+            message: Cow::Owned(format!("expected `{punct}` after this")),
+        }
+    }
+
+    pub fn parse_punct_group(span_open: Span, punct: char) -> Self {
+        Self {
+            span: span_open,
+            message: Cow::Owned(format!("expected `{punct}`, found delimiter")),
+        }
+    }
+
+    pub fn parse_punct_ident(span: Span, punct: char) -> Self {
+        Self {
+            span,
+            message: Cow::Owned(format!("expected `{punct}`, found identifier")),
+        }
+    }
+
+    pub fn parse_punct_literal(span: Span, punct: char) -> Self {
+        Self {
+            span,
+            message: Cow::Owned(format!("expected `{punct}`, found literal")),
+        }
+    }
+
+    pub fn parse_punct_wrong_punct(span: Span, punct: char, found_punct: char) -> Self {
+        Self {
+            span,
+            message: Cow::Owned(format!("expected `{punct}`, found `{found_punct}`")),
         }
     }
 
@@ -169,63 +204,63 @@ impl Error {
 
 /// Execute errors.
 impl Error {
-    pub fn int_add_overflow(span: Span) -> Self {
+    pub fn execute_int_add_overflow(span: Span) -> Self {
         Self {
             span,
             message: Cow::Borrowed("attempt to add with overflow"),
         }
     }
 
-    pub fn int_div_overflow(span: Span) -> Self {
+    pub fn execute_int_div_overflow(span: Span) -> Self {
         Self {
             span,
             message: Cow::Borrowed("attempt to divide with overflow"),
         }
     }
 
-    pub fn int_div_zero(span: Span) -> Self {
+    pub fn execute_int_div_zero(span: Span) -> Self {
         Self {
             span,
             message: Cow::Borrowed("attempt to divide by zero"),
         }
     }
 
-    pub fn int_mul_overflow(span: Span) -> Self {
+    pub fn execute_int_mul_overflow(span: Span) -> Self {
         Self {
             span,
             message: Cow::Borrowed("attempt to multiply with overflow"),
         }
     }
 
-    pub fn int_neg_overflow(span: Span) -> Self {
+    pub fn execute_int_neg_overflow(span: Span) -> Self {
         Self {
             span,
             message: Cow::Borrowed("attempt to negate with overflow"),
         }
     }
 
-    pub fn int_rem_overflow(span: Span) -> Self {
+    pub fn execute_int_rem_overflow(span: Span) -> Self {
         Self {
             span,
             message: Cow::Borrowed("attempt to calculate the remainder with overflow"),
         }
     }
 
-    pub fn int_rem_zero(span: Span) -> Self {
+    pub fn execute_int_rem_zero(span: Span) -> Self {
         Self {
             span,
             message: Cow::Borrowed("attempt to calculate the remainder with a divisor of zero"),
         }
     }
 
-    pub fn int_sub_overflow(span: Span) -> Self {
+    pub fn execute_int_sub_overflow(span: Span) -> Self {
         Self {
             span,
             message: Cow::Borrowed("attempt to subtract with overflow"),
         }
     }
 
-    pub fn str_emit_invalid(span: Span, val: &str) -> Self {
+    pub fn execute_str_emit_invalid(span: Span, val: &str) -> Self {
         Self {
             span,
             message: Cow::Owned(format!("attempt to emit invalid identifier `{val}`")),

@@ -3,7 +3,7 @@
 use std::{borrow::Cow, cell::Cell};
 
 use crate::{
-    error::Error,
+    errors::Error,
     proc_macro12::{
         Delimiter, Group, Ident, Literal, Punct, Spacing, Span, TokenStream, TokenTree,
     },
