@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         Expr, ExprArray, ExprKind, ExprTuple, Meta, MetaFor, MetaIdent, MetaIf, MetaLet, MetaMatch,
-        Pat, PatKind, Quote, QuoteGroup, QuoteSegment,
+        MetaMatchArm, Pat, PatKind, Quote, QuoteGroup, QuoteSegment,
     },
     diagnostics::{Diagnostics, RecordedError},
     errors::Error,
@@ -12,8 +12,7 @@ use crate::{
 
 pub fn parse_ast(input: TokenStream) -> Quote {
     Quote {
-        last_span: Span::call_site(),
-        stream: input,
+        unparsed_segments: TokenIter::new(Span::call_site(), input),
     }
 }
 
@@ -23,7 +22,7 @@ impl Quote {
         diagnostics: &Diagnostics,
         str_interner: &StrInterner,
     ) -> impl Iterator<Item = Result<QuoteSegment, RecordedError>> {
-        let mut iter = TokenIter::new(self.last_span, self.stream);
+        let mut iter = self.unparsed_segments;
 
         std::iter::from_fn(move || {
             Some(parse_quote_segment(
@@ -33,6 +32,18 @@ impl Quote {
                 str_interner,
             ))
         })
+    }
+}
+
+impl MetaMatch {
+    pub fn arms(
+        self,
+        diagnostics: &Diagnostics,
+        str_interner: &StrInterner,
+    ) -> impl Iterator<Item = Result<MetaMatchArm, RecordedError>> {
+        todo!();
+        #[expect(unreachable_code)]
+        [].into_iter()
     }
 }
 
@@ -84,10 +95,9 @@ fn parse_brace_with_quote(
     iter: &mut TokenIter,
     diagnostics: &Diagnostics,
 ) -> Result<Quote, RecordedError> {
-    let braces = parse_delimiter(Delimiter::Brace, iter, diagnostics)?;
+    let brace = parse_delimiter(Delimiter::Brace, iter, diagnostics)?;
     Ok(Quote {
-        last_span: braces.span_open(),
-        stream: braces.stream(),
+        unparsed_segments: TokenIter::new(brace.span_open(), brace.stream()),
     })
 }
 
@@ -300,8 +310,7 @@ fn parse_quote_segment(
             delimiter: first_token.delimiter(),
             span: first_token.span(),
             stream: Quote {
-                last_span: first_token.span_open(),
-                stream: first_token.stream(),
+                unparsed_segments: TokenIter::new(first_token.span_open(), first_token.stream()),
             },
         }),
         TokenTree::Punct(first_token) if first_token.as_char() == '$' => {

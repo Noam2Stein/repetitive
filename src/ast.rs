@@ -5,8 +5,7 @@ use crate::{
 };
 
 pub struct Quote {
-    pub last_span: Span,
-    pub stream: TokenStream,
+    pub unparsed_segments: TokenIter,
 }
 
 pub enum QuoteSegment {
@@ -56,7 +55,7 @@ pub struct MetaLet {
 
 pub struct MetaMatch {
     pub expr: Expr,
-    pub arms: Vec<MetaMatchArm>,
+    pub unparsed_arms: TokenIter,
 }
 
 pub struct MetaMatchArm {
@@ -83,7 +82,7 @@ pub enum ExprKind {
 
 pub struct ExprArray {
     pub first_element: Option<Expr>,
-    pub remaining_elements: TokenIter,
+    pub unparsed_elements: TokenIter,
 }
 
 pub struct ExprBinary {
@@ -114,7 +113,7 @@ pub struct ExprRepeat {
 
 pub struct ExprTuple {
     pub first_field: Option<Expr>,
-    pub remaining_fields: TokenIter,
+    pub unparsed_fields: TokenIter,
 }
 
 pub struct ExprUnary {
