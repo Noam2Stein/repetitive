@@ -124,21 +124,13 @@ mod proc_macro12 {
     pub use proc_macro2::*;
 }
 
-mod arena;
-mod ast;
-mod bindings;
-mod compile;
-mod context;
+//mod codegen;
 mod diagnostics;
+/*
 mod entrypoint;
-mod errors;
 mod execute;
-mod instruction;
-mod parse;
-mod stack;
-mod str_interner;
-mod token_iter;
-mod val;
+mod parsing;
+mod storage;
 
 #[cfg(test)]
 mod tests;
@@ -168,3 +160,4 @@ pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         not(test) => output,
     }
 }
+*/
