@@ -1,10 +1,11 @@
 use std::cell::UnsafeCell;
 
-use crate::arena::StrArena;
+use crate::entrypoint::Context;
 
-pub struct StrInterner {
-    arena: StrArena,
-    strs: UnsafeCell<Vec<StrMetadata>>,
+pub struct StrInterner<'storage>(UnsafeCell<Inner<'storage>>);
+
+struct Inner<'storage> {
+    interned_strs: Vec<InternedStr<'storage>>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -12,51 +13,43 @@ pub struct StrId {
     index: u32,
 }
 
-struct StrMetadata {
-    /// # Safety
-    ///
-    /// This pointer must be valid as `&str`.
-    ptr: *const str,
+struct InternedStr<'storage> {
+    str: &'storage str,
     hash: u64,
 }
 
-impl StrInterner {
+impl<'storage> StrInterner<'storage> {
     pub fn new() -> Self {
-        Self {
-            arena: StrArena::new(),
-            strs: UnsafeCell::new(Vec::with_capacity(100)),
-        }
+        Self(UnsafeCell::new(Inner {
+            interned_strs: Vec::new(),
+        }))
     }
 
     #[must_use]
-    pub fn intern(&self, str: &str) -> StrId {
+    pub fn intern(&self, str: &str, storage: &'storage Context) -> StrId {
         // SAFETY: This reference does not escape the function, and during this
         // function no other references are created.
-        let strs = unsafe { self.strs.get().as_mut_unchecked() };
+        let inner = unsafe { self.0.get().as_mut_unchecked() };
 
         let hash = hash(str);
-        let matching_str_index = strs.iter().position(|existing_str_metadata| {
-            // SAFETY: The pointer is guaranteed to be valid as `&str`.
-            let existing_str = unsafe { existing_str_metadata.ptr.as_ref_unchecked() };
-
-            existing_str_metadata.hash == hash && existing_str == str
-        });
+        let matching_str_index = inner
+            .interned_strs
+            .iter()
+            .position(|interned_str| interned_str.hash == hash && interned_str.str == str);
 
         if let Some(matching_str_index) = matching_str_index {
             StrId {
                 index: matching_str_index as u32,
             }
         } else {
-            let index = strs.len();
+            let index = inner.interned_strs.len() as u32;
 
-            strs.push(StrMetadata {
-                ptr: self.arena.insert(str) as *const str,
+            inner.interned_strs.push(InternedStr {
+                str: storage.mixed_arena.insert_str(str),
                 hash,
             });
 
-            StrId {
-                index: index as u32,
-            }
+            StrId { index }
         }
     }
 
@@ -64,13 +57,9 @@ impl StrInterner {
     pub fn restore(&self, str_id: StrId) -> &str {
         // SAFETY: This reference does not escape the function, and during this
         // function no other references are created.
-        let strs = unsafe { self.strs.get().as_ref_unchecked() };
+        let inner = unsafe { self.0.get().as_mut_unchecked() };
 
-        let ptr = strs[str_id.index as usize].ptr;
-
-        // SAFETY: The pointer is guaranteed to be valid as `&str` and to live
-        // as long as `self`.
-        unsafe { ptr.as_ref_unchecked() }
+        inner.interned_strs[str_id.index as usize].str
     }
 }
 

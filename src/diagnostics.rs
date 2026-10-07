@@ -46,26 +46,22 @@ impl Diagnostics {
             .map(|diagnostic| diagnostic.message.as_ref())
     }
 
-    pub fn emit_onto(self, output: TokenStream) -> TokenStream {
+    pub fn to_token_stream(self) -> TokenStream {
         let Self { errors } = self;
         let errors = errors.into_inner();
 
-        if errors.is_empty() {
-            output
-        } else {
-            errors
-                .into_iter()
-                .flat_map(|error| {
-                    [
-                        TokenTree::Ident(Ident::new("compile_error", error.span)),
-                        TokenTree::Punct(Punct::new('!', Spacing::Alone)),
-                        TokenTree::Group(Group::new(
-                            Delimiter::Parenthesis,
-                            TokenTree::Literal(Literal::string(&error.message)).into(),
-                        )),
-                    ]
-                })
-                .collect()
-        }
+        errors
+            .into_iter()
+            .flat_map(|error| {
+                [
+                    TokenTree::Ident(Ident::new("compile_error", error.span)),
+                    TokenTree::Punct(Punct::new('!', Spacing::Alone)),
+                    TokenTree::Group(Group::new(
+                        Delimiter::Parenthesis,
+                        TokenTree::Literal(Literal::string(&error.message)).into(),
+                    )),
+                ]
+            })
+            .collect()
     }
 }

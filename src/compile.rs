@@ -3,7 +3,8 @@ use std::cell::Cell;
 use crate::{
     ast::{Expr, Meta, Pat, Quote, QuoteSegment},
     diagnostics::{Diagnostics, RecordedError},
-    instruction::{Instruction, InstructionStorage},
+    entrypoint::Context,
+    instruction::Instruction,
     parse::parse_ast,
     proc_macro12::TokenStream,
     str_interner::StrInterner,
@@ -14,12 +15,10 @@ pub struct CompileResult<'storage> {
     pub output_slot: &'storage Cell<TokenStream>,
 }
 
-pub fn compile<'storage>(
+pub fn compile<'ctx>(
     input: TokenStream,
-    diagnostics: &Diagnostics,
-    instruction_storage: &'storage InstructionStorage,
-) -> Result<CompileResult<'storage>, RecordedError> {
-    let str_interner = StrInterner::new();
+    ctx: &'ctx Context<'ctx>,
+) -> Result<CompileResult<'ctx>, RecordedError> {
     compile_quote(parse_ast(input), diagnostics, &str_interner)?;
     todo!("actually implement codegen")
 }

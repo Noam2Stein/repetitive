@@ -111,8 +111,6 @@
 
 #![forbid(missing_docs)]
 
-use proc_macro::TokenStream;
-
 /// Reexports the items from `proc_macro2` if `cfg(test)` is active, or from
 /// `proc_macro` if not.
 ///
@@ -130,6 +128,7 @@ mod arena;
 mod ast;
 mod bindings;
 mod compile;
+mod context;
 mod diagnostics;
 mod entrypoint;
 mod errors;
@@ -150,8 +149,10 @@ mod tests;
 ///
 /// [repetitive Documentation]: TODO
 #[proc_macro]
-pub fn repetitive(input: TokenStream) -> TokenStream {
-    use crate::entrypoint::{RepetitiveResult, repetitive};
+pub fn repetitive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    use crate::{context::Context, entrypoint::repetitive};
+
+    let ctx = Context::new();
 
     let RepetitiveResult {
         output,

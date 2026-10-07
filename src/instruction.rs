@@ -6,15 +6,6 @@ use crate::{
     stack::Stack,
 };
 
-pub struct InstructionStorage {
-    pub bool_stack: Stack<Cell<bool>>,
-    pub int_stack: Stack<Cell<i32>>,
-    pub str_constants: Arena<Cell<String>>,
-    pub str_stack: Stack<Cell<String>>,
-    pub token_stream_constants: Arena<Cell<TokenStream>>,
-    pub token_stream_stack: Stack<Cell<TokenStream>>,
-}
-
 pub enum Instruction<'storage> {
     BoolAnd {
         lhs: &'storage Cell<bool>,
@@ -121,17 +112,4 @@ pub enum Instruction<'storage> {
         val: &'storage Cell<TokenStream>,
         dst: &'storage Cell<TokenStream>,
     },
-}
-
-impl InstructionStorage {
-    pub fn new() -> Self {
-        Self {
-            bool_stack: Stack::new(),
-            int_stack: Stack::new(),
-            str_constants: Arena::new(),
-            str_stack: Stack::new(),
-            token_stream_constants: Arena::new(),
-            token_stream_stack: Stack::new(),
-        }
-    }
 }
