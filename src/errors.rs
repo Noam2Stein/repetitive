@@ -19,6 +19,13 @@ impl Error {
 
 /// Syntax errors.
 impl Error {
+    pub fn leftover_token(span: Span) -> Self {
+        Self {
+            span,
+            message: Cow::Borrowed("unexpected token"),
+        }
+    }
+
     pub fn parse_char_cutoff(last_span: Span, char: char) -> Self {
         Self {
             span: last_span,
@@ -112,6 +119,13 @@ impl Error {
                 delimiter_noun(delimiter),
                 delimiter_noun(found_delimiter)
             )),
+        }
+    }
+
+    pub fn parse_expr_brace(span_open: Span) -> Self {
+        Self {
+            span: span_open,
+            message: Cow::Borrowed("block expressions are not supported"),
         }
     }
 

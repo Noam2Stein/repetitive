@@ -81,6 +81,7 @@ pub enum ExprKind {
     Unary(Box<ExprUnary>),
     Repeat(Box<ExprRepeat>),
     Str(String),
+    TupleEmpty,
     Tuple(Box<ExprTuple>),
 }
 
@@ -116,7 +117,7 @@ pub struct ExprRepeat {
 }
 
 pub struct ExprTuple {
-    pub first_field: Option<Expr>,
+    pub first_field: Expr,
     pub unparsed_fields: TokenIter,
 }
 

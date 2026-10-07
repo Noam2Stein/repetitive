@@ -1,11 +1,19 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, mem::transmute};
 
-use crate::proc_macro12::{Span, TokenStream, TokenTree, token_stream};
+use crate::{
+    diagnostics::{Diagnostics, RecordedError},
+    errors::Error,
+    proc_macro12::{Group, Span, TokenStream, TokenTree, token_stream},
+};
 
-#[cfg_attr(test, derive(Clone))]
-pub struct TokenIter {
-    iter: token_stream::IntoIter,
-    queue: VecDeque<TokenTree>,
+#[derive(Clone)]
+#[repr(transparent)]
+pub struct TokenIter(Inner);
+
+#[derive(Clone)]
+struct Inner {
+    raw_iter: token_stream::IntoIter,
+    next_queue: VecDeque<TokenTree>,
     last_span: Span,
 }
 
@@ -13,10 +21,10 @@ impl Iterator for TokenIter {
     type Item = TokenTree;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let result = if let Some(result) = self.queue.pop_front() {
+        let result = if let Some(result) = self.0.next_queue.pop_front() {
             result
         } else {
-            self.iter.next()?
+            self.0.raw_iter.next()?
         };
 
         self.update_last_span(&result);
@@ -26,18 +34,42 @@ impl Iterator for TokenIter {
 }
 
 impl TokenIter {
-    pub fn new(last_span: Span, stream: TokenStream) -> Self {
-        Self {
-            iter: stream.into_iter(),
-            queue: VecDeque::new(),
-            last_span,
+    pub fn from_root_stream(stream: TokenStream) -> Self {
+        Self(Inner {
+            raw_iter: stream.into_iter(),
+            next_queue: VecDeque::new(),
+            last_span: Span::call_site(),
+        })
+    }
+
+    pub fn from_group(group: &Group) -> Self {
+        Self(Inner {
+            raw_iter: group.stream().into_iter(),
+            next_queue: VecDeque::new(),
+            last_span: group.span_open(),
+        })
+    }
+
+    pub fn finish(self, diagnostics: &Diagnostics) -> Result<(), RecordedError> {
+        // SAFETY: `TokenIter` is a transparent wrapper of `Inner`.
+        let mut inner = unsafe { transmute::<TokenIter, Inner>(self) };
+
+        let leftover_token = inner
+            .next_queue
+            .pop_front()
+            .or_else(|| inner.raw_iter.next());
+
+        if let Some(leftover_token) = leftover_token {
+            Err(diagnostics.record_error(Error::leftover_token(leftover_token.span())))
+        } else {
+            Ok(())
         }
     }
 
     pub fn peek(&mut self) -> Option<&TokenTree> {
         /*
-        This implementation would be better, but does not compile because of
-        borrow checker limitations.
+        This commented-out implementation would be better, but it does not
+        compile because of borrow checker limitations.
 
         Some(if let Some(peek) = self.queue.front() {
             peek
@@ -46,24 +78,24 @@ impl TokenIter {
         })
         */
 
-        if self.queue.is_empty() {
-            self.queue.push_back(self.iter.next()?);
+        if self.0.next_queue.is_empty() {
+            self.0.next_queue.push_back(self.0.raw_iter.next()?);
         }
-        self.queue.front()
+        self.0.next_queue.front()
     }
 
     pub fn peek_n<const N: usize>(&mut self) -> Option<[&TokenTree; N]> {
-        while self.queue.len() < N {
-            self.queue.push_back(self.iter.next()?);
+        while self.0.next_queue.len() < N {
+            self.0.next_queue.push_back(self.0.raw_iter.next()?);
         }
 
-        let mut queue_iter = self.queue.iter();
+        let mut queue_iter = self.0.next_queue.iter();
         Some(std::array::from_fn(|_| queue_iter.next().unwrap()))
     }
 
     pub fn next_if(&mut self, func: impl FnOnce(&TokenTree) -> bool) -> Option<TokenTree> {
         func(self.peek()?).then(|| {
-            let result = self.queue.pop_front().unwrap();
+            let result = self.0.next_queue.pop_front().unwrap();
             self.update_last_span(&result);
             result
         })
@@ -74,7 +106,7 @@ impl TokenIter {
         func: impl FnOnce([&TokenTree; N]) -> bool,
     ) -> Option<[TokenTree; N]> {
         func(self.peek_n()?).then(|| {
-            let result = std::array::from_fn(|_| self.queue.pop_front().unwrap());
+            let result = std::array::from_fn(|_| self.0.next_queue.pop_front().unwrap());
 
             if let Some(result_last) = result.last() {
                 self.update_last_span(result_last);
@@ -85,14 +117,20 @@ impl TokenIter {
     }
 
     pub fn last_span(&self) -> Span {
-        self.last_span
+        self.0.last_span
     }
 
     fn update_last_span(&mut self, last_token: &TokenTree) {
-        self.last_span = match &last_token {
+        self.0.last_span = match &last_token {
             TokenTree::Group(token) => token.span_close(),
             token => token.span(),
         };
+    }
+}
+
+impl Drop for TokenIter {
+    fn drop(&mut self) {
+        panic!("forgot to call `TokenIter::finish`")
     }
 }
 
@@ -109,14 +147,14 @@ mod tests {
         let stream = random_token_stream();
 
         let expected_iter = stream.clone().into_iter();
-        let actual_iter = TokenIter::new(Span::call_site(), stream);
+        let actual_iter = TokenIter::from_root_stream(stream);
 
         assert!(token_iter_eq(expected_iter, actual_iter));
     }
 
     #[test]
     fn test_peek() {
-        let mut token_iter = TokenIter::new(Span::call_site(), random_token_stream());
+        let mut token_iter = TokenIter::from_root_stream(random_token_stream());
         for _ in 0..5 {
             token_iter.next().unwrap();
         }
@@ -134,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_peek_n() {
-        let mut token_iter = TokenIter::new(Span::call_site(), random_token_stream());
+        let mut token_iter = TokenIter::from_root_stream(random_token_stream());
         for _ in 0..5 {
             token_iter.next().unwrap();
         }
@@ -154,7 +192,7 @@ mod tests {
 
     #[test]
     fn test_next_if() {
-        let mut token_iter = TokenIter::new(Span::call_site(), random_token_stream());
+        let mut token_iter = TokenIter::from_root_stream(random_token_stream());
         for _ in 0..5 {
             token_iter.next().unwrap();
         }
@@ -175,7 +213,7 @@ mod tests {
 
     #[test]
     fn test_next_n_if() {
-        let mut token_iter = TokenIter::new(Span::call_site(), random_token_stream());
+        let mut token_iter = TokenIter::from_root_stream(random_token_stream());
         for _ in 0..5 {
             token_iter.next().unwrap();
         }

@@ -13,7 +13,7 @@ use crate::{
 
 pub fn parse_ast(input: TokenStream) -> Quote {
     Quote {
-        unparsed_segments: TokenIter::new(Span::call_site(), input),
+        unparsed_segments: TokenIter::from_root_stream(input),
     }
 }
 
@@ -58,7 +58,20 @@ impl Expr {
         diagnostics: &Diagnostics,
         str_interner: &StrInterner,
     ) -> Result<ExprKind, RecordedError> {
-        todo!()
+        let group = match self {
+            Self::Group(group) => group,
+            Self::Kind { span: _, kind } => return Ok(kind),
+        };
+        let iter = TokenIter::from_group(&group);
+
+        Ok(match group.delimiter() {
+            Delimiter::Brace => {
+                return Err(diagnostics.record_error(Error::parse_expr_brace(group.span_open())));
+            }
+            Delimiter::Bracket => todo!(),
+            Delimiter::None => todo!(),
+            Delimiter::Parenthesis => parse_expr_parenthesis(iter, diagnostics, str_interner)?,
+        })
     }
 }
 
@@ -157,14 +170,14 @@ fn parse_delimiter(
     diagnostics: &Diagnostics,
 ) -> Result<TokenIter, RecordedError> {
     match iter.next() {
-        Some(TokenTree::Group(token)) => {
-            let found_delimiter = token.delimiter();
+        Some(TokenTree::Group(group)) => {
+            let found_delimiter = group.delimiter();
             if found_delimiter == delimiter {
-                Ok(TokenIter::new(token.span_open(), token.stream()))
+                Ok(TokenIter::from_group(&group))
             } else {
                 Err(
                     diagnostics.record_error(Error::parse_delimiter_wrong_delimiter(
-                        token.span_open(),
+                        group.span_open(),
                         delimiter,
                         found_delimiter,
                     )),
@@ -193,6 +206,29 @@ fn parse_expr(
     str_interner: &StrInterner,
 ) -> Result<Expr, RecordedError> {
     todo!()
+}
+
+fn parse_expr_parenthesis(
+    mut iter: TokenIter,
+    diagnostics: &Diagnostics,
+    str_interner: &StrInterner,
+) -> Result<ExprKind, RecordedError> {
+    if iter.peek().is_none() {
+        return Ok(ExprKind::TupleEmpty);
+    }
+
+    let first_expr = parse_expr(&mut iter, diagnostics, str_interner)?;
+    let separator = iter.next_if(|token| token_is_char(token, ','));
+
+    Ok(if separator.is_some() {
+        ExprKind::Tuple(Box::new(ExprTuple {
+            first_field: first_expr,
+            unparsed_fields: iter,
+        }))
+    } else {
+        iter.finish(diagnostics)?;
+        first_expr.kind(diagnostics, str_interner)?
+    })
 }
 
 fn parse_keyword(
@@ -383,7 +419,7 @@ fn parse_quote_segment(
             delimiter: first_token.delimiter(),
             span: first_token.span(),
             stream: Quote {
-                unparsed_segments: TokenIter::new(first_token.span_open(), first_token.stream()),
+                unparsed_segments: TokenIter::from_group(&first_token),
             },
         }),
         TokenTree::Punct(first_token) if first_token.as_char() == '$' => {
