@@ -4,7 +4,7 @@ categories = ["rust-patterns"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Noam2Stein/repetitive"
-rust-version = "1.97"
+rust-version = "1.99"
 description = "A metaprogramming macro with control flow syntax"
 
 [lib]
@@ -16,4 +16,4 @@ itertools = "0.15.0"
 prettyplease = "0.3.0"
 proc-macro2 = "1.0.107"
 quote = "1.0.47"
-syn = "3.0.3"
+syn = "3.0.6"
