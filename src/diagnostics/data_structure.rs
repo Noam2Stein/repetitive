@@ -1,26 +1,22 @@
-//! This module implements all diagnostics functionality.
-//!
-//! Other submodules use this functionality to define context-specific error
-//! messages.
+//! A module defining the [`Diagnostics`] data structure.
 
 use std::{cell::UnsafeCell, fmt::Write};
 
 use crate::{
-    diagnostics::error_trait::Error,
+    diagnostics::error_format::Error,
     proc_macro12::{Delimiter, Group, Ident, Literal, Punct, Spacing, TokenStream, TokenTree},
 };
 
 /// A data structure storing diagnostics.
 ///
-/// Diagnostics are emitted via free functions found in submodules inside
-/// [`crate::diagnostics`].
+/// See [`crate::diagnostics`] for more information about how diagnostics are
+/// handled.
 ///
 /// When `cfg(test)` is active, this retains error-message strings and makes
 /// them accessible via [`Self::errors`].
 ///
 /// Regardless of `cfg(test)`, errors are stored as a token-stream with calls to
-/// [`compile_error`] and are accessible via [`Self::into_compile_errors`]. In
-/// the future,
+/// [`compile_error`] and are accessible via [`Self::into_compile_errors`].
 pub struct Diagnostics(UnsafeCell<Inner>);
 
 /// A zero-sized error type indicating an error has been emitted to
@@ -45,10 +41,6 @@ impl Diagnostics {
             #[cfg(test)]
             errors: Vec::new(),
         }))
-    }
-
-    pub fn has_errors(&mut self) -> bool {
-        !self.0.get_mut().token_stream.is_empty()
     }
 
     /// Converts diagnostics into a token-stream containing calls to
@@ -77,10 +69,14 @@ impl Diagnostics {
         let inner = unsafe { self.0.get().as_mut_unchecked() };
 
         let span = error.span();
-        let message = error.message();
 
         inner.message_buffer.clear();
-        write!(&mut inner.message_buffer, "{message}").expect("failed to format error message");
+        write!(
+            &mut inner.message_buffer,
+            "{}",
+            std::fmt::from_fn(|f| error.write_message(f))
+        )
+        .expect("failed to format error message");
         let message = &inner.message_buffer;
 
         inner.token_stream.extend([

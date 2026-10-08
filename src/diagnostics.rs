@@ -1,19 +1,20 @@
 //! A module that exposes functionality for emitting errors and defines all of
 //! the macro's error messages.
 //!
-//! This module's submodules contain free functions that emit context-specific
-//! errors. Such functions take a reference to [`Diagnostics`] which stores
-//! appropriate state, and return the zero-sized-type [`EmittedError`] as a
-//! "proof" that an error has been emitted.
+//! All of the macro's error messages are defined via free functions that return
+//! an anonymous `impl Error` type. These functions take whatever context is
+//! needed to construct an error's span and message. Keeping all errors in this
+//! module makes them easier to maintain.
 //!
-//! All error messages are defined inside this module. Functionality for
-//! emitting errors with arbitrary messages is intentionally not exposed
-//! publicly. Keeping all errors in one place makes them easier to maintain.
+//! The [`Diagnostics`] type stores appropriate state about emitted errors. The
+//! method [`Diagnostics::emit_error`] takes an `impl Error`, emits the error,
+//! and returns the zero-sized type [`EmittedError`] as a "proof" that an error
+//! has been emitted. [`EmittedError`] is meant to be used with [`Result`].
 
-pub use self::storage::{Diagnostics, EmittedError};
+pub use self::data_structure::{Diagnostics, EmittedError};
 
 pub mod execute_errors;
 pub mod parse_errors;
 
-mod error_trait;
-mod storage;
+mod data_structure;
+mod error_format;

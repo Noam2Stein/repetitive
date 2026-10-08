@@ -3,7 +3,7 @@
 //! See [`crate::diagnostics`] for context.
 
 use crate::{
-    diagnostics::error_trait::{Error, error},
+    diagnostics::error_format::{Error, error},
     proc_macro12::Span,
 };
 

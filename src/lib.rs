@@ -124,6 +124,7 @@ mod proc_macro12 {
     pub use proc_macro2::*;
 }
 
+#[allow(dead_code)]
 mod diagnostics;
 
 // TODO: Improve the quality of these modules. Everything above is done, but
