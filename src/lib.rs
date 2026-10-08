@@ -129,10 +129,10 @@ mod diagnostics;
 // TODO: Improve the quality of these modules. Everything above is done, but
 // below is not
 mod codegen;
+mod execute;
 mod storage;
 /*
 mod entrypoint;
-mod execute;
 mod parsing;
 
 #[cfg(test)]

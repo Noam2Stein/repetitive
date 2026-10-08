@@ -1,14 +1,15 @@
 use std::{cell::Cell, fmt::Write};
 
 use crate::{
-    diagnostics::RecordedError,
-    entrypoint::Context,
-    errors::Error,
-    instruction::Instruction,
+    codegen::Instruction,
+    diagnostics::{Diagnostics, EmittedError, execute_errors as errors},
     proc_macro12::{Ident, Literal},
 };
 
-pub fn execute(instructions: &[Instruction], ctx: &Context) -> Result<(), RecordedError> {
+pub fn execute(
+    instructions: &[Instruction],
+    diagnostics: &Diagnostics,
+) -> Result<(), EmittedError> {
     let mut next_instruction = 0;
 
     while let Some(instruction) = instructions.get(next_instruction) {
@@ -52,9 +53,7 @@ pub fn execute(instructions: &[Instruction], ctx: &Context) -> Result<(), Record
                 if let Some(result) = lhs.get().checked_add(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(ctx
-                        .diagnostics
-                        .record_error(Error::execute_int_add_overflow(span)));
+                    return Err(diagnostics.emit_error(errors::int_add_overflow(span)));
                 }
             }
             Instruction::IntCopy { val, dst } => {
@@ -74,11 +73,11 @@ pub fn execute(instructions: &[Instruction], ctx: &Context) -> Result<(), Record
                 if let Some(result) = lhs.get().checked_div(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(ctx.diagnostics.record_error(if rhs.get() == 0 {
-                        Error::execute_int_div_zero(span)
+                    return Err(if rhs.get() == 0 {
+                        diagnostics.emit_error(errors::int_div_zero(span))
                     } else {
-                        Error::execute_int_div_overflow(span)
-                    }));
+                        diagnostics.emit_error(errors::int_div_overflow(span))
+                    });
                 }
             }
             Instruction::IntEmit { val, dst, span } => {
@@ -98,18 +97,14 @@ pub fn execute(instructions: &[Instruction], ctx: &Context) -> Result<(), Record
                 if let Some(result) = lhs.get().checked_mul(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(ctx
-                        .diagnostics
-                        .record_error(Error::execute_int_mul_overflow(span)));
+                    return Err(diagnostics.emit_error(errors::int_mul_overflow(span)));
                 }
             }
             Instruction::IntNeg { val, dst, span } => {
                 if let Some(result) = val.get().checked_neg() {
                     dst.set(result);
                 } else {
-                    return Err(ctx
-                        .diagnostics
-                        .record_error(Error::execute_int_neg_overflow(span)));
+                    return Err(diagnostics.emit_error(errors::int_neg_overflow(span)));
                 }
             }
             Instruction::IntRem {
@@ -121,11 +116,11 @@ pub fn execute(instructions: &[Instruction], ctx: &Context) -> Result<(), Record
                 if let Some(result) = lhs.get().checked_rem(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(ctx.diagnostics.record_error(if rhs.get() == 0 {
-                        Error::execute_int_rem_zero(span)
+                    return Err(if rhs.get() == 0 {
+                        diagnostics.emit_error(errors::int_rem_zero(span))
                     } else {
-                        Error::execute_int_rem_overflow(span)
-                    }));
+                        diagnostics.emit_error(errors::int_rem_overflow(span))
+                    });
                 }
             }
             Instruction::IntSub {
@@ -137,9 +132,7 @@ pub fn execute(instructions: &[Instruction], ctx: &Context) -> Result<(), Record
                 if let Some(result) = lhs.get().checked_sub(rhs.get()) {
                     dst.set(result);
                 } else {
-                    return Err(ctx
-                        .diagnostics
-                        .record_error(Error::execute_int_sub_overflow(span)));
+                    return Err(diagnostics.emit_error(errors::int_sub_overflow(span)));
                 }
             }
             Instruction::StrCopy { val, dst } => {
@@ -160,9 +153,7 @@ pub fn execute(instructions: &[Instruction], ctx: &Context) -> Result<(), Record
                         dst.extend([Ident::new(val, span)]);
                         Ok(())
                     } else {
-                        Err(ctx
-                            .diagnostics
-                            .record_error(Error::execute_str_emit_invalid(span, val)))
+                        Err(diagnostics.emit_error(errors::str_emit_invalid(span, val)))
                     }
                 })?;
             }

@@ -1,10 +1,6 @@
 use std::cell::Cell;
 
-use crate::{
-    arena::Arena,
-    proc_macro12::{Span, TokenStream},
-    stack::Stack,
-};
+use crate::proc_macro12::{Span, TokenStream};
 
 pub enum Instruction<'storage> {
     BoolAnd {

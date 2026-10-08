@@ -3,13 +3,11 @@
 //! Other submodules use this functionality to define context-specific error
 //! messages.
 
-use std::{
-    cell::UnsafeCell,
-    fmt::{Arguments, Write},
-};
+use std::{cell::UnsafeCell, fmt::Write};
 
-use crate::proc_macro12::{
-    Delimiter, Group, Ident, Literal, Punct, Spacing, Span, TokenStream, TokenTree,
+use crate::{
+    diagnostics::error_trait::Error,
+    proc_macro12::{Delimiter, Group, Ident, Literal, Punct, Spacing, TokenStream, TokenTree},
 };
 
 /// A data structure storing diagnostics.
@@ -73,14 +71,13 @@ impl Diagnostics {
     ///
     /// This method is intentionally restricted to [`crate::diagnostics`], in
     /// order to force all errors to be defined here.
-    pub(in crate::diagnostics) fn emit_error(
-        &self,
-        span: Span,
-        message: Arguments,
-    ) -> EmittedError {
+    pub fn emit_error(&self, error: impl Error) -> EmittedError {
         // SAFETY: This reference does not escape the function, and during this
         // function no other references are created.
         let inner = unsafe { self.0.get().as_mut_unchecked() };
+
+        let span = error.span();
+        let message = error.message();
 
         inner.message_buffer.clear();
         write!(&mut inner.message_buffer, "{message}").expect("failed to format error message");
