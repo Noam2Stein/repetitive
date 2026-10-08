@@ -1,3 +1,7 @@
+//! A module defining all errors related to syntax.
+//!
+//! See [`crate::diagnostics`] for context.
+
 use crate::{
     diagnostics::{Diagnostics, EmittedError},
     proc_macro12::{Delimiter, Span},
