@@ -172,10 +172,10 @@ impl<T> Drop for Chunk<T> {
 mod tests {
     use itertools::Itertools;
 
-    use crate::arena::Arena;
+    use crate::storage::arena::{Arena, MixedArena};
 
     #[test]
-    fn test_usage() {
+    fn test_arena() {
         let arena = Arena::<String>::new();
 
         let values = (0..100).map(|n| n.to_string()).collect_vec();
@@ -190,8 +190,8 @@ mod tests {
     }
 
     #[test]
-    fn test_copy_usage() {
-        let arena = Arena::new();
+    fn test_mixed_arena() {
+        let arena = MixedArena::new();
 
         let values = (0..100).map(|n| n.to_string()).collect_vec();
 

@@ -125,7 +125,7 @@ impl Debug for ReleaseError {
 
 #[cfg(test)]
 mod tests {
-    use crate::stack::Stack;
+    use crate::storage::stack::Stack;
 
     #[test]
     fn test_usage() {

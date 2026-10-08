@@ -126,11 +126,11 @@ mod proc_macro12 {
 
 //mod codegen;
 mod diagnostics;
+mod storage;
 /*
 mod entrypoint;
 mod execute;
 mod parsing;
-mod storage;
 
 #[cfg(test)]
 mod tests;
