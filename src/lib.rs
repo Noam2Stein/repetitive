@@ -124,10 +124,13 @@ mod proc_macro12 {
     pub use proc_macro2::*;
 }
 
-//mod codegen;
 mod diagnostics;
+
+// TODO: Improve the quality of these modules. Everything above is done, but
+// below is not
 mod storage;
 /*
+mod codegen;
 mod entrypoint;
 mod execute;
 mod parsing;
