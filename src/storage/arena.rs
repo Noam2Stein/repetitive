@@ -48,7 +48,9 @@ impl<T> Arena<T> {
     #[expect(clippy::mut_from_ref)]
     pub fn insert(&self, value: T) -> &mut T {
         // SAFETY: This reference does not escape the function, and during this
-        // function no other references are created.
+        // function no other references are created. The reference that does
+        // escape is a separate pointer unrelated to this reference's aliasing
+        // rules.
         let inner = unsafe { self.0.get().as_mut_unchecked() };
 
         let mut dst = inner.reserve_dst(1);
@@ -66,7 +68,9 @@ impl<T> Arena<T> {
         T: Copy,
     {
         // SAFETY: This reference does not escape the function, and during this
-        // function no other references are created.
+        // function no other references are created. The reference that does
+        // escape is a separate pointer unrelated to this reference's aliasing
+        // rules.
         let inner = unsafe { self.0.get().as_mut_unchecked() };
 
         let src = slice.as_ptr();
@@ -89,9 +93,10 @@ impl<T> Arena<T> {
 impl Arena<u8> {
     #[expect(clippy::mut_from_ref)]
     pub fn insert_str(&self, str: &str) -> &mut str {
+        let result_bytes = self.insert_slice(str.as_bytes());
         // SAFETY: The output of `insert_slice` is the same as the input, which
         // is valid utf-8.
-        unsafe { str::from_utf8_unchecked_mut(self.insert_slice(str.as_bytes())) }
+        unsafe { str::from_utf8_unchecked_mut(result_bytes) }
     }
 }
 
@@ -100,7 +105,8 @@ impl<T> Inner<T> {
         let chunk = self.reserve_chunk(elements);
 
         // SAFETY: `chunk.elements` cannot overflow `isize` because it cannot go
-        // outside of `chunk.ptr`.
+        // outside of `chunk.ptr`. If it is too large, `reserve_chunk` would
+        // panic.
         let result = unsafe { chunk.ptr.cast::<MaybeUninit<T>>().add(chunk.used_slots) };
         chunk.used_slots = chunk.used_slots.strict_add(elements);
         result
