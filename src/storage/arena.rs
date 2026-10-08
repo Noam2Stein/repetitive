@@ -4,8 +4,31 @@ use std::{
     ptr::{NonNull, copy_nonoverlapping},
 };
 
+/// A type-specific arena data-structure.
+///
+/// Insert methods take a shared reference to `self` and return references that
+/// live for the entire lifetime of the arena. This means references can be
+/// retained while inserting more values.
+///
+/// This type stores values in chunks in order to avoid reallocation. The size
+/// of each chunk is twice the size of the previous chunk in order to avoid
+/// making too many separate allocations.
+///
+/// This arena is type-specific so that when it is dropped, the drop glue of `T`
+/// can be run. For types that implement [`Copy`], it is more efficient to use
+/// one shared [`MixedArena`].
 pub struct Arena<T>(UnsafeCell<Inner<T>>);
 
+/// A mixed-type arena data-structure that supports all types implementing
+/// [`Copy`].
+///
+/// The only reason [`Arena<T>`] is type-specific is so that when it is dropped,
+/// the drop glue of `T` can be run. Types that implement [`Copy`] have no drop
+/// glue, and thus can be stored in one shared arena. This also supports slices
+/// and [`str`].
+///
+/// Even though this is just a type alias, dedicated mixed-type functionality is
+/// implemented for it.
 pub type MixedArena = Arena<MaybeUninit<u8>>;
 
 struct Inner<T> {
