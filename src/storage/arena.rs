@@ -14,22 +14,10 @@ use std::{
 /// of each chunk is twice the size of the previous chunk in order to avoid
 /// making too many separate allocations.
 ///
-/// This arena is type-specific so that when it is dropped, the drop glue of `T`
-/// can be run. For types that implement [`Copy`], it is more efficient to use
-/// one shared [`MixedArena`].
+/// This arena is type-specific so that slots can be properly aligned without
+/// wasting space on padding, and so that when the arena is dropped, the drop
+/// glue of `T` can be run.
 pub struct Arena<T>(UnsafeCell<Inner<T>>);
-
-/// A mixed-type arena data-structure that supports all types implementing
-/// [`Copy`].
-///
-/// The only reason [`Arena<T>`] is type-specific is so that when it is dropped,
-/// the drop glue of `T` can be run. Types that implement [`Copy`] have no drop
-/// glue, and thus can be stored in one shared arena. This also supports slices
-/// and [`str`].
-///
-/// Even though this is just a type alias, dedicated mixed-type functionality is
-/// implemented for it.
-pub type MixedArena = Arena<MaybeUninit<u8>>;
 
 struct Inner<T> {
     chunks: Vec<Chunk<T>>,
@@ -39,8 +27,9 @@ struct Inner<T> {
 ///
 /// - `ptr` must be the result of `Box::<[MaybeUninit<T>]>::into_non_null`
 ///
-/// - The element range `..used_slots` must not be referenced, since the caller
-///   may retain references to it for the entire lifetime of the arena
+/// - The element range `..used_slots` may be pointed at by the caller for the
+///   entire lifetime of the arena, so there must not be any reads or writes to
+///   that range
 ///
 /// - The element range `..used_slots` must only contain initialized values of
 ///   `T`, which may be accessed when dropping the arena
@@ -70,29 +59,9 @@ impl<T> Arena<T> {
 
         dst.write(value)
     }
-}
-
-impl MixedArena {
-    #[expect(clippy::mut_from_ref)]
-    pub fn insert_ref<T>(&self, value: &T) -> &mut T
-    where
-        T: Copy,
-    {
-        // SAFETY: This reference does not escape the function, and during this
-        // function no other references are created.
-        let inner = unsafe { self.0.get().as_mut_unchecked() };
-
-        let mut dst = inner.reserve_dst(size_of::<T>()).cast::<MaybeUninit<T>>();
-
-        // SAFETY: `dst` is guaranteed to be valid as a mutable reference of one
-        // element, and its guaranteed to remain ours until the arena is dropped
-        let dst = unsafe { dst.as_mut() };
-
-        dst.write(*value)
-    }
 
     #[expect(clippy::mut_from_ref)]
-    pub fn insert_slice<T>(&self, slice: &[T]) -> &mut [T]
+    pub fn insert_slice(&self, slice: &[T]) -> &mut [T]
     where
         T: Copy,
     {
@@ -101,10 +70,8 @@ impl MixedArena {
         let inner = unsafe { self.0.get().as_mut_unchecked() };
 
         let src = slice.as_ptr();
+        let dst = inner.reserve_dst(slice.len()).cast::<T>().as_ptr();
         let count = slice.len();
-
-        let bytes = count.strict_mul(size_of::<T>());
-        let dst = inner.reserve_dst(bytes).cast::<T>().as_ptr();
 
         // SAFETY: `src` and `count` come from a valid slice. `dst` is
         // guaranteed to be valid as a mutable reference to `slice.len()`
@@ -117,7 +84,9 @@ impl MixedArena {
         // dropped.
         unsafe { std::slice::from_raw_parts_mut(dst, count) }
     }
+}
 
+impl Arena<u8> {
     #[expect(clippy::mut_from_ref)]
     pub fn insert_str(&self, str: &str) -> &mut str {
         // SAFETY: The output of `insert_slice` is the same as the input, which
@@ -195,7 +164,7 @@ impl<T> Drop for Chunk<T> {
 mod tests {
     use itertools::Itertools;
 
-    use crate::storage::arena::{Arena, MixedArena};
+    use crate::storage::arena::Arena;
 
     #[test]
     fn test_arena() {
@@ -213,8 +182,8 @@ mod tests {
     }
 
     #[test]
-    fn test_mixed_arena() {
-        let arena = MixedArena::new();
+    fn test_u8_arena() {
+        let arena = Arena::<u8>::new();
 
         let values = (0..100).map(|n| n.to_string()).collect_vec();
 
