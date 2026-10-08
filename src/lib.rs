@@ -128,9 +128,9 @@ mod diagnostics;
 
 // TODO: Improve the quality of these modules. Everything above is done, but
 // below is not
+mod codegen;
 mod storage;
 /*
-mod codegen;
 mod entrypoint;
 mod execute;
 mod parsing;
