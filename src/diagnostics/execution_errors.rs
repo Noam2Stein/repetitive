@@ -1,7 +1,3 @@
-//! A module defining all errors that occur at execution time.
-//!
-//! See [`crate::diagnostics`] for context.
-
 use crate::{
     diagnostics::error_format::{Error, error},
     proc_macro12::Span,

@@ -131,10 +131,10 @@ mod diagnostics;
 // below is not
 mod codegen;
 mod execute;
+mod parsing;
 mod storage;
 /*
 mod entrypoint;
-mod parsing;
 
 #[cfg(test)]
 mod tests;

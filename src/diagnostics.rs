@@ -11,10 +11,10 @@
 //! and returns the zero-sized type [`EmittedError`] as a "proof" that an error
 //! has been emitted. [`EmittedError`] is meant to be used with [`Result`].
 
-pub use self::data_structure::{Diagnostics, EmittedError};
+pub use self::data_structure::*;
 
-pub mod execute_errors;
-pub mod parse_errors;
+pub mod execution_errors;
+pub mod syntax_errors;
 
 mod data_structure;
 mod error_format;

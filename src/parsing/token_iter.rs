@@ -1,8 +1,7 @@
 use std::{collections::VecDeque, mem::transmute};
 
 use crate::{
-    diagnostics::{Diagnostics, RecordedError},
-    errors::Error,
+    diagnostics::{Diagnostics, EmittedError, syntax_errors as errors},
     proc_macro12::{Group, Span, TokenStream, TokenTree, token_stream},
 };
 
@@ -50,7 +49,7 @@ impl TokenIter {
         })
     }
 
-    pub fn finish(self, diagnostics: &Diagnostics) -> Result<(), RecordedError> {
+    pub fn finish(self, diagnostics: &Diagnostics) -> Result<(), EmittedError> {
         // SAFETY: `TokenIter` is a transparent wrapper of `Inner`.
         let mut inner = unsafe { transmute::<TokenIter, Inner>(self) };
 
@@ -60,7 +59,7 @@ impl TokenIter {
             .or_else(|| inner.raw_iter.next());
 
         if let Some(leftover_token) = leftover_token {
-            Err(diagnostics.record_error(Error::leftover_token(leftover_token.span())))
+            Err(diagnostics.emit_error(errors::leftover_token(leftover_token.span())))
         } else {
             Ok(())
         }
@@ -140,7 +139,7 @@ mod tests {
         Delimiter, Group, Ident, Literal, Punct, Spacing, Span, TokenStream, TokenTree,
     };
 
-    use crate::token_iter::TokenIter;
+    use crate::parsing::TokenIter;
 
     #[test]
     fn test_next() {

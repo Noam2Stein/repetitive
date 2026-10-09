@@ -2,7 +2,7 @@ use std::{cell::Cell, fmt::Write};
 
 use crate::{
     codegen::Instruction,
-    diagnostics::{Diagnostics, EmittedError, execute_errors as errors},
+    diagnostics::{Diagnostics, EmittedError, execution_errors as errors},
     proc_macro12::{Ident, Literal},
 };
 

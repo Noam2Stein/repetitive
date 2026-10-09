@@ -1,4 +1,4 @@
-pub use self::instruction::Instruction;
+pub use self::instruction::*;
 
 mod instruction;
 mod stack;
