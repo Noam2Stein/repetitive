@@ -76,11 +76,7 @@ pub fn expected_expr_found_brace(span_open: Span) -> impl Error {
     error!(span_open, "block expressions are not supported")
 }
 
-pub fn expected_joint_spacing_found_alone_spacing(
-    span: Span,
-    char: char,
-    next_char: char,
-) -> impl Error {
+pub fn expected_joint_spacing_found_alone(span: Span, char: char, next_char: char) -> impl Error {
     error!(
         span,
         "expected `{next_char}` immediately after this `{char}`"

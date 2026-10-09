@@ -7,23 +7,23 @@ use crate::{
     proc_macro12::{Delimiter, Group, Ident, Literal, Punct, Spacing, TokenStream, TokenTree},
 };
 
-/// A data structure storing diagnostics.
+/// A data structure storing appropriate information about emitted errors.
 ///
-/// See [`crate::diagnostics`] for more information about how diagnostics are
-/// handled.
+/// See [`crate::diagnostics`] for an overview of how diagnostics are handled.
 ///
 /// When `cfg(test)` is active, this retains error-message strings and makes
-/// them accessible via [`Self::errors`].
+/// them accessible via `Self::errors`.
 ///
-/// Regardless of `cfg(test)`, errors are stored as a token-stream with calls to
-/// [`compile_error`] and are accessible via [`Self::into_compile_errors`].
+/// Regardless of `cfg(test)`, errors are stored as a token-stream containing
+/// calls to [`compile_error`]. The token-stream is accessible via
+/// [`Self::into_compile_errors`].
 pub struct Diagnostics(UnsafeCell<Inner>);
 
 /// A zero-sized error type indicating an error has been emitted to
 /// [`Diagnostics`].
 ///
-/// This type cannot be constructed directly; it is returned from functions that
-/// emit errors.
+/// This type cannot be constructed directly; it is returned from
+/// [`Diagnostics::emit_error`].
 pub struct EmittedError(());
 
 struct Inner {
@@ -58,11 +58,17 @@ impl Diagnostics {
         self.0.get_mut().errors.iter().map(String::as_str)
     }
 
-    /// Emits an error with a span and an error message created with
-    /// [`format_args`].
+    /// Emits the given error.
     ///
-    /// This method is intentionally restricted to [`crate::diagnostics`], in
-    /// order to force all errors to be defined here.
+    /// This takes an error defined in the [`crate::diagnostics`] module.
+    /// Emitting errors with arbitrary messages it intentionally not supported
+    /// in order to force all errors to be defined in this module.
+    ///
+    /// Currently, this only emits the error to the given [`Diagnostics`]
+    /// instance. However, it may affect global state in the future, if the
+    /// nightly `proc_macro_diagnostic` API is stabilized.
+    ///
+    /// See [`crate::diagnostics`] for context.
     pub fn emit_error(&self, error: impl Error) -> EmittedError {
         // SAFETY: This reference does not escape the function, and during this
         // function no other references are created.
