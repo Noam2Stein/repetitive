@@ -131,6 +131,8 @@ mod diagnostics;
 // below is not
 mod codegen;
 mod execute;
+#[allow(dead_code)]
+#[allow(unused_imports)]
 mod parsing;
 mod storage;
 /*
